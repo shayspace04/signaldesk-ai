@@ -1,0 +1,76 @@
+{
+  "agent_runtime": null,
+  "description": "Assesses incident severity from a signal's evidence tickets and recommends an incident response plan.",
+  "icon_url": null,
+  "input_schema": null,
+  "instruction": {
+    "$file": "instruction.md"
+  },
+  "metadata": null,
+  "name": "severity-assessor",
+  "output_schema": {
+    "properties": {
+      "estimated_blast_radius": {
+        "type": "string"
+      },
+      "immediate_actions": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "recommended_owner": {
+        "type": "string"
+      },
+      "severity": {
+        "enum": [
+          "low",
+          "normal",
+          "high",
+          "urgent"
+        ],
+        "type": "string"
+      },
+      "severity_reasoning": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "severity",
+      "severity_reasoning",
+      "recommended_owner",
+      "immediate_actions"
+    ],
+    "type": "object"
+  },
+  "permissions": {
+    "grants": [
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "signals",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "tickets",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "incidents",
+        "resource_type": "datastore_table"
+      }
+    ]
+  },
+  "toolsets": [],
+  "visibility": "POD"
+}

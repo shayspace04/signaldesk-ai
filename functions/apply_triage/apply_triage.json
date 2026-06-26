@@ -1,0 +1,34 @@
+{
+  "code": {
+    "$file": "code.py"
+  },
+  "code_hash": "e0ca534d8e7e2aee4bc27a7cc9b5112efeb723d4ba77e14c7ad1be8b2625bd46",
+  "config": null,
+  "description": "Persist the triage-agent's classification onto the ticket row: priority, category, sentiment, summary, reasoning, status=triaged, triaged_at, sla_due_at.",
+  "icon_url": null,
+  "name": "apply_triage",
+  "permissions": {
+    "grants": [
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "tickets",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "audit_logs",
+        "resource_type": "datastore_table"
+      }
+    ]
+  },
+  "python_packages": [],
+  "type": "API",
+  "visibility": "POD"
+}

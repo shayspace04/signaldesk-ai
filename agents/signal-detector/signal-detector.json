@@ -1,0 +1,100 @@
+{
+  "agent_runtime": null,
+  "description": "Scans resolved tickets, finds recurring patterns, and PROPOSES operational signals (returns proposals; the create_signal function persists them).",
+  "icon_url": null,
+  "input_schema": null,
+  "instruction": {
+    "$file": "instruction.md"
+  },
+  "metadata": null,
+  "name": "signal-detector",
+  "output_schema": {
+    "properties": {
+      "notes": {
+        "type": "string"
+      },
+      "scanned_count": {
+        "type": "integer"
+      },
+      "signals": {
+        "items": {
+          "properties": {
+            "category": {
+              "type": "string"
+            },
+            "evidence_count": {
+              "type": "integer"
+            },
+            "example_ticket_ids": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "name": {
+              "maxLength": 200,
+              "type": "string"
+            },
+            "proposed_priority": {
+              "enum": [
+                "low",
+                "normal",
+                "high",
+                "urgent"
+              ],
+              "type": "string"
+            },
+            "recurring_terms": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "summary": {
+              "maxLength": 1200,
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "summary",
+            "category",
+            "evidence_count",
+            "proposed_priority"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      }
+    },
+    "required": [
+      "signals",
+      "scanned_count"
+    ],
+    "type": "object"
+  },
+  "permissions": {
+    "grants": [
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "signals",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "tickets",
+        "resource_type": "datastore_table"
+      }
+    ]
+  },
+  "toolsets": [
+    "POD"
+  ],
+  "visibility": "POD"
+}

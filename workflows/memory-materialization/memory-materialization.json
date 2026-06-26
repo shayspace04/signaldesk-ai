@@ -1,0 +1,135 @@
+{
+  "description": "Approved signal -> memory-agent synthesizes enriched memory narrative -> materialize_signal persists memory entry with root cause + recommended action + evidence, opens incident if high/urgent.",
+  "edges": [
+    {
+      "id": "e1",
+      "label": null,
+      "source": "pick",
+      "target": "mem"
+    },
+    {
+      "id": "e2",
+      "label": null,
+      "source": "mem",
+      "target": "materialize"
+    },
+    {
+      "id": "e3",
+      "label": null,
+      "source": "materialize",
+      "target": "end"
+    }
+  ],
+  "icon_url": null,
+  "mode": "GLOBAL",
+  "name": "memory-materialization",
+  "nodes": [
+    {
+      "config": {
+        "assignee_pod_member_id": null,
+        "assignee_pod_member_id_expression": null,
+        "input_schema": {
+          "properties": {
+            "signal_id": {
+              "description": "UUID of an approved signal to materialize into memory",
+              "type": "string"
+            }
+          },
+          "required": [
+            "signal_id"
+          ],
+          "type": "object"
+        },
+        "ui_schema": null
+      },
+      "id": "pick",
+      "label": "Pick approved signal",
+      "position": null,
+      "type": "FORM"
+    },
+    {
+      "config": {
+        "agent_name": "memory-agent",
+        "input_mapping": {
+          "signal_id": {
+            "optional": false,
+            "type": "expression",
+            "value": "pick.signal_id"
+          }
+        }
+      },
+      "id": "mem",
+      "label": "Synthesize memory narrative",
+      "position": null,
+      "type": "AGENT"
+    },
+    {
+      "config": {
+        "function_name": "materialize_signal",
+        "input_mapping": {
+          "confidence": {
+            "optional": true,
+            "type": "expression",
+            "value": "mem.confidence"
+          },
+          "memory_body": {
+            "optional": true,
+            "type": "expression",
+            "value": "mem.body"
+          },
+          "memory_recommended_action": {
+            "optional": true,
+            "type": "expression",
+            "value": "mem.recommended_action"
+          },
+          "memory_root_cause": {
+            "optional": true,
+            "type": "expression",
+            "value": "mem.root_cause"
+          },
+          "memory_summary": {
+            "optional": true,
+            "type": "expression",
+            "value": "mem.summary"
+          },
+          "memory_supporting_evidence": {
+            "optional": true,
+            "type": "expression",
+            "value": "mem.supporting_evidence"
+          },
+          "memory_title": {
+            "optional": true,
+            "type": "expression",
+            "value": "mem.title"
+          },
+          "signal_id": {
+            "optional": false,
+            "type": "expression",
+            "value": "pick.signal_id"
+          },
+          "tags": {
+            "optional": true,
+            "type": "expression",
+            "value": "mem.tags"
+          }
+        }
+      },
+      "id": "materialize",
+      "label": "Materialize into memory",
+      "position": null,
+      "type": "FUNCTION"
+    },
+    {
+      "config": {},
+      "id": "end",
+      "label": "Done",
+      "position": null,
+      "type": "END"
+    }
+  ],
+  "start": {
+    "config": null,
+    "type": "MANUAL"
+  },
+  "visibility": "POD"
+}

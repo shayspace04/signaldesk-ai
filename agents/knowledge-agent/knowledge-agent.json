@@ -1,0 +1,73 @@
+{
+  "agent_runtime": null,
+  "description": "Searches the /knowledge support docs for a ticket and returns cited, relevant snippets. Does not draft or write anything.",
+  "icon_url": null,
+  "input_schema": null,
+  "instruction": {
+    "$file": "instruction.md"
+  },
+  "metadata": null,
+  "name": "knowledge-agent",
+  "output_schema": {
+    "properties": {
+      "notes": {
+        "type": "string"
+      },
+      "query": {
+        "type": "string"
+      },
+      "snippets": {
+        "items": {
+          "properties": {
+            "page": {
+              "type": "integer"
+            },
+            "path": {
+              "type": "string"
+            },
+            "relevance": {
+              "type": "string"
+            },
+            "snippet": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "snippet"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      }
+    },
+    "required": [
+      "query",
+      "snippets"
+    ],
+    "type": "object"
+  },
+  "permissions": {
+    "grants": [
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "tickets",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "folder.read"
+        ],
+        "resource_name": "/knowledge",
+        "resource_type": "folder"
+      }
+    ]
+  },
+  "toolsets": [
+    "POD"
+  ],
+  "visibility": "POD"
+}

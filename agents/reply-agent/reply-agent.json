@@ -1,0 +1,86 @@
+{
+  "agent_runtime": null,
+  "description": "Drafts a customer reply grounded in /knowledge docs and writes a pending draft row. Never sends; humans approve.",
+  "icon_url": null,
+  "input_schema": {},
+  "instruction": {
+    "$file": "instruction.md"
+  },
+  "metadata": null,
+  "name": "reply-agent",
+  "output_schema": {
+    "properties": {
+      "body": {
+        "type": "string"
+      },
+      "confidence": {
+        "maximum": 100,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "grounded_in": {
+        "items": {
+          "properties": {
+            "page": {
+              "type": "integer"
+            },
+            "path": {
+              "type": "string"
+            },
+            "snippet": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "snippet"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "notes": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "body",
+      "grounded_in",
+      "confidence"
+    ],
+    "type": "object"
+  },
+  "permissions": {
+    "grants": [
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "tickets",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "drafts",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "folder.read",
+          "folder.write"
+        ],
+        "resource_name": "/knowledge",
+        "resource_type": "folder"
+      }
+    ]
+  },
+  "toolsets": [
+    "POD"
+  ],
+  "visibility": "POD"
+}

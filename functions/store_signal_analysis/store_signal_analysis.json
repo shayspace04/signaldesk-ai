@@ -1,0 +1,34 @@
+{
+  "code": {
+    "$file": "code.py"
+  },
+  "code_hash": "dc31c45a93a216062e19a8bde072343a17add832658345042d968ff9374b623a",
+  "config": null,
+  "description": "Persist the memory-agent's root cause analysis (root_cause, suggested_action, analysis_confidence, expected_impact, business_priority) onto the signals row and write an audit log.",
+  "icon_url": null,
+  "name": "store_signal_analysis",
+  "permissions": {
+    "grants": [
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "signals",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "audit_logs",
+        "resource_type": "datastore_table"
+      }
+    ]
+  },
+  "python_packages": [],
+  "type": "API",
+  "visibility": "POD"
+}

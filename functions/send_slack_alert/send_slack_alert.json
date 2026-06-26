@@ -1,0 +1,41 @@
+{
+  "code": {
+    "$file": "code.py"
+  },
+  "code_hash": "d76c556c4764bc90acda50f9f7e27a61a541dddc3bbf925f3997b591d0c49dec",
+  "config": null,
+  "description": "Send (or simulate) a Slack alert for high/critical incidents. Records in audit log.",
+  "icon_url": null,
+  "name": "send_slack_alert",
+  "permissions": {
+    "grants": [
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "signals",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "incidents",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "audit_logs",
+        "resource_type": "datastore_table"
+      }
+    ]
+  },
+  "python_packages": [],
+  "type": "API",
+  "visibility": "POD"
+}

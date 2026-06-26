@@ -1,0 +1,6 @@
+{
+  "description": "I need a support operations workspace.  Support tickets arrive from customers.  A triage agent categorizes them.  A knowledge agent searches support documentation.  A reply agent drafts responses.  Support agents approve replies.  Recurring complaints are grouped into operational signals.  Managers approve operational signals.  Signals become part of organizational memory.  Support teams can track tickets, approvals, incidents, and signals from dedicated desks.\nAI-built starter.\nConnectors can be connected later.",
+  "format_version": 2,
+  "icon_url": null,
+  "name": "Team Knowledge App"
+}

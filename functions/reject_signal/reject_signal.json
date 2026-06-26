@@ -1,0 +1,43 @@
+{
+  "code": {
+    "$file": "code.py"
+  },
+  "code_hash": "6c45abdc2a88e0767f8542d93c3db66fa0abb06fac5612038ad734f57c1c8a85",
+  "config": null,
+  "description": "Manager rejects a proposed signal: flip status to rejected and record the rejection.",
+  "icon_url": null,
+  "name": "reject_signal",
+  "permissions": {
+    "grants": [
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "signals",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "audit_logs",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "approvals",
+        "resource_type": "datastore_table"
+      }
+    ]
+  },
+  "python_packages": [],
+  "type": "API",
+  "visibility": "POD"
+}

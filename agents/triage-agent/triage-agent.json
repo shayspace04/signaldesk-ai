@@ -1,0 +1,73 @@
+{
+  "agent_runtime": null,
+  "description": "Classifies inbound support tickets (priority, category, sentiment, summary) and writes the result back to the ticket row.",
+  "icon_url": null,
+  "input_schema": null,
+  "instruction": {
+    "$file": "instruction.md"
+  },
+  "metadata": null,
+  "name": "triage-agent",
+  "output_schema": {
+    "properties": {
+      "category": {
+        "type": "string"
+      },
+      "priority": {
+        "enum": [
+          "low",
+          "normal",
+          "high",
+          "urgent"
+        ],
+        "type": "string"
+      },
+      "reasoning": {
+        "maxLength": 1200,
+        "type": "string"
+      },
+      "sentiment": {
+        "enum": [
+          "calm",
+          "frustrated",
+          "angry",
+          "churn_risk"
+        ],
+        "type": "string"
+      },
+      "sla_first_reply_hours": {
+        "type": "integer"
+      },
+      "summary": {
+        "maxLength": 600,
+        "type": "string"
+      }
+    },
+    "required": [
+      "priority",
+      "category",
+      "sentiment",
+      "summary",
+      "reasoning",
+      "sla_first_reply_hours"
+    ],
+    "type": "object"
+  },
+  "permissions": {
+    "grants": [
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "tickets",
+        "resource_type": "datastore_table"
+      }
+    ]
+  },
+  "toolsets": [
+    "POD"
+  ],
+  "visibility": "POD"
+}
