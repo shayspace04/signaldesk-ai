@@ -1,0 +1,126 @@
+{
+  "description": "Root Cause Explorer: pick an approved signal, run memory-agent to produce a 5-field root cause analysis, persist root_cause/suggested_action/analysis_confidence/expected_impact/business_priority onto the signal row.",
+  "edges": [
+    {
+      "id": "e1",
+      "label": null,
+      "source": "pick",
+      "target": "mem"
+    },
+    {
+      "id": "e2",
+      "label": null,
+      "source": "mem",
+      "target": "store"
+    },
+    {
+      "id": "e3",
+      "label": null,
+      "source": "store",
+      "target": "end"
+    }
+  ],
+  "icon_url": null,
+  "mode": "GLOBAL",
+  "name": "root-cause-analysis",
+  "nodes": [
+    {
+      "config": {
+        "assignee_pod_member_id": null,
+        "assignee_pod_member_id_expression": null,
+        "input_schema": {
+          "properties": {
+            "signal_id": {
+              "description": "The approved signal to analyze.",
+              "title": "Signal ID",
+              "type": "string"
+            }
+          },
+          "required": [
+            "signal_id"
+          ],
+          "type": "object"
+        },
+        "ui_schema": null
+      },
+      "id": "pick",
+      "label": "Pick Signal",
+      "position": null,
+      "type": "FORM"
+    },
+    {
+      "config": {
+        "agent_name": "memory-agent",
+        "input_mapping": {
+          "signal_id": {
+            "optional": false,
+            "type": "expression",
+            "value": "pick.signal_id"
+          }
+        }
+      },
+      "id": "mem",
+      "label": "Analyze Root Cause",
+      "position": null,
+      "type": "AGENT"
+    },
+    {
+      "config": {
+        "function_name": "store_signal_analysis",
+        "input_mapping": {
+          "analysis_confidence": {
+            "optional": false,
+            "type": "expression",
+            "value": "mem.confidence"
+          },
+          "business_priority": {
+            "optional": false,
+            "type": "expression",
+            "value": "mem.business_priority"
+          },
+          "expected_impact": {
+            "optional": false,
+            "type": "expression",
+            "value": "mem.expected_impact"
+          },
+          "root_cause": {
+            "optional": false,
+            "type": "expression",
+            "value": "mem.root_cause"
+          },
+          "signal_id": {
+            "optional": false,
+            "type": "expression",
+            "value": "pick.signal_id"
+          },
+          "suggested_action": {
+            "optional": false,
+            "type": "expression",
+            "value": "mem.recommended_action"
+          },
+          "supporting_evidence": {
+            "optional": false,
+            "type": "expression",
+            "value": "mem.supporting_evidence"
+          }
+        }
+      },
+      "id": "store",
+      "label": "Store Analysis",
+      "position": null,
+      "type": "FUNCTION"
+    },
+    {
+      "config": {},
+      "id": "end",
+      "label": "Done",
+      "position": null,
+      "type": "END"
+    }
+  ],
+  "start": {
+    "config": null,
+    "type": "MANUAL"
+  },
+  "visibility": "POD"
+}

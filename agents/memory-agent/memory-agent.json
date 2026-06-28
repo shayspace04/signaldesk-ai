@@ -1,0 +1,103 @@
+{
+  "agent_runtime": null,
+  "description": "Root Cause Explorer: analyzes an approved signal's evidence tickets and produces a structured root cause analysis (root cause, confidence, suggested action, expected impact, business priority) plus a memory narrative. Does not write; store_signal_analysis / materialize_signal persist it.",
+  "icon_url": null,
+  "input_schema": null,
+  "instruction": {
+    "$file": "instruction.md"
+  },
+  "metadata": null,
+  "name": "memory-agent",
+  "output_schema": {
+    "properties": {
+      "body": {
+        "type": "string"
+      },
+      "business_priority": {
+        "type": "string"
+      },
+      "confidence": {
+        "maximum": 100,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "expected_impact": {
+        "type": "string"
+      },
+      "recommended_action": {
+        "type": "string"
+      },
+      "root_cause": {
+        "type": "string"
+      },
+      "summary": {
+        "type": "string"
+      },
+      "supporting_evidence": {
+        "items": {
+          "properties": {
+            "category": {
+              "type": "string"
+            },
+            "customer": {
+              "type": "string"
+            },
+            "priority": {
+              "type": "string"
+            },
+            "ticket_number": {
+              "type": "integer"
+            },
+            "title": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "tags": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "title",
+      "body",
+      "summary",
+      "root_cause",
+      "recommended_action",
+      "confidence"
+    ],
+    "type": "object"
+  },
+  "permissions": {
+    "grants": [
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "signals",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "tickets",
+        "resource_type": "datastore_table"
+      }
+    ]
+  },
+  "toolsets": [
+    "POD"
+  ],
+  "visibility": "POD"
+}

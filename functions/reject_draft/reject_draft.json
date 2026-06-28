@@ -1,0 +1,52 @@
+{
+  "code": {
+    "$file": "code.py"
+  },
+  "code_hash": "9283c0d533b17fe356ca501cc7cf9c135d30b2784a344c9da49f2f5e7ec3bbf2",
+  "config": null,
+  "description": "Support agent rejects a draft: mark rejected, return ticket to triaged, and record the rejection.",
+  "icon_url": null,
+  "name": "reject_draft",
+  "permissions": {
+    "grants": [
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "tickets",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "drafts",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "audit_logs",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "approvals",
+        "resource_type": "datastore_table"
+      }
+    ]
+  },
+  "python_packages": [],
+  "type": "API",
+  "visibility": "POD"
+}

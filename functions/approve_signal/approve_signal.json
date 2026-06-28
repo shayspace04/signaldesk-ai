@@ -1,0 +1,60 @@
+{
+  "code": {
+    "$file": "code.py"
+  },
+  "code_hash": "7cee4b63afc982db5ccf522b6f90a7a02af13169f34465a17c27b43c7255c503",
+  "config": null,
+  "description": "Manager approves a proposed signal: flip status, record approval, calculate impact scores, auto-create incident if criteria met, send Slack alert for high/critical.",
+  "icon_url": null,
+  "name": "approve_signal",
+  "permissions": {
+    "grants": [
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "signals",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "tickets",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "incidents",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "audit_logs",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "approvals",
+        "resource_type": "datastore_table"
+      }
+    ]
+  },
+  "python_packages": [],
+  "type": "API",
+  "visibility": "POD"
+}

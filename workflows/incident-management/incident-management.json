@@ -1,0 +1,194 @@
+{
+  "description": "Signal -> severity assessment (agent) -> incident creation (function) -> manager review (form) -> owner assignment -> resolution tracking.",
+  "edges": [
+    {
+      "id": "e1",
+      "label": null,
+      "source": "pick_signal",
+      "target": "assess_severity"
+    },
+    {
+      "id": "e2",
+      "label": null,
+      "source": "assess_severity",
+      "target": "create_incident"
+    },
+    {
+      "id": "e3",
+      "label": null,
+      "source": "create_incident",
+      "target": "manager_review"
+    },
+    {
+      "id": "e4",
+      "label": null,
+      "source": "manager_review",
+      "target": "review_decision"
+    },
+    {
+      "id": "e5",
+      "label": "rejected (default)",
+      "source": "review_decision",
+      "target": "end"
+    },
+    {
+      "id": "e6",
+      "label": null,
+      "source": "assign_owner",
+      "target": "end"
+    }
+  ],
+  "icon_url": null,
+  "mode": "GLOBAL",
+  "name": "incident-management",
+  "nodes": [
+    {
+      "config": {
+        "assignee_pod_member_id": null,
+        "assignee_pod_member_id_expression": null,
+        "input_schema": {
+          "properties": {
+            "signal_id": {
+              "description": "UUID of an approved signal to assess for incident creation",
+              "type": "string"
+            }
+          },
+          "required": [
+            "signal_id"
+          ],
+          "type": "object"
+        },
+        "ui_schema": null
+      },
+      "id": "pick_signal",
+      "label": "Select signal for incident assessment",
+      "position": null,
+      "type": "FORM"
+    },
+    {
+      "config": {
+        "agent_name": "severity-assessor",
+        "input_mapping": {
+          "signal_id": {
+            "optional": false,
+            "type": "expression",
+            "value": "pick_signal.signal_id"
+          }
+        }
+      },
+      "id": "assess_severity",
+      "label": "Severity assessment",
+      "position": null,
+      "type": "AGENT"
+    },
+    {
+      "config": {
+        "function_name": "link_incident",
+        "input_mapping": {
+          "description": {
+            "optional": true,
+            "type": "expression",
+            "value": "assess_severity.estimated_blast_radius"
+          },
+          "severity": {
+            "optional": true,
+            "type": "expression",
+            "value": "assess_severity.severity"
+          },
+          "signal_id": {
+            "optional": false,
+            "type": "expression",
+            "value": "pick_signal.signal_id"
+          },
+          "summary": {
+            "optional": true,
+            "type": "expression",
+            "value": "assess_severity.severity_reasoning"
+          }
+        }
+      },
+      "id": "create_incident",
+      "label": "Create incident",
+      "position": null,
+      "type": "FUNCTION"
+    },
+    {
+      "config": {
+        "assignee_pod_member_id": null,
+        "assignee_pod_member_id_expression": null,
+        "input_schema": {
+          "properties": {
+            "approved": {
+              "description": "Approve the incident and assign an owner?",
+              "type": "boolean"
+            },
+            "notes": {
+              "description": "Manager notes",
+              "type": "string"
+            },
+            "owner_user_id": {
+              "description": "User ID to assign as incident owner",
+              "type": "string"
+            }
+          },
+          "required": [
+            "approved"
+          ],
+          "type": "object"
+        },
+        "ui_schema": null
+      },
+      "id": "manager_review",
+      "label": "Manager review",
+      "position": null,
+      "type": "FORM"
+    },
+    {
+      "config": {
+        "rules": [
+          {
+            "condition": "manager_review.approved == `true`",
+            "next_node_id": "assign_owner"
+          }
+        ]
+      },
+      "id": "review_decision",
+      "label": "Approved?",
+      "position": null,
+      "type": "DECISION"
+    },
+    {
+      "config": {
+        "function_name": "assign_incident",
+        "input_mapping": {
+          "incident_id": {
+            "optional": false,
+            "type": "expression",
+            "value": "create_incident.incident_id"
+          },
+          "owner_user_id": {
+            "optional": true,
+            "type": "expression",
+            "value": "manager_review.owner_user_id"
+          }
+        }
+      },
+      "id": "assign_owner",
+      "label": "Assign owner",
+      "position": null,
+      "type": "FUNCTION"
+    },
+    {
+      "config": {},
+      "id": "end",
+      "label": "Incident tracked",
+      "position": null,
+      "type": "END"
+    }
+  ],
+  "start": {
+    "config": null,
+    "type": "MANUAL"
+  },
+  "visibility": "POD"
+}

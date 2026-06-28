@@ -1,0 +1,34 @@
+{
+  "code": {
+    "$file": "code.py"
+  },
+  "code_hash": "d122f5bd5dab4da09d6c4239a3924eab13b9c4516d85c7dfbb114d1971341649",
+  "config": null,
+  "description": "Resolve an incident: set status=closed, record resolution notes, and write audit log.",
+  "icon_url": null,
+  "name": "resolve_incident",
+  "permissions": {
+    "grants": [
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "incidents",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "audit_logs",
+        "resource_type": "datastore_table"
+      }
+    ]
+  },
+  "python_packages": [],
+  "type": "API",
+  "visibility": "POD"
+}

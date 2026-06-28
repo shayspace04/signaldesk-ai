@@ -1,0 +1,27 @@
+{
+  "account_id": "019ef9cc-4470-7634-b03f-c8069048f1af",
+  "agent_name": null,
+  "config": {
+    "interval": 2,
+    "labelIds": "INBOX",
+    "platform": "gmail",
+    "provider_trigger_id": "ti_6mzIirSN0AmR",
+    "query": "label:inbox -from:shayelpanda@gmail.com",
+    "source": "agent_surfaces_email",
+    "surface_id": "019efb19-a26d-768f-94ae-0fd2bb0f84f6",
+    "userId": "me"
+  },
+  "connector_trigger_id": "gmail:composio:gmail_new_gmail_message",
+  "filter_instruction": null,
+  "filter_output_schema": null,
+  "is_active": false,
+  "is_internal": false,
+  "last_error": null,
+  "last_fire_status": null,
+  "last_fired_at": null,
+  "last_run_id": null,
+  "name": "agent_surface_gmail_019efb19",
+  "schedule_type": "WEBHOOK",
+  "visibility": "PERSONAL",
+  "workflow_name": null
+}

@@ -1,0 +1,42 @@
+{
+  "code": {
+    "$file": "code.py"
+  },
+  "code_hash": "44d7df71052a081d0e83fd30a8683cbf4347304ccf6d756a907e1100f535b80e",
+  "config": null,
+  "description": "Create a standalone organizational memory entry.",
+  "icon_url": null,
+  "name": "create_memory_entry",
+  "permissions": {
+    "grants": [
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "signals",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "memory_entries",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "audit_logs",
+        "resource_type": "datastore_table"
+      }
+    ]
+  },
+  "python_packages": [],
+  "type": "API",
+  "visibility": "POD"
+}

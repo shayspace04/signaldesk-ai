@@ -1,0 +1,34 @@
+{
+  "code": {
+    "$file": "code.py"
+  },
+  "code_hash": "467a0b16985691210819636c517e33438e26c1e67f49604f43df1b88d47e1374",
+  "config": null,
+  "description": "Calculate and store frequency/customer-impact/business-impact/priority scores for a signal.",
+  "icon_url": null,
+  "name": "calculate_signal_impact",
+  "permissions": {
+    "grants": [
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "signals",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "tickets",
+        "resource_type": "datastore_table"
+      }
+    ]
+  },
+  "python_packages": [],
+  "type": "API",
+  "visibility": "POD"
+}

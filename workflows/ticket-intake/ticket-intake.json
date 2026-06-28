@@ -1,0 +1,321 @@
+{
+  "description": "Customer ticket intake pipeline: create ticket -> triage (agent) -> apply_triage (persist) -> knowledge search -> reply draft (agent) -> create_draft (persist pending) -> mark waiting_approval. A support agent then approves/rejects the draft in the Approval Desk (resolve_ticket / reject_draft).",
+  "edges": [
+    {
+      "id": "e_intake_create",
+      "label": null,
+      "source": "intake",
+      "target": "create"
+    },
+    {
+      "id": "e_create_triage",
+      "label": null,
+      "source": "create",
+      "target": "triage"
+    },
+    {
+      "id": "e_triage_apply",
+      "label": null,
+      "source": "triage",
+      "target": "apply_triage"
+    },
+    {
+      "id": "e_apply_knowledge",
+      "label": null,
+      "source": "apply_triage",
+      "target": "knowledge"
+    },
+    {
+      "id": "e_knowledge_reply",
+      "label": null,
+      "source": "knowledge",
+      "target": "reply"
+    },
+    {
+      "id": "e_reply_draft",
+      "label": null,
+      "source": "reply",
+      "target": "create_draft"
+    },
+    {
+      "id": "e_draft_mark",
+      "label": null,
+      "source": "create_draft",
+      "target": "mark_waiting"
+    },
+    {
+      "id": "e_mark_waiting_end",
+      "label": null,
+      "source": "mark_waiting",
+      "target": "end"
+    }
+  ],
+  "icon_url": null,
+  "mode": "GLOBAL",
+  "name": "ticket-intake",
+  "nodes": [
+    {
+      "config": {
+        "assignee_pod_member_id": null,
+        "assignee_pod_member_id_expression": null,
+        "input_schema": {
+          "properties": {
+            "body": {
+              "type": "string"
+            },
+            "channel": {
+              "default": "email",
+              "enum": [
+                "email",
+                "chat",
+                "phone",
+                "in_app"
+              ],
+              "type": "string"
+            },
+            "customer_email": {
+              "type": "string"
+            },
+            "customer_name": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "title",
+            "body",
+            "customer_email"
+          ],
+          "type": "object"
+        },
+        "ui_schema": {
+          "ui:order": [
+            "title",
+            "customer_name",
+            "customer_email",
+            "channel",
+            "body"
+          ]
+        }
+      },
+      "id": "intake",
+      "label": "Customer ticket intake",
+      "position": null,
+      "type": "FORM"
+    },
+    {
+      "config": {
+        "function_name": "create_ticket",
+        "input_mapping": {
+          "body": {
+            "optional": false,
+            "type": "expression",
+            "value": "intake.body"
+          },
+          "channel": {
+            "optional": true,
+            "type": "expression",
+            "value": "intake.channel"
+          },
+          "customer_email": {
+            "optional": false,
+            "type": "expression",
+            "value": "intake.customer_email"
+          },
+          "customer_name": {
+            "optional": true,
+            "type": "expression",
+            "value": "intake.customer_name"
+          },
+          "title": {
+            "optional": false,
+            "type": "expression",
+            "value": "intake.title"
+          }
+        }
+      },
+      "id": "create",
+      "label": "Create ticket",
+      "position": null,
+      "type": "FUNCTION"
+    },
+    {
+      "config": {
+        "agent_name": "triage-agent",
+        "input_mapping": {
+          "record_id": {
+            "optional": false,
+            "type": "expression",
+            "value": "create.ticket_id"
+          }
+        }
+      },
+      "id": "triage",
+      "label": "Triage ticket",
+      "position": null,
+      "type": "AGENT"
+    },
+    {
+      "config": {
+        "function_name": "apply_triage",
+        "input_mapping": {
+          "category": {
+            "optional": false,
+            "type": "expression",
+            "value": "triage.category"
+          },
+          "priority": {
+            "optional": false,
+            "type": "expression",
+            "value": "triage.priority"
+          },
+          "reasoning": {
+            "optional": true,
+            "type": "expression",
+            "value": "triage.reasoning"
+          },
+          "sentiment": {
+            "optional": false,
+            "type": "expression",
+            "value": "triage.sentiment"
+          },
+          "sla_first_reply_hours": {
+            "optional": false,
+            "type": "expression",
+            "value": "triage.sla_first_reply_hours"
+          },
+          "summary": {
+            "optional": false,
+            "type": "expression",
+            "value": "triage.summary"
+          },
+          "ticket_id": {
+            "optional": false,
+            "type": "expression",
+            "value": "create.ticket_id"
+          }
+        }
+      },
+      "id": "apply_triage",
+      "label": "Apply triage to ticket",
+      "position": null,
+      "type": "FUNCTION"
+    },
+    {
+      "config": {
+        "agent_name": "knowledge-agent",
+        "input_mapping": {
+          "ticket_id": {
+            "optional": false,
+            "type": "expression",
+            "value": "create.ticket_id"
+          }
+        }
+      },
+      "id": "knowledge",
+      "label": "Search knowledge",
+      "position": null,
+      "type": "AGENT"
+    },
+    {
+      "config": {
+        "agent_name": "reply-agent",
+        "input_mapping": {
+          "snippets": {
+            "optional": true,
+            "type": "expression",
+            "value": "knowledge.snippets"
+          },
+          "ticket_id": {
+            "optional": false,
+            "type": "expression",
+            "value": "create.ticket_id"
+          }
+        }
+      },
+      "id": "reply",
+      "label": "Draft reply",
+      "position": null,
+      "type": "AGENT"
+    },
+    {
+      "config": {
+        "function_name": "create_draft",
+        "input_mapping": {
+          "body": {
+            "optional": false,
+            "type": "expression",
+            "value": "reply.body"
+          },
+          "confidence": {
+            "optional": false,
+            "type": "expression",
+            "value": "reply.confidence"
+          },
+          "grounded_in": {
+            "optional": true,
+            "type": "expression",
+            "value": "reply.grounded_in"
+          },
+          "notes": {
+            "optional": true,
+            "type": "expression",
+            "value": "reply.notes"
+          },
+          "ticket_id": {
+            "optional": false,
+            "type": "expression",
+            "value": "create.ticket_id"
+          },
+          "ticket_number": {
+            "optional": true,
+            "type": "expression",
+            "value": "create.ticket_number"
+          }
+        }
+      },
+      "id": "create_draft",
+      "label": "Persist pending draft",
+      "position": null,
+      "type": "FUNCTION"
+    },
+    {
+      "config": {
+        "function_name": "update_status",
+        "input_mapping": {
+          "record_id": {
+            "optional": false,
+            "type": "expression",
+            "value": "create.ticket_id"
+          },
+          "status": {
+            "type": "literal",
+            "value": "waiting_approval"
+          },
+          "table": {
+            "type": "literal",
+            "value": "tickets"
+          }
+        }
+      },
+      "id": "mark_waiting",
+      "label": "Mark awaiting approval",
+      "position": null,
+      "type": "FUNCTION"
+    },
+    {
+      "config": {},
+      "id": "end",
+      "label": "Done",
+      "position": null,
+      "type": "END"
+    }
+  ],
+  "start": {
+    "config": null,
+    "type": "MANUAL"
+  },
+  "visibility": "POD"
+}

@@ -1,0 +1,43 @@
+{
+  "code": {
+    "$file": "code.py"
+  },
+  "code_hash": "cfe4676b693a505dd82dfbd91e803d93913e1fc241adabff3b359a00e61a70fa",
+  "config": null,
+  "description": "Generic validated status update for a ticket or incident, with resolution notes and closed_at for incident resolution.",
+  "icon_url": null,
+  "name": "update_status",
+  "permissions": {
+    "grants": [
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "tickets",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "incidents",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "audit_logs",
+        "resource_type": "datastore_table"
+      }
+    ]
+  },
+  "python_packages": [],
+  "type": "API",
+  "visibility": "POD"
+}

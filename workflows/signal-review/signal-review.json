@@ -1,0 +1,114 @@
+{
+  "description": "Nightly scan of recent resolved tickets. signal-detector proposes recurring patterns; each proposal is persisted as a pending signal by create_signal. Managers approve signals in the Approval Desk.",
+  "edges": [
+    {
+      "id": "e_detect_create_loop",
+      "label": null,
+      "source": "detect",
+      "target": "create_loop"
+    },
+    {
+      "id": "e_create_one_create_loop",
+      "label": null,
+      "source": "create_one",
+      "target": "create_loop"
+    },
+    {
+      "id": "e_create_loop_end",
+      "label": null,
+      "source": "create_loop",
+      "target": "end"
+    }
+  ],
+  "icon_url": null,
+  "mode": "GLOBAL",
+  "name": "signal-review",
+  "nodes": [
+    {
+      "config": {
+        "agent_name": "signal-detector",
+        "input_mapping": {
+          "window_days": {
+            "type": "literal",
+            "value": 7
+          }
+        }
+      },
+      "id": "detect",
+      "label": "Detect recurring signals",
+      "position": null,
+      "type": "AGENT"
+    },
+    {
+      "config": {
+        "child_node_id": "create_one",
+        "item_var_name": "prop",
+        "items_path": "detect.signals"
+      },
+      "id": "create_loop",
+      "label": "Create each proposed signal",
+      "position": null,
+      "type": "LOOP"
+    },
+    {
+      "config": {
+        "function_name": "create_signal",
+        "input_mapping": {
+          "category": {
+            "optional": true,
+            "type": "expression",
+            "value": "loop.prop.category"
+          },
+          "evidence_count": {
+            "optional": true,
+            "type": "expression",
+            "value": "loop.prop.evidence_count"
+          },
+          "example_ticket_ids": {
+            "optional": true,
+            "type": "expression",
+            "value": "loop.prop.example_ticket_ids"
+          },
+          "name": {
+            "optional": false,
+            "type": "expression",
+            "value": "loop.prop.name"
+          },
+          "proposed_priority": {
+            "optional": true,
+            "type": "expression",
+            "value": "loop.prop.proposed_priority"
+          },
+          "recurring_terms": {
+            "optional": true,
+            "type": "expression",
+            "value": "loop.prop.recurring_terms"
+          },
+          "summary": {
+            "optional": false,
+            "type": "expression",
+            "value": "loop.prop.summary"
+          }
+        }
+      },
+      "id": "create_one",
+      "label": "Persist signal proposal",
+      "position": null,
+      "type": "FUNCTION"
+    },
+    {
+      "config": {},
+      "id": "end",
+      "label": "Done",
+      "position": null,
+      "type": "END"
+    }
+  ],
+  "start": {
+    "config": {
+      "schedule_type": "CRON"
+    },
+    "type": "SCHEDULED"
+  },
+  "visibility": "POD"
+}
