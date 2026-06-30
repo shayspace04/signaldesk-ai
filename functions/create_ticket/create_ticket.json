@@ -2,7 +2,6 @@
   "code": {
     "$file": "code.py"
   },
-  "code_hash": "091aa3e7c171c38b63cfb8b3bf9712e15b06ca1cd05662c95a7e4d81554c4dbd",
   "config": null,
   "description": "Write a new ticket row from a submitted intake form.",
   "icon_url": null,
@@ -10,25 +9,26 @@
   "permissions": {
     "grants": [
       {
+        "resource_type": "datastore_table",
+        "resource_name": "tickets",
         "permission_ids": [
           "datastore.record.read",
           "datastore.record.write",
           "datastore.table.read"
-        ],
-        "resource_name": "tickets",
-        "resource_type": "datastore_table"
+        ]
       },
       {
+        "resource_type": "datastore_table",
+        "resource_name": "audit_logs",
         "permission_ids": [
           "datastore.record.write",
           "datastore.table.read"
-        ],
-        "resource_name": "audit_logs",
-        "resource_type": "datastore_table"
+        ]
       }
     ]
   },
   "python_packages": [],
   "type": "API",
-  "visibility": "POD"
+  "visibility": "POD",
+  "code_hash": "69702b6dda92b9fb71e7ab4aad01c37078cd2ce89df627ebf1a1c717b852cc23"
 }

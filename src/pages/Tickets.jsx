@@ -129,22 +129,17 @@ export default function Tickets() {
     const toastId = toast.loading("Creating ticket...");
     setSubmitting(true);
     try {
-      const result = await client.functions.run("create_ticket", {
-        input: {
-          title: form.subject,
-          customer_name: form.customer_name,
-          customer_email: form.customer_email,
-          body: form.description,
-          channel: "email",
-        },
-      });
+      const input = {
+        title: form.subject,
+        customer_name: form.customer_name,
+        customer_email: form.customer_email,
+        body: form.description,
+        channel: "email",
+      };
+      if (form.priority) input.priority = form.priority;
+      if (form.category) input.category = form.category;
+      const result = await client.functions.run("create_ticket", { input });
       const ticketId = result.output_data?.ticket_id || result.ticket_id || result.id;
-      if (form.priority || form.category) {
-        const updates = {};
-        if (form.priority) updates.priority = form.priority;
-        if (form.category) updates.category = form.category;
-        await client.records.update("tickets", ticketId, updates);
-      }
       toast.dismiss(toastId);
       toast.success("Ticket created successfully");
       setShowForm(false);
