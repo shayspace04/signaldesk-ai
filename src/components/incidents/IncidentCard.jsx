@@ -14,21 +14,21 @@ export default function IncidentCard({
 
             ${
                 selected
-                    ? "border-violet-500 bg-violet-500/10"
-                    : "border-zinc-800 bg-zinc-900"
+                    ? "border-violet-500 bg-violet-50"
+                    : "border-[#EFEFEF] bg-white hover:border-zinc-300"
             }
 
             `}
 
         >
 
-            <h3 className="font-semibold">
+            <h3 className="font-semibold text-zinc-900">
 
                 {incident.title}
 
             </h3>
 
-            <p className="mt-2 text-zinc-400">
+            <p className="mt-2 text-zinc-500">
 
                 {incident.summary}
 
@@ -36,13 +36,13 @@ export default function IncidentCard({
 
             <div className="mt-4 flex justify-between">
 
-                <span className="text-red-400">
+                <span className="text-red-600 font-medium">
 
                     {incident.severity}
 
                 </span>
 
-                <span className="text-zinc-500">
+                <span className="text-zinc-400 text-sm">
 
                     {incident.status}
 

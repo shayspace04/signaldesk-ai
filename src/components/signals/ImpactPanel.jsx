@@ -2,9 +2,9 @@ import { Users, Globe, Server } from "lucide-react";
 
 export default function ImpactPanel({ signal }) {
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+    <div className="rounded-2xl border border-[#EFEFEF] bg-white p-6">
 
-      <h2 className="mb-6 text-xl font-semibold">
+      <h2 className="mb-6 text-xl font-semibold text-zinc-900">
 
         Impact Assessment
 
@@ -12,9 +12,9 @@ export default function ImpactPanel({ signal }) {
 
       <div className="grid grid-cols-3 gap-6">
 
-        <div className="rounded-xl bg-zinc-950 p-5">
+        <div className="rounded-xl bg-zinc-50 p-5">
 
-          <Users className="mb-3 text-violet-400" />
+          <Users className="mb-3 text-violet-500" />
 
           <p className="text-zinc-500">
 
@@ -22,7 +22,7 @@ export default function ImpactPanel({ signal }) {
 
           </p>
 
-          <h3 className="mt-2 text-2xl font-bold">
+          <h3 className="mt-2 text-2xl font-bold text-zinc-900">
 
             {signal.affectedUsers}
 
@@ -30,9 +30,9 @@ export default function ImpactPanel({ signal }) {
 
         </div>
 
-        <div className="rounded-xl bg-zinc-950 p-5">
+        <div className="rounded-xl bg-zinc-50 p-5">
 
-          <Globe className="mb-3 text-blue-400" />
+          <Globe className="mb-3 text-blue-500" />
 
           <p className="text-zinc-500">
 
@@ -40,7 +40,7 @@ export default function ImpactPanel({ signal }) {
 
           </p>
 
-          <h3 className="mt-2 text-2xl font-bold">
+          <h3 className="mt-2 text-2xl font-bold text-zinc-900">
 
             {signal.region}
 
@@ -48,9 +48,9 @@ export default function ImpactPanel({ signal }) {
 
         </div>
 
-        <div className="rounded-xl bg-zinc-950 p-5">
+        <div className="rounded-xl bg-zinc-50 p-5">
 
-          <Server className="mb-3 text-orange-400" />
+          <Server className="mb-3 text-orange-500" />
 
           <p className="text-zinc-500">
 
@@ -58,7 +58,7 @@ export default function ImpactPanel({ signal }) {
 
           </p>
 
-          <h3 className="mt-2 text-xl font-bold">
+          <h3 className="mt-2 text-xl font-bold text-zinc-900">
 
             {signal.source}
 

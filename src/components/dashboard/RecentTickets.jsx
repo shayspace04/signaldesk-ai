@@ -2,15 +2,15 @@ import ticketData from "@/data/ticketData";
 
 export default function RecentTickets() {
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+    <div className="rounded-2xl border border-[#EFEFEF] bg-white p-6">
 
       <div className="flex items-center justify-between mb-6">
 
-        <h2 className="text-xl font-semibold">
+        <h2 className="text-lg font-semibold text-zinc-900">
           Recent Tickets
         </h2>
 
-        <button className="text-sm text-violet-400 hover:text-violet-300">
+        <button className="text-sm text-accent hover:opacity-80">
           View All
         </button>
 
@@ -20,17 +20,17 @@ export default function RecentTickets() {
 
         <thead>
 
-          <tr className="border-b border-zinc-800 text-left text-zinc-500">
+          <tr className="border-b border-[#EFEFEF] text-left text-zinc-500">
 
-            <th className="pb-3">ID</th>
+            <th className="pb-3 text-xs font-medium uppercase tracking-wider">ID</th>
 
-            <th className="pb-3">Customer</th>
+            <th className="pb-3 text-xs font-medium uppercase tracking-wider">Customer</th>
 
-            <th className="pb-3">Issue</th>
+            <th className="pb-3 text-xs font-medium uppercase tracking-wider">Issue</th>
 
-            <th className="pb-3">Priority</th>
+            <th className="pb-3 text-xs font-medium uppercase tracking-wider">Priority</th>
 
-            <th className="pb-3">Status</th>
+            <th className="pb-3 text-xs font-medium uppercase tracking-wider">Status</th>
 
           </tr>
 
@@ -42,26 +42,26 @@ export default function RecentTickets() {
 
             <tr
               key={ticket.id}
-              className="border-b border-zinc-800 hover:bg-zinc-800/40 transition"
+              className="border-b border-[#EFEFEF] hover:bg-zinc-50 transition text-sm"
             >
 
-              <td className="py-4">{ticket.id}</td>
+              <td className="py-4 text-zinc-700">{ticket.id}</td>
 
-              <td>{ticket.customer}</td>
+              <td className="text-zinc-700">{ticket.customer}</td>
 
-              <td>{ticket.issue}</td>
+              <td className="text-zinc-700">{ticket.issue}</td>
 
               <td>
 
                 <span
-                  className={`rounded-full px-3 py-1 text-xs
+                  className={`rounded-full px-3 py-1 text-xs font-medium
 
                   ${
                     ticket.priority === "Critical"
-                      ? "bg-red-500/20 text-red-400"
+                      ? "bg-red-100 text-red-700"
                       : ticket.priority === "High"
-                      ? "bg-orange-500/20 text-orange-400"
-                      : "bg-blue-500/20 text-blue-400"
+                      ? "bg-orange-100 text-orange-700"
+                      : "bg-blue-100 text-blue-700"
                   }
 
                   `}
@@ -71,7 +71,7 @@ export default function RecentTickets() {
 
               </td>
 
-              <td className="text-zinc-400">
+              <td className="text-zinc-500">
 
                 {ticket.status}
 

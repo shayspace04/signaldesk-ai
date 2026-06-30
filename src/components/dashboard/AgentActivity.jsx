@@ -2,9 +2,9 @@ import activityData from "@/data/activityData";
 
 export default function AgentActivity() {
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+    <div className="rounded-2xl border border-[#EFEFEF] bg-white p-6">
 
-      <h2 className="text-xl font-semibold mb-6">
+      <h2 className="text-lg font-semibold text-zinc-900 mb-6">
         AI Agent Activity
       </h2>
 
@@ -22,7 +22,7 @@ export default function AgentActivity() {
             >
 
               <div
-                className={`rounded-xl bg-zinc-950 p-3 ${agent.color}`}
+                className={`rounded-xl bg-zinc-100 p-3 ${agent.color}`}
               >
                 <Icon size={18} />
               </div>
@@ -31,17 +31,17 @@ export default function AgentActivity() {
 
                 <div className="flex justify-between">
 
-                  <h3 className="font-medium">
+                  <h3 className="font-medium text-zinc-900">
                     {agent.title}
                   </h3>
 
-                  <span className="text-xs text-zinc-500">
+                  <span className="text-xs text-zinc-400">
                     {agent.time}
                   </span>
 
                 </div>
 
-                <p className="text-sm text-zinc-400 mt-1">
+                <p className="text-sm text-zinc-500 mt-1">
                   {agent.description}
                 </p>
 

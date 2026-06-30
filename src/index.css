@@ -3,16 +3,86 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: oklch(0.145 0 0);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.965 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.965 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --accent: oklch(0.965 0 0);
+    --accent-foreground: oklch(0.205 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --destructive-foreground: oklch(0.577 0.245 27.325);
+    --border: oklch(0.922 0 0);
+    --input: oklch(0.922 0 0);
+    --ring: oklch(0.708 0 0);
+    --radius: 0.625rem;
+    --radius-md: 0.625rem;
+  }
+
   html {
-    font-family: sans-serif;
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
-    @apply bg-zinc-950 text-white;
     margin: 0;
+    background-color: #ffffff;
+    color: #18181b;
   }
 
   * {
     box-sizing: border-box;
+  }
+
+  ::selection {
+    background-color: var(--accent);
+    color: white;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #e4e4e7;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #d4d4d8;
+  }
+}
+
+@layer utilities {
+  .bg-accent { background-color: var(--accent); }
+  .text-accent { color: var(--accent); }
+  .border-accent { border-color: var(--accent); }
+  .hover\:bg-accent:hover { background-color: var(--accent); }
+  .hover\:bg-accent-dark:hover { background-color: var(--accent-dark); }
+  .hover\:border-accent:hover { border-color: var(--accent); }
+  .focus\:border-accent:focus { border-color: var(--accent); }
+  .from-accent { --tw-gradient-from: var(--accent); }
+  .to-accent-dark { --tw-gradient-to: var(--accent-dark); }
+  .ring-accent { --tw-ring-color: var(--accent); }
+
+  .card-hover {
+    transition: border-color 0.15s ease;
+  }
+  .card-hover:hover {
+    border-color: var(--accent);
   }
 }

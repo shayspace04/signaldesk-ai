@@ -6,18 +6,18 @@ export default function DraftCard({ ticket }) {
   const [draft, setDraft] = useState(ticket.draftReply);
 
   return (
-    <div className="rounded-xl border border-violet-700/40 bg-gradient-to-br from-zinc-900 to-zinc-950 p-6">
+    <div className="rounded-xl border border-violet-200 bg-violet-50 p-6">
 
       <div className="flex items-center justify-between">
 
         <div className="flex items-center gap-3">
 
-          <div className="rounded-lg bg-violet-600/20 p-2">
-            <Bot className="text-violet-400" size={20} />
+          <div className="rounded-lg bg-violet-100 p-2">
+            <Bot className="text-violet-600" size={20} />
           </div>
 
           <div>
-            <h2 className="text-xl font-semibold">
+            <h2 className="text-xl font-semibold text-zinc-900">
               AI Draft Reply
             </h2>
 
@@ -29,19 +29,19 @@ export default function DraftCard({ ticket }) {
 
         </div>
 
-        <Sparkles className="text-violet-400" />
+        <Sparkles className="text-violet-500" />
 
       </div>
 
       <textarea
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
-        className="mt-6 h-72 w-full rounded-xl border border-zinc-800 bg-zinc-950 p-5 outline-none resize-none"
+        className="mt-6 h-72 w-full rounded-xl border border-[#EFEFEF] bg-white p-5 text-zinc-900 outline-none resize-none"
       />
 
       <div className="mt-6">
 
-        <h3 className="mb-4 flex items-center gap-2">
+        <h3 className="mb-4 flex items-center gap-2 text-sm font-medium text-zinc-700">
 
           <FileText size={16} />
 
@@ -55,7 +55,7 @@ export default function DraftCard({ ticket }) {
 
             <div
               key={item}
-              className="rounded-lg bg-zinc-900 p-3"
+              className="rounded-lg bg-white border border-[#EFEFEF] p-3 text-sm text-zinc-700"
             >
               {item}
             </div>

@@ -1,0 +1,64 @@
+{
+  "code": "#input_type_name: DetectAndLinkSignalInput\n#output_type_name: DetectAndLinkSignalOutput\n#function_name: detect_and_link_signal\n\"\"\"Detect if a ticket relates to an existing signal, or group similar tickets into a new signal, and create incidents when threshold is met.\"\"\"\nimport re\nfrom typing import Optional, List\nfrom pydantic import BaseModel\nfrom lemma_sdk import FunctionContext, Pod\n\nINCIDENT_TICKET_THRESHOLD = 3\nSIMILARITY_MIN_SCORE = 0.4\n\ndef _audit(pod, action, actor_type=\"system\", actor_user_id=None, actor_agent_name=None, resource_type=None, resource_id=None, ticket_id=None, signal_id=None, details=None):\n    try:\n        row = {\"actor_type\": actor_type, \"action\": action}\n        if actor_user_id: row[\"actor_user_id\"] = actor_user_id\n        if actor_agent_name: row[\"actor_agent_name\"] = actor_agent_name\n        if resource_type: row[\"resource_type\"] = resource_type\n        if resource_id: row[\"resource_id\"] = str(resource_id)\n        if ticket_id: row[\"ticket_id\"] = str(ticket_id)\n        if signal_id: row[\"signal_id\"] = str(signal_id)\n        if details is not None: row[\"details\"] = details\n        pod.records.create(\"audit_logs\", row)\n    except Exception:\n        pass\n\ndef _tokenize(text: str) -> set:\n    return set(re.findall(r'\\b[a-zA-Z]{4,}\\b', text.lower()))\n\ndef _similarity(a: dict, b: dict) -> float:\n    score = 0.0\n    ca = (a.get(\"category\") or \"\").lower()\n    cb = (b.get(\"category\") or \"\").lower()\n    if ca and cb and ca == cb:\n        score += 0.5\n    ta = _tokenize(a.get(\"title\") or \"\")\n    tb = _tokenize(b.get(\"title\") or \"\")\n    if ta and tb:\n        score += 0.3 * (len(ta & tb) / max(len(ta | tb), 1))\n    ba = _tokenize(a.get(\"body\") or \"\")\n    bb = _tokenize(b.get(\"body\") or \"\")\n    if ba and bb:\n        score += 0.2 * (len(ba & bb) / max(len(ba | bb), 1))\n    return score\n\ndef _items(rows):\n    if rows is None:\n        return []\n    if hasattr(rows, \"items\"):\n        return [item.to_dict() for item in rows.items]\n    if isinstance(rows, dict) and \"data\" in rows:\n        return rows[\"data\"]\n    if isinstance(rows, list):\n        return rows\n    return []\n\nclass DetectAndLinkSignalInput(BaseModel):\n    ticket_id: str\n\nclass DetectAndLinkSignalOutput(BaseModel):\n    signal_id: Optional[str] = None\n    incident_id: Optional[str] = None\n    ticket_linked: bool = False\n    signal_created: bool = False\n    incident_created: bool = False\n    ticket_count: int = 0\n\nasync def detect_and_link_signal(ctx: FunctionContext, data: DetectAndLinkSignalInput) -> DetectAndLinkSignalOutput:\n    pod = Pod.from_env()\n    ticket = pod.records.get(\"tickets\", data.ticket_id)\n    if not ticket:\n        raise RuntimeError(f\"ticket {data.ticket_id} not found\")\n\n    result = DetectAndLinkSignalOutput()\n\n    # If ticket already linked to a signal, update evidence count\n    if ticket.get(\"signal_id\"):\n        sig = pod.records.get(\"signals\", ticket[\"signal_id\"])\n        if sig and sig.get(\"status\") not in (\"rejected\", \"memory\"):\n            ids = list(set((sig.get(\"example_ticket_ids\") or []) + [data.ticket_id]))\n            pod.records.update(\"signals\", ticket[\"signal_id\"], {\n                \"evidence_count\": len(ids), \"example_ticket_ids\": ids,\n            })\n            result.signal_id = ticket[\"signal_id\"]\n            result.ticket_linked = True\n            result.ticket_count = len(ids)\n            return result\n\n    # Find similar open tickets (same category to reduce scan)\n    cat_filter = ticket.get(\"category\")\n    try:\n        if cat_filter:\n            rows = pod.records.list(\"tickets\", filter=[{\"field\": \"category\", \"op\": \"eq\", \"value\": cat_filter}], limit=200)\n        else:\n            rows = pod.records.list(\"tickets\", limit=200)\n        all_rows = _items(rows)\n    except Exception:\n        all_rows = _items(pod.records.list(\"tickets\", limit=200))\n    candidates = [t for t in all_rows if t.get(\"id\") != data.ticket_id and t.get(\"status\") != \"resolved\"]\n\n    related = [c for c in candidates if _similarity(ticket, c) >= SIMILARITY_MIN_SCORE]\n    all_ticket_ids = [data.ticket_id] + [t.get(\"id\") for t in related]\n\n    # Check if any related ticket is already in a signal\n    existing_signal_id = None\n    for t in related:\n        sid = t.get(\"signal_id\")\n        if sid:\n            sig = pod.records.get(\"signals\", sid)\n            if sig and sig.get(\"status\") not in (\"rejected\", \"memory\"):\n                existing_signal_id = sid\n                break\n\n    if existing_signal_id:\n        sig = pod.records.get(\"signals\", existing_signal_id)\n        ids = list(set((sig.get(\"example_ticket_ids\") or []) + all_ticket_ids))\n        pod.records.update(\"signals\", existing_signal_id, {\n            \"evidence_count\": len(ids), \"example_ticket_ids\": ids,\n        })\n        for tid in all_ticket_ids:\n            try:\n                pod.records.update(\"tickets\", tid, {\"signal_id\": existing_signal_id})\n            except Exception:\n                pass\n        result.signal_id = existing_signal_id\n        result.ticket_linked = True\n        result.ticket_count = len(ids)\n        _audit(pod, \"signal.updated\", actor_type=\"system\", actor_agent_name=\"signal-detector\",\n               resource_type=\"signal\", resource_id=existing_signal_id, signal_id=existing_signal_id,\n               details={\"evidence_count\": len(ids), \"ticket_ids\": ids, \"previous_count\": len(sig.get(\"example_ticket_ids\") or [])})\n        _audit(pod, \"ticket.linked_to_signal\", actor_type=\"system\", actor_agent_name=\"signal-detector\",\n               resource_type=\"ticket\", resource_id=data.ticket_id, ticket_id=data.ticket_id,\n               signal_id=existing_signal_id,\n               details={\"signal_id\": existing_signal_id, \"ticket_ids\": ids})\n    else:\n        # Build recurring terms from intersection of tokens across all related tickets\n        all_sets = [_tokenize(t.get(\"title\", \"\") + \" \" + t.get(\"body\", \"\")) for t in ([ticket] + related)]\n        common = all_sets[0]\n        for s in all_sets[1:]:\n            common &= s\n        recurring = list(common)[:20] if common else []\n\n        name = f\"{ticket.get('category', 'General')} issue: {ticket.get('title', '')[:120]}\" if related else (ticket.get(\"title\", \"Signal\")[:200])\n        priority = ticket.get(\"priority\", \"normal\")\n\n        sig_result = pod.functions.run(\"create_signal\", {\n            \"input\": {\n                \"name\": name,\n                \"summary\": f\"Automatically detected from {len(all_ticket_ids)} related ticket(s).\",\n                \"category\": ticket.get(\"category\"),\n                \"evidence_count\": len(all_ticket_ids),\n                \"example_ticket_ids\": all_ticket_ids,\n                \"recurring_terms\": recurring,\n                \"proposed_priority\": priority,\n            }\n        })\n        od = sig_result.get(\"output_data\") or {}\n        signal_id = od.get(\"signal_id\") or sig_result.get(\"signal_id\")\n\n        for tid in all_ticket_ids:\n            try:\n                pod.records.update(\"tickets\", tid, {\"signal_id\": signal_id})\n            except Exception:\n                pass\n\n        result.signal_id = signal_id\n        result.signal_created = True\n        result.ticket_linked = True\n        result.ticket_count = len(all_ticket_ids)\n        _audit(pod, \"signal.created\", actor_type=\"system\", actor_agent_name=\"signal-detector\",\n               resource_type=\"signal\", resource_id=signal_id, signal_id=signal_id,\n               details={\"name\": name, \"evidence_count\": len(all_ticket_ids)})\n        existing_signal_id = signal_id\n\n    # Check if signal has enough tickets for an incident\n    sig = pod.records.get(\"signals\", existing_signal_id)\n    ticket_count = len(sig.get(\"example_ticket_ids\") or []) or sig.get(\"evidence_count\", 0)\n\n    if ticket_count >= INCIDENT_TICKET_THRESHOLD:\n        try:\n            existing = _items(pod.records.list(\"incidents\", filter=[{\"field\": \"signal_id\", \"op\": \"eq\", \"value\": existing_signal_id}], limit=1))\n            if existing:\n                result.incident_id = existing[0].get(\"id\")\n                # Update affected ticket count on existing incident\n                try:\n                    pod.records.update(\"incidents\", existing[0].get(\"id\"), {\"affected_ticket_count\": ticket_count})\n                except Exception:\n                    pass\n                return result\n        except Exception:\n            pass\n\n        inc_result = pod.functions.run(\"link_incident\", {\n            \"input\": {\n                \"signal_id\": existing_signal_id,\n                \"title\": f\"Incident: {sig.get('name', 'Unknown Signal')[:200]}\",\n                \"severity\": \"normal\",\n                \"status\": \"open\",\n                \"description\": f\"Auto-created by SignalDesk when signal reached {ticket_count} related tickets.\",\n            }\n        })\n        od = inc_result.get(\"output_data\") or {}\n        result.incident_id = od.get(\"incident_id\") or inc_result.get(\"incident_id\")\n        result.incident_created = True\n        _audit(pod, \"incident.created\", actor_type=\"system\", actor_agent_name=\"signal-detector\",\n               resource_type=\"incident\", resource_id=result.incident_id, signal_id=existing_signal_id,\n               details={\"ticket_count\": ticket_count, \"threshold\": INCIDENT_TICKET_THRESHOLD})\n\n    return result\n",
+  "code_hash": null,
+  "config": null,
+  "description": "Detect if a ticket relates to an existing signal, or group similar tickets into a new signal, and create incidents when threshold is met.",
+  "icon_url": null,
+  "name": "detect_and_link_signal",
+  "permissions": {
+    "grants": [
+      {
+        "resource_type": "datastore_table",
+        "resource_name": "tickets",
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ]
+      },
+      {
+        "resource_type": "datastore_table",
+        "resource_name": "signals",
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ]
+      },
+      {
+        "resource_type": "datastore_table",
+        "resource_name": "incidents",
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ]
+      },
+      {
+        "resource_type": "datastore_table",
+        "resource_name": "audit_logs",
+        "permission_ids": [
+          "datastore.record.write",
+          "datastore.table.read"
+        ]
+      },
+      {
+        "resource_type": "function",
+        "resource_name": "create_signal",
+        "permission_ids": [
+          "function.execute"
+        ]
+      },
+      {
+        "resource_type": "function",
+        "resource_name": "link_incident",
+        "permission_ids": [
+          "function.execute"
+        ]
+      }
+    ]
+  },
+  "python_packages": [],
+  "type": "API",
+  "visibility": "POD"
+}

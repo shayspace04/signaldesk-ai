@@ -9,45 +9,45 @@ const services = [
     name: "Triage Agent",
     status: "Online",
     icon: CheckCircle2,
-    color: "text-green-400",
+    color: "text-green-600",
   },
   {
     name: "Knowledge Agent",
     status: "Online",
     icon: CheckCircle2,
-    color: "text-green-400",
+    color: "text-green-600",
   },
   {
     name: "Reply Agent",
     status: "Running",
     icon: Loader2,
-    color: "text-blue-400 animate-spin",
+    color: "text-blue-600 animate-spin",
   },
   {
     name: "Memory Agent",
     status: "Waiting",
     icon: AlertTriangle,
-    color: "text-yellow-400",
+    color: "text-yellow-600",
   },
   {
     name: "Email Connector",
     status: "Connected",
     icon: CheckCircle2,
-    color: "text-green-400",
+    color: "text-green-600",
   },
   {
     name: "Knowledge Base",
     status: "Healthy",
     icon: CheckCircle2,
-    color: "text-green-400",
+    color: "text-green-600",
   },
 ];
 
 export default function SystemHealth() {
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+    <div className="rounded-2xl border border-[#EFEFEF] bg-white p-6">
 
-      <h2 className="mb-6 text-xl font-semibold">
+      <h2 className="mb-6 text-lg font-semibold text-zinc-900">
         System Health
       </h2>
 
@@ -61,7 +61,7 @@ export default function SystemHealth() {
 
             <div
               key={service.name}
-              className="flex items-center justify-between rounded-xl bg-zinc-950 p-4"
+              className="flex items-center justify-between rounded-xl bg-zinc-50 p-4"
             >
 
               <div className="flex items-center gap-3">
@@ -71,7 +71,7 @@ export default function SystemHealth() {
                   className={service.color}
                 />
 
-                <span>
+                <span className="text-sm text-zinc-700">
                   {service.name}
                 </span>
 

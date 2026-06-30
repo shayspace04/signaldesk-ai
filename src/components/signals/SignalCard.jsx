@@ -15,21 +15,21 @@ export default function SignalCard({
 
       ${
         selected
-          ? "border-violet-500 bg-violet-500/10"
-          : "border-zinc-800 bg-zinc-900 hover:border-zinc-700"
+          ? "border-violet-500 bg-violet-50"
+          : "border-[#EFEFEF] bg-white hover:border-zinc-300"
       }`}
     >
       <div className="flex items-center justify-between">
 
         <div>
 
-          <h3 className="font-semibold text-white">
+          <h3 className="font-semibold text-zinc-900">
 
             {signal.title}
 
           </h3>
 
-          <p className="mt-1 text-sm text-zinc-400">
+          <p className="mt-1 text-sm text-zinc-500">
 
             {signal.region}
 
@@ -40,8 +40,8 @@ export default function SignalCard({
         <AlertTriangle
           className={`${
             signal.severity === "Critical"
-              ? "text-red-400"
-              : "text-orange-400"
+              ? "text-red-500"
+              : "text-orange-500"
           }`}
         />
 
@@ -54,8 +54,8 @@ export default function SignalCard({
 
           ${
             signal.severity === "Critical"
-              ? "bg-red-500/20 text-red-400"
-              : "bg-orange-500/20 text-orange-400"
+              ? "bg-red-100 text-red-700"
+              : "bg-orange-100 text-orange-700"
           }`}
         >
           {signal.severity}
@@ -63,7 +63,7 @@ export default function SignalCard({
 
         <ArrowRight
           size={18}
-          className="text-zinc-500"
+          className="text-zinc-400"
         />
 
       </div>

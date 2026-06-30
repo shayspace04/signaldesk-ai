@@ -26,9 +26,9 @@ const actions = [
 
 export default function QuickActions() {
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+    <div className="rounded-2xl border border-[#EFEFEF] bg-white p-6">
 
-      <h2 className="mb-6 text-xl font-semibold">
+      <h2 className="mb-6 text-lg font-semibold text-zinc-900">
 
         Quick Actions
 
@@ -44,11 +44,11 @@ export default function QuickActions() {
 
             <button
               key={action.title}
-              className="rounded-xl border border-zinc-800 bg-zinc-950 p-5 transition hover:border-violet-500 hover:bg-zinc-800"
+              className="rounded-xl border border-[#EFEFEF] bg-white p-5 text-left text-sm text-zinc-700 transition hover:border-violet-500 hover:bg-zinc-50"
             >
 
               <Icon
-                className="mb-3 text-violet-400"
+                className="mb-3 text-violet-500"
                 size={22}
               />
 

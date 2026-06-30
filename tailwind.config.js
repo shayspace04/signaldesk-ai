@@ -5,7 +5,18 @@ export default {
     "./src/**/*.{js,jsx,ts,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+      },
+      borderRadius: {
+        DEFAULT: "12px",
+      },
+      colors: {
+        border: "#EFEFEF",
+        surface: "#FAFAFA",
+      },
+    },
   },
   plugins: [],
 }

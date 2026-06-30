@@ -1,0 +1,53 @@
+{
+  "grants": [
+    {
+      "resource_type": "datastore_table",
+      "resource_name": "tickets",
+      "permission_ids": [
+        "datastore.record.read",
+        "datastore.record.write",
+        "datastore.table.read"
+      ]
+    },
+    {
+      "resource_type": "datastore_table",
+      "resource_name": "signals",
+      "permission_ids": [
+        "datastore.record.read",
+        "datastore.record.write",
+        "datastore.table.read"
+      ]
+    },
+    {
+      "resource_type": "datastore_table",
+      "resource_name": "incidents",
+      "permission_ids": [
+        "datastore.record.read",
+        "datastore.record.write",
+        "datastore.table.read"
+      ]
+    },
+    {
+      "resource_type": "datastore_table",
+      "resource_name": "audit_logs",
+      "permission_ids": [
+        "datastore.record.write",
+        "datastore.table.read"
+      ]
+    },
+    {
+      "resource_type": "function",
+      "resource_name": "create_signal",
+      "permission_ids": [
+        "function.execute"
+      ]
+    },
+    {
+      "resource_type": "function",
+      "resource_name": "link_incident",
+      "permission_ids": [
+        "function.execute"
+      ]
+    }
+  ]
+}

@@ -1,7 +1,10 @@
 import { Search } from "lucide-react";
 import NotificationCenter from "@/components/common/NotificationCenter";
+import { useWorkspace } from "@/context/WorkspaceContext";
 
 export default function Header() {
+  const { workspace } = useWorkspace();
+
   return (
     <header className="flex h-16 items-center justify-between border-b border-zinc-800 bg-zinc-950 px-8">
 
@@ -11,7 +14,7 @@ export default function Header() {
 
         <input
           type="text"
-          placeholder="Search tickets, incidents, signals..."
+          placeholder={`Search ${workspace.name.toLowerCase()} tickets, incidents, signals...`}
           className="w-full bg-transparent outline-none placeholder:text-zinc-500"
         />
 
@@ -21,8 +24,8 @@ export default function Header() {
 
         <NotificationCenter />
 
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-purple-700 font-semibold">
-          S
+        <div className="flex h-10 w-10 items-center justify-center rounded-full font-semibold bg-accent">
+          {workspace.initials}
         </div>
 
       </div>

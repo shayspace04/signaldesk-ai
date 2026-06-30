@@ -22,11 +22,11 @@ export default function CommandPalette() {
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-start justify-center pt-32">
 
-      <Command className="w-[650px] rounded-2xl border border-zinc-800 bg-zinc-950 p-4 shadow-2xl">
+      <Command className="w-[650px] rounded-2xl border border-[#EFEFEF] bg-white p-4 shadow-lg">
 
         <Command.Input
           placeholder="Search pages..."
-          className="w-full border-none bg-transparent p-4 text-lg outline-none"
+          className="w-full border-none bg-transparent p-4 text-lg outline-none text-zinc-900 placeholder-zinc-400"
         />
 
         <Command.List>
@@ -39,7 +39,7 @@ export default function CommandPalette() {
                 navigate(page.path);
                 setOpen(false);
               }}
-              className="cursor-pointer rounded-lg p-4 hover:bg-zinc-800"
+              className="cursor-pointer rounded-lg p-4 text-zinc-700 hover:bg-zinc-100"
             >
               {page.name}
             </Command.Item>

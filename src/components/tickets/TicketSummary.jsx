@@ -1,50 +1,46 @@
-import TicketSummary from "./TicketSummary";
-import TicketTimeline from "./TicketTimeline";
-import TicketActions from "./TicketActions";
+import StatusBadge from "@/components/common/StatusBadge";
+import PriorityBadge from "@/components/common/PriorityBadge";
 
-export default function TicketDrawer({ ticket, onClose }) {
+export default function TicketSummary({ ticket }) {
   if (!ticket) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm">
-
-      <div className="h-screen w-[540px] overflow-y-auto border-l border-zinc-800 bg-zinc-950 p-8">
-
-        <div className="mb-8 flex items-center justify-between">
-
-          <div>
-
-            <h1 className="text-2xl font-bold">
-              {ticket.id}
-            </h1>
-
-            <p className="text-zinc-500">
-              {ticket.customer}
-            </p>
-
-          </div>
-
-          <button
-            onClick={onClose}
-            className="rounded-lg bg-zinc-900 px-3 py-2 hover:bg-zinc-800"
-          >
-            Close
-          </button>
-
+    <div className="rounded-xl border border-[#EFEFEF] bg-white p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-zinc-900">{ticket.title || "Untitled"}</h2>
+        <div className="flex items-center gap-2">
+          <PriorityBadge priority={ticket.priority} />
+          <StatusBadge status={ticket.status} />
         </div>
-
-        <TicketSummary ticket={ticket} />
-
-        <div className="mt-8">
-          <TicketTimeline />
-        </div>
-
-        <div className="mt-8">
-          <TicketActions />
-        </div>
-
       </div>
-
+      <div className="grid grid-cols-2 gap-4 text-sm">
+        <div>
+          <p className="text-zinc-400">Customer</p>
+          <p className="text-zinc-900">{ticket.customer_name || ticket.customer_email || "-"}</p>
+        </div>
+        <div>
+          <p className="text-zinc-400">Email</p>
+          <p className="text-zinc-900">{ticket.customer_email || "-"}</p>
+        </div>
+        {ticket.category && (
+          <div>
+            <p className="text-zinc-400">Category</p>
+            <p className="text-zinc-900 capitalize">{ticket.category.replace(/_/g, " ")}</p>
+          </div>
+        )}
+        {ticket.assignee && (
+          <div>
+            <p className="text-zinc-400">Assignee</p>
+            <p className="text-zinc-900">{ticket.assignee}</p>
+          </div>
+        )}
+      </div>
+      {ticket.body && (
+        <div>
+          <p className="mb-1 text-xs text-zinc-400">Description</p>
+          <p className="text-sm text-zinc-600 leading-relaxed whitespace-pre-wrap line-clamp-4">{ticket.body}</p>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,19 +2,19 @@ import { Brain } from "lucide-react";
 
 export default function RootCausePanel({ signal }) {
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+    <div className="rounded-2xl border border-[#EFEFEF] bg-white p-6">
 
       <div className="flex items-center gap-3">
 
-        <div className="rounded-xl bg-violet-500/20 p-3">
+        <div className="rounded-xl bg-violet-100 p-3">
 
-          <Brain className="text-violet-400" size={22} />
+          <Brain className="text-violet-600" size={22} />
 
         </div>
 
         <div>
 
-          <h2 className="text-xl font-semibold">
+          <h2 className="text-xl font-semibold text-zinc-900">
 
             AI Root Cause Analysis
 
@@ -30,7 +30,7 @@ export default function RootCausePanel({ signal }) {
 
       </div>
 
-      <p className="mt-6 leading-8 text-zinc-300">
+      <p className="mt-6 leading-8 text-zinc-700">
 
         {signal.rootCause}
 

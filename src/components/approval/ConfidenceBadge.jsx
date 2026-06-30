@@ -14,7 +14,7 @@ export default function ConfidenceBadge({ value }) {
         className={`w-3 h-3 rounded-full ${color}`}
       />
 
-      <span className="text-sm text-zinc-300">
+      <span className="text-sm text-zinc-600">
         {value}% Confidence
       </span>
 

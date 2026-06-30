@@ -2,9 +2,9 @@ export default function IncidentTimeline({ incident }) {
 
     return (
 
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+        <div className="rounded-2xl border border-[#EFEFEF] bg-white p-6">
 
-            <h2 className="text-xl font-semibold mb-6">
+            <h2 className="text-lg font-semibold text-zinc-900 mb-6">
 
                 Timeline
 
@@ -23,13 +23,13 @@ export default function IncidentTimeline({ incident }) {
 
                         <div>
 
-                            <p>
+                            <p className="text-zinc-900">
 
                                 {step}
 
                             </p>
 
-                            <span className="text-sm text-zinc-500">
+                            <span className="text-sm text-zinc-400">
 
                                 Step {index + 1}
 

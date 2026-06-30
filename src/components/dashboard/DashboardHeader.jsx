@@ -9,19 +9,19 @@ export default function DashboardHeader() {
 
         <div className="flex items-center gap-3">
 
-          <div className="rounded-xl bg-violet-600/20 p-2">
+          <div className="rounded-xl bg-violet-100 p-2">
 
-            <Sparkles className="text-violet-400" size={20} />
+            <Sparkles className="text-violet-600" size={20} />
 
           </div>
 
           <div>
 
-            <h1 className="text-4xl font-bold tracking-tight text-white">
+            <h1 className="text-4xl font-bold tracking-tight text-zinc-900">
               AI Operations Center
             </h1>
 
-            <p className="mt-1 text-zinc-400">
+            <p className="mt-1 text-zinc-500">
               Monitor incidents, tickets and AI agents in real time.
             </p>
 
