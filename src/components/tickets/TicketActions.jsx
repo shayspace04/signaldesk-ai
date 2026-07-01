@@ -34,8 +34,8 @@ export default function TicketActions({ ticket, onRefresh }) {
   };
 
   return (
-    <div className="rounded-xl border border-[#EFEFEF] bg-white p-6">
-      <h2 className="mb-6 text-lg font-semibold text-zinc-900">Actions</h2>
+    <div className="rounded-xl border border-[#EFEFEF] dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] bg-white p-6">
+      <h2 className="mb-6 text-lg font-semibold text-zinc-900 dark:text-[#FAFAFA]">Actions</h2>
       <div className="grid grid-cols-2 gap-4">
         {ACTIONS.map((action) => (
           <button

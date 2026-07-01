@@ -93,7 +93,7 @@ async def generate_draft_reply(ctx: FunctionContext, data: GenerateDraftReplyInp
         "generated_at": now,
     })
 
-    pod.records.update("tickets", data.ticket_id, {"status": "awaiting_approval", "draft_id": draft["id"]})
+    pod.records.update("tickets", data.ticket_id, {"status": "waiting_approval"})
 
     _audit(pod, "draft.generated", actor_type="agent", actor_agent_name="reply-agent",
            actor_user_id=str(ctx.user_id) if ctx.user_id else None,

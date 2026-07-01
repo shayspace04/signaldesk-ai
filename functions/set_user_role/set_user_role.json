@@ -1,0 +1,16 @@
+{
+  "code": { "$file": "code.py" },
+  "code_hash": "",
+  "config": null,
+  "description": "Set the role for the current user in the user_roles table.",
+  "icon_url": null,
+  "name": "set_user_role",
+  "permissions": {
+    "grants": [
+      { "permission_ids": ["datastore.record.read", "datastore.record.write", "datastore.table.read"], "resource_name": "user_roles", "resource_type": "datastore_table" }
+    ]
+  },
+  "python_packages": [],
+  "type": "API",
+  "visibility": "POD"
+}

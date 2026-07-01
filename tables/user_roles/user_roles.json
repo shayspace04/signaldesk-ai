@@ -1,0 +1,13 @@
+{
+  "columns": [
+    { "auto": true, "computed": false, "default": null, "description": null, "expression": null, "foreign_key": null, "max_length": null, "name": "id", "options": null, "required": true, "system": false, "type": "UUID", "type_params": null, "unique": true },
+    { "auto": false, "computed": false, "default": null, "description": "The Lemma user ID", "expression": null, "foreign_key": null, "max_length": null, "name": "user_id", "options": null, "required": true, "system": false, "type": "TEXT", "type_params": null, "unique": true },
+    { "auto": false, "computed": false, "default": "support_agent", "description": null, "expression": null, "foreign_key": null, "max_length": null, "name": "role", "options": ["support_agent", "support_manager"], "required": true, "system": false, "type": "ENUM", "type_params": null, "unique": false },
+    { "auto": true, "computed": false, "default": null, "description": null, "expression": null, "foreign_key": null, "max_length": null, "name": "created_at", "options": null, "required": false, "system": true, "type": "DATETIME", "type_params": null, "unique": false }
+  ],
+  "config": {},
+  "enable_rls": false,
+  "name": "user_roles",
+  "primary_key_column": "id",
+  "visibility": "POD"
+}

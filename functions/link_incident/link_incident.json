@@ -28,6 +28,14 @@
       {
         "permission_ids": [
           "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "ticket_incidents",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
           "datastore.record.write",
           "datastore.table.read"
         ],

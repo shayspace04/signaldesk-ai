@@ -55,7 +55,7 @@ function CardDescription({
   return (
     <div
       data-slot="card-description"
-      className={cn("text-sm text-muted-foreground", className)}
+      className={cn("text-sm text-muted dark:text-[#A1A1AA]-foreground", className)}
       {...props} />
   );
 }

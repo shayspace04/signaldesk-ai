@@ -1,9 +1,11 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect, useMemo } from "react";
-import { ChevronDown, Search, UserCheck, UserCog, Activity, Bell, Ticket, Radio, ShieldAlert, BookOpen, BarChart3, ScrollText, Settings, Signal as SignalIcon } from "lucide-react";
+import { ChevronDown, Search, Activity, Bell, Ticket, Radio, ShieldAlert, BookOpen, BarChart3, ScrollText, Settings, UserCheck, UserCog } from "lucide-react";
+import Logo from "@/components/common/Logo";
 import { useWorkspace, workspaces } from "@/context/WorkspaceContext";
 import useRole from "@/hooks/useRole";
-import { useLemmaRecords } from "@/hooks/useLemmaRecords";
+import { useMetrics } from "@/hooks/useMetrics";
+import ThemeToggle from "@/components/common/ThemeToggle";
 
 const navItems = [
   { name: "Dashboard", icon: Activity, path: "/dashboard", badge: null },
@@ -35,27 +37,12 @@ export default function Sidebar() {
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
-  const { data: tickets } = useLemmaRecords("tickets", { limit: 200 });
-  const { data: signals } = useLemmaRecords("signals", { limit: 100 });
-  const { data: incidents } = useLemmaRecords("incidents", { limit: 50 });
-  const { data: logs } = useLemmaRecords("audit_logs", { sort: [{ field: "created_at", direction: "desc" }], limit: 20 });
+  const m = useMetrics(workspace.id);
+  const tickets = m.all.tickets;
+  const signals = m.all.signals;
+  const knowledge = m.all.knowledge;
 
-  const openTickets = useMemo(() => tickets.filter((t) => t.status !== "resolved" && t.status !== "closed").length, [tickets]);
-  const pendingSignals = useMemo(() => signals.filter((s) => s.status === "pending" || !s.status).length, [signals]);
-  const activeIncidents = useMemo(() => incidents.filter((i) => i.status !== "resolved").length, [incidents]);
-  const unreadNotifs = useMemo(() => {
-    try {
-      const readIds = new Set(JSON.parse(localStorage.getItem("signaldesk-read-notifs") || "[]"));
-      return logs.filter((n) => !readIds.has(n.id)).length;
-    } catch { return logs.length; }
-  }, [logs]);
-
-  const badgeMap = {
-    tickets: openTickets,
-    signals: pendingSignals,
-    incidents: activeIncidents,
-    unread: unreadNotifs,
-  };
+  const badgeMap = m.sidebar;
 
   const [searchResults, setSearchResults] = useState([]);
   useEffect(() => {
@@ -63,13 +50,16 @@ export default function Sidebar() {
     const q = searchQuery.toLowerCase();
     const results = [];
     tickets.filter((t) => (t.title || "").toLowerCase().includes(q) || (t.customer_name || "").toLowerCase().includes(q)).slice(0, 5).forEach((t) => {
-      results.push({ label: t.title || t.id, sub: t.customer_name || "", path: "/tickets", id: t.id });
+      results.push({ label: t.title || t.id, sub: t.customer_name || "", path: "/tickets", id: t.id, focusTicketId: t.id });
     });
     signals.filter((s) => (s.name || "").toLowerCase().includes(q)).slice(0, 3).forEach((s) => {
       results.push({ label: s.name || s.id, sub: s.category || "", path: "/signals", id: s.id });
     });
+    knowledge.filter((k) => (k.title || "").toLowerCase().includes(q) || (k.summary || "").toLowerCase().includes(q) || (k.root_cause || "").toLowerCase().includes(q)).slice(0, 3).forEach((k) => {
+      results.push({ label: k.title || "Knowledge Article", sub: `${k.confidence || 0}% confidence`, path: "/knowledge", id: k.id });
+    });
     setSearchResults(results);
-  }, [searchQuery, tickets, signals]);
+  }, [searchQuery, tickets, signals, knowledge]);
 
   useEffect(() => {
     const handleClick = (e) => {
@@ -84,24 +74,22 @@ export default function Sidebar() {
   const handleSearchKeyDown = (e) => {
     if (e.key === "Enter" && searchResults.length > 0) {
       const first = searchResults[0];
-      navigate(first.path);
+      navigate(first.path, { state: { focusTicketId: first.id } });
       setSearchQuery("");
       setSearchResults([]);
     }
   };
 
   return (
-    <aside className="flex w-60 flex-col border-r border-[#EFEFEF] bg-white flex-shrink-0 h-screen sticky top-0">
-      <div className="flex items-center gap-2.5 px-5 pt-5 pb-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 text-xs font-bold text-white">
-          SD
-        </div>
-        <span className="text-base font-semibold tracking-tight">SignalDesk</span>
+    <aside className="flex w-60 flex-col border-r border-border dark:border-[#2A2A2E] bg-white dark:bg-[#111113] flex-shrink-0 h-screen sticky top-0 z-30">
+      <div className="flex items-center gap-3 px-5 pt-6 pb-4">
+        <Logo size={28} />
+        <span className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-[#FAFAFA]">SignalDesk</span>
       </div>
 
-      <div className="relative px-3 pb-3">
-        <div className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${searchFocused ? "border-zinc-400" : "border-[#EFEFEF]"} bg-[#FAFAFA]`}>
-          <Search size={15} className="text-zinc-400 flex-shrink-0" />
+      <div className="relative px-4 pb-3">
+        <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-all duration-200 ${searchFocused ? "border-zinc-300 dark:border-[#2A2A2E] ring-1 ring-zinc-200 dark:ring-zinc-600" : "border-border dark:border-[#2A2A2E]"} bg-surface dark:bg-[#111113]`}>
+          <Search size={15} className="text-muted dark:text-[#A1A1AA] flex-shrink-0" />
           <input
             type="text"
             value={searchQuery}
@@ -109,21 +97,21 @@ export default function Sidebar() {
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
             onKeyDown={handleSearchKeyDown}
-            placeholder="Search..."
-            className="w-full bg-transparent outline-none text-sm placeholder:text-zinc-400"
+            placeholder="Search tickets, signals, knowledge..."
+            className="w-full bg-transparent outline-none text-sm placeholder:text-muted dark:text-[#A1A1AA]"
           />
         </div>
         {searchResults.length > 0 && (
-          <div className="absolute left-3 right-3 top-full mt-1 z-50 rounded-xl border border-[#EFEFEF] bg-white py-2 shadow-lg">
+          <div className="absolute left-4 right-4 top-full mt-1.5 z-50 rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] py-2 shadow-dropdown">
             {searchResults.map((r, i) => (
               <button
                 key={i}
-                onMouseDown={() => { navigate(r.path); setSearchQuery(""); setSearchResults([]); }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-zinc-50 transition-colors"
+                onMouseDown={() => { navigate(r.path, { state: { focusTicketId: r.id } }); setSearchQuery(""); setSearchResults([]); }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-zinc-50 dark:hover:bg-[#27272A] transition-colors"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">{r.label}</p>
-                  <p className="text-xs text-zinc-400 truncate">{r.sub}</p>
+                  <p className="text-sm font-medium truncate text-zinc-900 dark:text-[#FAFAFA]">{r.label}</p>
+                  <p className="text-xs text-muted dark:text-[#A1A1AA] truncate">{r.sub}</p>
                 </div>
               </button>
             ))}
@@ -135,16 +123,30 @@ export default function Sidebar() {
         {navItems.map((item) => {
           const Icon = item.icon;
           const badgeValue = item.badge ? badgeMap[item.badge] : null;
+
+          if (item.path === "/notifications") {
+            return (
+              <button
+                key={item.path}
+                onClick={() => navigate("/notifications")}
+                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all duration-150 text-zinc-500 dark:text-[#A1A1AA] hover:bg-zinc-100 hover:text-zinc-700 dark:hover:text-[#FAFAFA]"
+              >
+                <Icon size={17} className="flex-shrink-0" />
+                <span className="truncate">{item.name}</span>
+                <Badge value={badgeValue} />
+              </button>
+            );
+          }
+
           return (
             <NavLink
               key={item.path}
-              to={item.path === "/notifications" ? "#" : item.path}
-              onClick={item.path === "/notifications" ? (e) => e.preventDefault() : undefined}
+              to={item.path}
               className={({ isActive }) =>
-                `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
+                `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all duration-150 ${
                   isActive
-                    ? "bg-zinc-100 font-medium text-zinc-900"
-                    : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700"
+                    ? "bg-zinc-900 font-medium text-white"
+                    : "text-zinc-500 dark:text-[#A1A1AA] hover:bg-zinc-100 hover:text-zinc-700 dark:hover:text-[#FAFAFA]"
                 }`
               }
             >
@@ -156,46 +158,44 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="border-t border-[#EFEFEF] px-3 py-3 space-y-2">
-        <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Support Team</p>
-
+      <div className="border-t border-border dark:border-[#2A2A2E] px-4 py-3 space-y-3">
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors hover:bg-zinc-50"
+            className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-[#27272A]"
           >
             <div
-              className="flex h-7 w-7 items-center justify-center rounded-md text-[10px] font-bold text-white flex-shrink-0"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold text-white flex-shrink-0"
               style={{ backgroundColor: workspace.accent }}
             >
               {workspace.initials}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{workspace.name}</p>
-              <p className="text-[11px] text-zinc-400">Demo Workspace</p>
+              <p className="text-sm font-medium truncate text-zinc-900 dark:text-[#FAFAFA]">{workspace.name}</p>
+              <p className="text-[11px] text-muted dark:text-[#A1A1AA]">Demo Workspace</p>
             </div>
-            <ChevronDown size={14} className="text-zinc-400 flex-shrink-0" />
+            <ChevronDown size={14} className="text-muted dark:text-[#A1A1AA] flex-shrink-0" />
           </button>
 
           {dropdownOpen && (
-            <div className="absolute bottom-full left-0 right-0 mb-1 rounded-xl border border-[#EFEFEF] bg-white shadow-lg overflow-hidden">
+            <div className="absolute bottom-full left-0 right-0 mb-1.5 rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] shadow-dropdown overflow-hidden z-40">
               {workspaces.map((w) => (
                 <button
                   key={w.id}
                   onClick={() => { setWorkspace(w.id); setDropdownOpen(false); }}
-                  className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-zinc-50 ${
-                    w.id === workspace.id ? "bg-zinc-50" : ""
+                  className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-[#27272A] ${
+                    w.id === workspace.id ? "bg-zinc-50 dark:bg-[#27272A]" : ""
                   }`}
                 >
                   <div
-                    className="flex h-6 w-6 items-center justify-center rounded-md text-[9px] font-bold text-white flex-shrink-0"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg text-[9px] font-bold text-white flex-shrink-0"
                     style={{ backgroundColor: w.accent }}
                   >
                     {w.initials}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{w.name}</p>
-                    <p className="text-[10px] text-zinc-400">{w.subtitle}</p>
+                    <p className="text-sm font-medium truncate text-zinc-900 dark:text-[#FAFAFA]">{w.name}</p>
+                    <p className="text-[10px] text-muted dark:text-[#A1A1AA]">{w.subtitle}</p>
                   </div>
                   {w.id === workspace.id && (
                     <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: w.accent }} />
@@ -206,30 +206,35 @@ export default function Sidebar() {
           )}
         </div>
 
-        <div className="flex rounded-lg border border-[#EFEFEF] overflow-hidden">
+        <div className="flex rounded-xl border border-border dark:border-[#2A2A2E] overflow-hidden">
           <button
             onClick={() => setRole("agent")}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium transition-colors ${
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-all duration-150 ${
               role === "support_agent"
                 ? "bg-zinc-900 text-white"
-                : "text-zinc-500 hover:bg-zinc-50"
+                : "text-zinc-500 dark:text-[#A1A1AA] hover:bg-zinc-50 hover:text-zinc-700 dark:hover:bg-[#27272A] dark:hover:text-[#FAFAFA]"
             }`}
           >
             <UserCheck size={12} />
             Agent
           </button>
-          <div className="w-px bg-[#EFEFEF]" />
+          <div className="w-px bg-border" />
           <button
             onClick={() => setRole("manager")}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium transition-colors ${
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-all duration-150 ${
               role === "support_manager"
                 ? "bg-zinc-900 text-white"
-                : "text-zinc-500 hover:bg-zinc-50"
+                : "text-zinc-500 dark:text-[#A1A1AA] hover:bg-zinc-50 hover:text-zinc-700 dark:hover:bg-[#27272A] dark:hover:text-[#FAFAFA]"
             }`}
           >
             <UserCog size={12} />
             Manager
           </button>
+        </div>
+
+        <div className="flex items-center justify-between rounded-xl border border-border dark:border-[#2A2A2E] px-3 py-2">
+          <span className="text-xs text-muted dark:text-[#A1A1AA]">Theme</span>
+          <ThemeToggle compact />
         </div>
       </div>
     </aside>

@@ -1,0 +1,17 @@
+{
+  "code": {"$file": "code.py"},
+  "config": null,
+  "description": "Add a comment to a linked Linear issue from an incident.",
+  "icon_url": null,
+  "name": "add_linear_comment",
+  "permissions": {
+    "grants": [
+      {"permission_ids":["datastore.record.read","datastore.record.write","datastore.table.read"],"resource_name":"incidents","resource_type":"datastore_table"},
+      {"permission_ids":["datastore.record.write","datastore.table.read"],"resource_name":"audit_logs","resource_type":"datastore_table"},
+      {"permission_ids":["connector.use"],"resource_name":"linear","resource_type":"connector"}
+    ]
+  },
+  "python_packages": [],
+  "type": "API",
+  "visibility": "POD"
+}

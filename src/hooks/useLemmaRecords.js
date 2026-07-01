@@ -4,6 +4,7 @@ import client from "../lib/lemmaClient";
 
 export function useLemmaRecords(table, options = {}) {
   const [data, setData] = useState([]);
+  const [total, setTotal] = useState(0);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -15,13 +16,18 @@ export function useLemmaRecords(table, options = {}) {
     let mounted = true;
     setLoading(true);
     client.records.list(table, { filters, sort, limit })
-      .then((res) => { if (mounted) setData(res.items || []); })
+      .then((res) => {
+        if (mounted) {
+          setData(res.items || []);
+          if (res.total != null) setTotal(res.total);
+        }
+      })
       .catch((err) => { if (mounted) setError(err.message || "Failed to fetch data"); })
       .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
   }, [depsKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { data, loading, error, refresh: () => setRefreshKey((k) => k + 1) };
+  return { data, total, loading, error, refresh: () => setRefreshKey((k) => k + 1) };
 }
 
 export function useLemmaRecord(table, recordId) {

@@ -12,18 +12,18 @@ const SEVERITY_COLORS = {
   urgent: "bg-red-100 text-red-700",
   high: "bg-orange-100 text-orange-700",
   normal: "bg-blue-100 text-blue-700",
-  low: "bg-zinc-100 text-zinc-500",
+  low: "bg-zinc-100 text-zinc-500 dark:text-[#A1A1AA]",
 };
 
 function actionMeta(action) {
-  if (!action) return { icon: Bell, color: "text-zinc-400" };
+  if (!action) return { icon: Bell, color: "text-zinc-400 dark:text-[#71717A]" };
   const a = action.toLowerCase();
   if (a.includes("incident") || a.includes("notification")) return { icon: ShieldAlert, color: "text-red-500" };
   if (a.includes("signal")) return { icon: Radio, color: "text-accent" };
   if (a.includes("ticket")) return { icon: Ticket, color: "text-blue-500" };
   if (a.includes("draft") || a.includes("approv")) return { icon: CheckCircle2, color: "text-green-500" };
   if (a.includes("agent") || a.includes("triage") || a.includes("reply")) return { icon: Brain, color: "text-accent" };
-  return { icon: Bell, color: "text-zinc-400" };
+  return { icon: Bell, color: "text-zinc-400 dark:text-[#71717A]" };
 }
 
 export default function NotificationCenter() {
@@ -62,7 +62,7 @@ export default function NotificationCenter() {
         onClick={() => { setOpen(!open); }}
         className="relative rounded-xl bg-zinc-100 p-2.5 hover:bg-zinc-200 transition-colors"
       >
-        <Bell size={18} className="text-zinc-600" />
+        <Bell size={18} className="text-zinc-600 dark:text-[#A1A1AA]" />
         {unreadCount > 0 && (
           <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-zinc-900 px-1 text-[10px] font-bold text-white">
             {unreadCount > 9 ? "9+" : unreadCount}
@@ -71,8 +71,8 @@ export default function NotificationCenter() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-12 z-50 w-[380px] rounded-xl border border-[#EFEFEF] bg-white shadow-lg">
-          <div className="flex items-center justify-between border-b border-[#EFEFEF] px-5 py-4">
+        <div className="absolute right-0 top-12 z-50 w-[380px] rounded-xl border border-[#EFEFEF] dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] bg-white shadow-lg">
+          <div className="flex items-center justify-between border-b border-[#EFEFEF] dark:border-[#2A2A2E] px-5 py-4">
             <h2 className="text-sm font-semibold">Notifications</h2>
             {unreadCount > 0 && (
               <button onClick={markAllRead} className="text-xs font-medium text-accent hover:opacity-80">
@@ -83,18 +83,18 @@ export default function NotificationCenter() {
 
           <div className="max-h-[500px] overflow-auto">
             {notifications.length === 0 ? (
-              <div className="p-5 text-sm text-zinc-400 text-center">No notifications yet.</div>
+              <div className="p-5 text-sm text-zinc-400 dark:text-[#71717A] text-center">No notifications yet.</div>
             ) : (
               notifications.map((item) => {
                 const { icon: Icon, color } = actionMeta(item.action);
                 const incidentNotif = isIncidentNotification(item);
                 const sev = item.details?.severity;
-                const sevColor = SEVERITY_COLORS[sev] || "bg-zinc-100 text-zinc-500";
+                const sevColor = SEVERITY_COLORS[sev] || "bg-zinc-100 text-zinc-500 dark:text-[#A1A1AA]";
                 return (
                   <div
                     key={item.id}
                     onClick={() => markRead(item.id)}
-                    className={`relative border-b border-[#EFEFEF] px-5 py-4 transition-colors hover:bg-zinc-50 cursor-pointer ${readIds.has(item.id) ? "" : "bg-zinc-50/50"}`}
+                    className={`relative border-b border-[#EFEFEF] dark:border-[#2A2A2E] px-5 py-4 transition-colors hover:bg-zinc-50 cursor-pointer ${readIds.has(item.id) ? "" : "bg-zinc-50/50"}`}
                   >
                     <div className="flex gap-3">
                       {!readIds.has(item.id) && (
@@ -104,10 +104,10 @@ export default function NotificationCenter() {
                       <div className="min-w-0 flex-1">
                         {incidentNotif ? (
                           <>
-                            <h3 className="text-sm font-medium text-zinc-900 truncate">
+                            <h3 className="text-sm font-medium text-zinc-900 dark:text-[#FAFAFA] truncate">
                               {item.details?.incident_title || "Incident Detected"}
                             </h3>
-                            <p className="mt-0.5 text-sm text-zinc-500 line-clamp-2">
+                            <p className="mt-0.5 text-sm text-zinc-500 dark:text-[#A1A1AA] line-clamp-2">
                               {item.details?.affected_tickets} related tickets — {workspace.name}
                             </p>
                             {sev && (
@@ -124,15 +124,30 @@ export default function NotificationCenter() {
                               </button>
                             </div>
                           </>
+                        ) : item.ticket_id ? (
+                          <>
+                            <h3 className="text-sm font-medium text-zinc-900 dark:text-[#FAFAFA]">{item.action}</h3>
+                            <p className="text-sm text-zinc-500 dark:text-[#A1A1AA]">
+                              {item.details?.name || item.resource_type || ""}
+                            </p>
+                            <div className="mt-2">
+                              <button
+                                onClick={() => { navigate("/tickets", { state: { focusTicketId: item.ticket_id } }); setOpen(false); }}
+                                className="flex items-center gap-1 text-xs font-medium text-accent hover:opacity-80"
+                              >
+                                View Ticket <ArrowRight size={12} />
+                              </button>
+                            </div>
+                          </>
                         ) : (
                           <>
-                            <h3 className="text-sm font-medium text-zinc-900">{item.action}</h3>
-                            <p className="text-sm text-zinc-500">
+                            <h3 className="text-sm font-medium text-zinc-900 dark:text-[#FAFAFA]">{item.action}</h3>
+                            <p className="text-sm text-zinc-500 dark:text-[#A1A1AA]">
                               {item.details?.name || item.resource_type || ""}
                             </p>
                           </>
                         )}
-                        <span className="mt-0.5 block text-xs text-zinc-400">
+                        <span className="mt-0.5 block text-xs text-zinc-400 dark:text-[#71717A]">
                           {item.created_at
                             ? formatDistanceToNow(new Date(item.created_at), { addSuffix: true })
                             : ""}

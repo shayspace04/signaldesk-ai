@@ -7,6 +7,52 @@ from typing import Optional
 from pydantic import BaseModel
 from lemma_sdk import FunctionContext, Pod
 
+SEVERITY_RANK = {"low": 0, "normal": 1, "high": 2, "urgent": 3}
+
+def _require_manager(ctx, action):
+    user_id = str(ctx.user_id) if ctx.user_id else None
+    if not user_id:
+        raise RuntimeError("Insufficient permissions: must be authenticated")
+    pod = Pod.from_env()
+    try:
+        rows = pod.records.list("user_roles", {"filters": {"user_id": user_id}, "limit": 1})
+        items = rows.get("items") or rows.get("data") or []
+        if items and items[0].get("role") == "support_manager":
+            return
+    except Exception:
+        pass
+    raise RuntimeError(f"Insufficient permissions: support_manager role required to {action}.")
+
+ACTIVE_STATUSES = ("open", "investigating")
+
+def _items(rows):
+    if rows is None:
+        return []
+    if hasattr(rows, "items"):
+        items = rows.items
+        if not items:
+            return []
+        if hasattr(items[0], "to_dict"):
+            return [item.to_dict() for item in items]
+        return list(items)
+    if isinstance(rows, dict) and "data" in rows:
+        return rows["data"]
+    if isinstance(rows, list):
+        return rows
+    return []
+
+def _get_existing_incident(pod, signal_id):
+    try:
+        rows = _items(pod.records.list("incidents", filter=[
+            {"field": "signal_id", "op": "eq", "value": signal_id},
+        ], limit=20))
+        for r in rows:
+            if r.get("status") in ACTIVE_STATUSES:
+                return r
+    except Exception:
+        pass
+    return None
+
 def _audit(pod, action, actor_type="user", actor_user_id=None, actor_agent_name=None, resource_type=None, resource_id=None, ticket_id=None, signal_id=None, details=None):
     try:
         row={"actor_type":actor_type,"action":action}
@@ -40,6 +86,7 @@ CATEGORY_RISK = {
 }
 
 async def approve_signal(ctx: FunctionContext, data: ApproveSignalInput) -> ApproveSignalOutput:
+    _require_manager(ctx, "approve signal")
     pod = Pod.from_env()
     decided_at = datetime.now(timezone.utc).isoformat()
     actor = data.approver_user_id or (str(ctx.user_id) if ctx.user_id else None)
@@ -115,21 +162,46 @@ async def approve_signal(ctx: FunctionContext, data: ApproveSignalInput) -> Appr
             inc_severity = "low"
 
         inc_title = f"[{inc_severity.upper()}] {sig.get('name', 'Signal')}"
-        inc = pod.records.create("incidents", {
-            "title": inc_title,
-            "signal_id": data.signal_id,
-            "status": "open",
-            "severity": inc_severity,
-            "summary": sig.get("summary"),
-            "blast_radius": f"{freq} tickets, {affected} customers affected",
-            "opened_at": decided_at,
-            "affected_ticket_count": freq,
-            "description": f"Auto-created from approved signal: {sig.get('name')}. Category: {category}. Priority score: {priority_score}.",
-        })
-        incident_id = inc["id"]
-        _audit(pod, "incident.created", actor_type="system", actor_user_id=actor,
-               resource_type="incident", resource_id=incident_id, signal_id=data.signal_id,
-               details={"severity": inc_severity, "title": inc_title, "auto_created": True, "priority_score": priority_score})
+
+        # ── Dedup: reuse existing active incident ──────────────────────────
+        existing = _get_existing_incident(pod, data.signal_id)
+        if existing:
+            inc = existing
+            incident_id = inc["id"]
+            now = datetime.now(timezone.utc).isoformat()
+            upd = {"last_detected_at": now}
+            if inc_title != inc.get("title"):
+                upd["title"] = inc_title
+            new_sev_rank = SEVERITY_RANK.get(inc_severity, -1)
+            cur_sev_rank = SEVERITY_RANK.get(inc.get("severity"), -1)
+            if new_sev_rank > cur_sev_rank:
+                upd["severity"] = inc_severity
+            old_count = inc.get("affected_ticket_count", 0) or 0
+            if freq > old_count:
+                upd["affected_ticket_count"] = freq
+                upd["blast_radius"] = f"{freq} tickets, {affected} customers affected"
+            pod.records.update("incidents", inc["id"], upd)
+            _audit(pod, "incident.updated", actor_type="system", actor_user_id=actor,
+                   resource_type="incident", resource_id=incident_id, signal_id=data.signal_id,
+                   details={"severity": inc_severity, "title": inc_title,
+                            "affected_tickets": freq,
+                            "note": "Existing incident updated with new occurrences."})
+        else:
+            inc = pod.records.create("incidents", {
+                "title": inc_title,
+                "signal_id": data.signal_id,
+                "status": "open",
+                "severity": inc_severity,
+                "summary": sig.get("summary"),
+                "blast_radius": f"{freq} tickets, {affected} customers affected",
+                "opened_at": decided_at,
+                "affected_ticket_count": freq,
+                "description": f"Auto-created from approved signal: {sig.get('name')}. Category: {category}. Priority score: {priority_score}.",
+            })
+            incident_id = inc["id"]
+            _audit(pod, "incident.created", actor_type="system", actor_user_id=actor,
+                   resource_type="incident", resource_id=incident_id, signal_id=data.signal_id,
+                   details={"severity": inc_severity, "title": inc_title, "auto_created": True, "priority_score": priority_score})
 
         # 5. Send Slack alert if high or critical
         if inc_severity in ("high", "urgent"):

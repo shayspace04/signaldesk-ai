@@ -36,18 +36,18 @@ export default function ChurnRiskCard({ ticket }) {
             {risk.riskLevel} Churn Risk
           </span>
         </div>
-        <span className="text-2xl font-bold text-zinc-900">{risk.riskPercent}%</span>
+        <span className="text-2xl font-bold text-zinc-900 dark:text-[#FAFAFA]">{risk.riskPercent}%</span>
       </div>
 
-      <div className="flex items-center gap-1.5 text-sm text-zinc-500">
+      <div className="flex items-center gap-1.5 text-sm text-zinc-500 dark:text-[#A1A1AA]">
         <Clock size={14} />
         <span>
           Estimated churn if unresolved:{" "}
-          <span className="text-zinc-700 font-medium">{risk.remainingFormatted}</span>
+          <span className="text-zinc-700 dark:text-[#FAFAFA] font-medium">{risk.remainingFormatted}</span>
         </span>
       </div>
 
-      <div className="text-xs text-zinc-400">
+      <div className="text-xs text-zinc-400 dark:text-[#71717A]">
         {risk.reasons.map((r, i) => (
           <span key={i}>
             {i > 0 && <span className="mx-1">·</span>}

@@ -6,7 +6,7 @@ export default function LoadingCard(){
 
     return(
 
-        <div className="rounded-xl bg-white p-6 border border-[#EFEFEF]">
+        <div className="rounded-xl bg-white dark:bg-[#18181B] bg-white p-6 border border-[#EFEFEF] dark:border-[#2A2A2E]">
 
             <Skeleton height={35}/>
 

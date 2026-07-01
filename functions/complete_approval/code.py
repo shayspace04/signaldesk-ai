@@ -7,6 +7,20 @@ from typing import Optional
 from pydantic import BaseModel
 from lemma_sdk import FunctionContext, Pod
 
+def _require_manager(ctx, action):
+    user_id = str(ctx.user_id) if ctx.user_id else None
+    if not user_id:
+        raise RuntimeError("Insufficient permissions: must be authenticated")
+    pod = Pod.from_env()
+    try:
+        rows = pod.records.list("user_roles", {"filters": {"user_id": user_id}, "limit": 1})
+        items = rows.get("items") or rows.get("data") or []
+        if items and items[0].get("role") == "support_manager":
+            return
+    except Exception:
+        pass
+    raise RuntimeError(f"Insufficient permissions: support_manager role required to {action}.")
+
 def _audit(pod, action, actor_type="user", actor_user_id=None, actor_agent_name=None,
            resource_type=None, resource_id=None, ticket_id=None, details=None):
     try:
@@ -32,6 +46,7 @@ class CompleteApprovalOutput(BaseModel):
     completed_at: str
 
 async def complete_approval(ctx: FunctionContext, data: CompleteApprovalInput) -> CompleteApprovalOutput:
+    _require_manager(ctx, "complete approval")
     pod = Pod.from_env()
     now = datetime.now(timezone.utc).isoformat()
     actor = str(ctx.user_id) if ctx.user_id else None
@@ -40,14 +55,14 @@ async def complete_approval(ctx: FunctionContext, data: CompleteApprovalInput) -
     if not draft:
         raise RuntimeError(f"draft {data.draft_id} not found")
 
-    pod.records.update("tickets", data.ticket_id, {"status": "resolved", "resolved_at": now})
-    pod.records.update("drafts", data.draft_id, {"status": "complete", "completed_at": now})
+    pod.records.update("tickets", data.ticket_id, {"status": "resolved"})
+    pod.records.update("drafts", data.draft_id, {"status": "sent", "completed_at": now})
 
     appr = pod.records.create("approvals", {
         "approval_type": "draft", "resource_id": data.draft_id,
         "ticket_id": data.ticket_id,
         "ticket_number": draft.get("ticket_number"),
-        "action": "complete", "actor_user_id": actor,
+        "action": "approve", "actor_user_id": actor,
         "notes": data.reviewer_notes, "decided_at": now,
     })
 

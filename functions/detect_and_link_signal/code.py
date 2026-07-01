@@ -73,7 +73,7 @@ async def detect_and_link_signal(ctx: FunctionContext, data: DetectAndLinkSignal
 
     result = DetectAndLinkSignalOutput()
 
-    # If ticket already linked to a signal, update evidence count
+    # If ticket already linked to a signal, update evidence count and skip to incident check
     if ticket.get("signal_id"):
         sig = pod.records.get("signals", ticket["signal_id"])
         if sig and sig.get("status") not in ("rejected", "memory"):
@@ -81,100 +81,105 @@ async def detect_and_link_signal(ctx: FunctionContext, data: DetectAndLinkSignal
             pod.records.update("signals", ticket["signal_id"], {
                 "evidence_count": len(ids), "example_ticket_ids": ids,
             })
+            existing_signal_id = ticket["signal_id"]
             result.signal_id = ticket["signal_id"]
             result.ticket_linked = True
             result.ticket_count = len(ids)
-            return result
-
-    # Find similar open tickets (same category to reduce scan)
-    cat_filter = ticket.get("category")
-    try:
-        if cat_filter:
-            rows = pod.records.list("tickets", filter=[{"field": "category", "op": "eq", "value": cat_filter}], limit=200)
+            # Skip straight to incident check
+            sig = pod.records.get("signals", existing_signal_id)
+            ticket_count = len(sig.get("example_ticket_ids") or []) or sig.get("evidence_count", 0)
         else:
-            rows = pod.records.list("tickets", limit=200)
-        all_rows = _items(rows)
-    except Exception:
-        all_rows = _items(pod.records.list("tickets", limit=200))
-    candidates = [t for t in all_rows if t.get("id") != data.ticket_id and t.get("status") != "resolved"]
-
-    related = [c for c in candidates if _similarity(ticket, c) >= SIMILARITY_MIN_SCORE]
-    all_ticket_ids = [data.ticket_id] + [t.get("id") for t in related]
-
-    # Check if any related ticket is already in a signal
-    existing_signal_id = None
-    for t in related:
-        sid = t.get("signal_id")
-        if sid:
-            sig = pod.records.get("signals", sid)
-            if sig and sig.get("status") not in ("rejected", "memory"):
-                existing_signal_id = sid
-                break
-
-    if existing_signal_id:
-        sig = pod.records.get("signals", existing_signal_id)
-        ids = list(set((sig.get("example_ticket_ids") or []) + all_ticket_ids))
-        pod.records.update("signals", existing_signal_id, {
-            "evidence_count": len(ids), "example_ticket_ids": ids,
-        })
-        for tid in all_ticket_ids:
-            try:
-                pod.records.update("tickets", tid, {"signal_id": existing_signal_id})
-            except Exception:
-                pass
-        result.signal_id = existing_signal_id
-        result.ticket_linked = True
-        result.ticket_count = len(ids)
-        _audit(pod, "signal.updated", actor_type="system", actor_agent_name="signal-detector",
-               resource_type="signal", resource_id=existing_signal_id, signal_id=existing_signal_id,
-               details={"evidence_count": len(ids), "ticket_ids": ids, "previous_count": len(sig.get("example_ticket_ids") or [])})
-        _audit(pod, "ticket.linked_to_signal", actor_type="system", actor_agent_name="signal-detector",
-               resource_type="ticket", resource_id=data.ticket_id, ticket_id=data.ticket_id,
-               signal_id=existing_signal_id,
-               details={"signal_id": existing_signal_id, "ticket_ids": ids})
+            return result
     else:
-        # Build recurring terms from intersection of tokens across all related tickets
-        all_sets = [_tokenize(t.get("title", "") + " " + t.get("body", "")) for t in ([ticket] + related)]
-        common = all_sets[0]
-        for s in all_sets[1:]:
-            common &= s
-        recurring = list(common)[:20] if common else []
+        # Find similar open tickets (same category to reduce scan)
+        existing_signal_id = None
+        cat_filter = ticket.get("category")
+        try:
+            if cat_filter:
+                rows = pod.records.list("tickets", filter=[{"field": "category", "op": "eq", "value": cat_filter}], limit=200)
+            else:
+                rows = pod.records.list("tickets", limit=200)
+            all_rows = _items(rows)
+        except Exception:
+            all_rows = _items(pod.records.list("tickets", limit=200))
+        candidates = [t for t in all_rows if t.get("id") != data.ticket_id and t.get("status") != "resolved"]
 
-        name = f"{ticket.get('category', 'General')} issue: {ticket.get('title', '')[:120]}" if related else (ticket.get("title", "Signal")[:200])
-        priority = ticket.get("priority", "normal")
+        related = [c for c in candidates if _similarity(ticket, c) >= SIMILARITY_MIN_SCORE]
+        all_ticket_ids = [data.ticket_id] + [t.get("id") for t in related]
 
-        sig_result = pod.functions.run("create_signal", {
-            "input": {
-                "name": name,
-                "summary": f"Automatically detected from {len(all_ticket_ids)} related ticket(s).",
-                "category": ticket.get("category"),
-                "evidence_count": len(all_ticket_ids),
-                "example_ticket_ids": all_ticket_ids,
-                "recurring_terms": recurring,
-                "proposed_priority": priority,
-            }
-        })
-        od = sig_result.get("output_data") or {}
-        signal_id = od.get("signal_id") or sig_result.get("signal_id")
+        # Check if any related ticket is already in a signal
+        for t in related:
+            sid = t.get("signal_id")
+            if sid:
+                sig = pod.records.get("signals", sid)
+                if sig and sig.get("status") not in ("rejected", "memory"):
+                    existing_signal_id = sid
+                    break
 
-        for tid in all_ticket_ids:
-            try:
-                pod.records.update("tickets", tid, {"signal_id": signal_id})
-            except Exception:
-                pass
+        if existing_signal_id:
+            sig = pod.records.get("signals", existing_signal_id)
+            ids = list(set((sig.get("example_ticket_ids") or []) + all_ticket_ids))
+            pod.records.update("signals", existing_signal_id, {
+                "evidence_count": len(ids), "example_ticket_ids": ids,
+            })
+            for tid in all_ticket_ids:
+                try:
+                    pod.records.update("tickets", tid, {"signal_id": existing_signal_id})
+                except Exception:
+                    pass
+            result.signal_id = existing_signal_id
+            result.ticket_linked = True
+            result.ticket_count = len(ids)
+            _audit(pod, "signal.updated", actor_type="system", actor_agent_name="signal-detector",
+                   resource_type="signal", resource_id=existing_signal_id, signal_id=existing_signal_id,
+                   details={"evidence_count": len(ids), "ticket_ids": ids, "previous_count": len(sig.get("example_ticket_ids") or [])})
+            _audit(pod, "ticket.linked_to_signal", actor_type="system", actor_agent_name="signal-detector",
+                   resource_type="ticket", resource_id=data.ticket_id, ticket_id=data.ticket_id,
+                   signal_id=existing_signal_id,
+                   details={"signal_id": existing_signal_id, "ticket_ids": ids})
+        else:
+            # Build recurring terms from intersection of tokens across all related tickets
+            all_sets = [_tokenize(t.get("title", "") + " " + t.get("body", "")) for t in ([ticket] + related)]
+            common = all_sets[0]
+            for s in all_sets[1:]:
+                common &= s
+            recurring = list(common)[:20] if common else []
 
-        result.signal_id = signal_id
-        result.signal_created = True
-        result.ticket_linked = True
-        result.ticket_count = len(all_ticket_ids)
-        _audit(pod, "signal.created", actor_type="system", actor_agent_name="signal-detector",
-               resource_type="signal", resource_id=signal_id, signal_id=signal_id,
-               details={"name": name, "evidence_count": len(all_ticket_ids)})
-        existing_signal_id = signal_id
+            name = f"{ticket.get('category', 'General')} issue: {ticket.get('title', '')[:120]}" if related else (ticket.get("title", "Signal")[:200])
+            priority = ticket.get("priority", "normal")
 
-    # Check if signal has enough tickets for an incident
-    sig = pod.records.get("signals", existing_signal_id)
-    ticket_count = len(sig.get("example_ticket_ids") or []) or sig.get("evidence_count", 0)
+            sig_result = pod.functions.run("create_signal", {
+                "input": {
+                    "name": name,
+                    "summary": f"Automatically detected from {len(all_ticket_ids)} related ticket(s).",
+                    "category": ticket.get("category"),
+                    "evidence_count": len(all_ticket_ids),
+                    "example_ticket_ids": all_ticket_ids,
+                    "recurring_terms": recurring,
+                    "proposed_priority": priority,
+                }
+            })
+            od = sig_result.get("output_data") or {}
+            signal_id = od.get("signal_id") or sig_result.get("signal_id")
+
+            for tid in all_ticket_ids:
+                try:
+                    pod.records.update("tickets", tid, {"signal_id": signal_id})
+                except Exception:
+                    pass
+
+            result.signal_id = signal_id
+            result.signal_created = True
+            result.ticket_linked = True
+            result.ticket_count = len(all_ticket_ids)
+            _audit(pod, "signal.created", actor_type="system", actor_agent_name="signal-detector",
+                   resource_type="signal", resource_id=signal_id, signal_id=signal_id,
+                   details={"name": name, "evidence_count": len(all_ticket_ids)})
+            existing_signal_id = signal_id
+
+        # Check if signal has enough tickets for an incident
+        sig = pod.records.get("signals", existing_signal_id)
+        ticket_count = len(sig.get("example_ticket_ids") or []) or sig.get("evidence_count", 0)
 
     if ticket_count >= INCIDENT_TICKET_THRESHOLD:
         try:

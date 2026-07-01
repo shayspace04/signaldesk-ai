@@ -1,0 +1,13 @@
+{
+  "name": "ticket_incidents",
+  "columns": [
+    { "name": "id", "type": "UUID", "required": true, "unique": true },
+    { "name": "ticket_id", "type": "UUID", "required": true },
+    { "name": "incident_id", "type": "UUID", "required": true },
+    { "name": "linked_at", "type": "DATETIME" },
+    { "name": "workspaceId", "type": "TEXT", "max_length": 80 },
+    { "name": "workspaceName", "type": "TEXT", "max_length": 80 },
+    { "name": "created_at", "type": "DATETIME", "system": true },
+    { "name": "updated_at", "type": "DATETIME", "system": true }
+  ]
+}

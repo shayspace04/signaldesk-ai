@@ -7,6 +7,37 @@ from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
 from lemma_sdk import FunctionContext, Pod
 
+SEVERITY_RANK = {"low": 0, "normal": 1, "high": 2, "urgent": 3}
+ACTIVE_STATUSES = ("open", "investigating")
+
+def _items(rows):
+    if rows is None:
+        return []
+    if hasattr(rows, "items"):
+        items = rows.items
+        if not items:
+            return []
+        if hasattr(items[0], "to_dict"):
+            return [item.to_dict() for item in items]
+        return list(items)
+    if isinstance(rows, dict) and "data" in rows:
+        return rows["data"]
+    if isinstance(rows, list):
+        return rows
+    return []
+
+def _get_existing_incident(pod, signal_id):
+    try:
+        rows = _items(pod.records.list("incidents", filter=[
+            {"field": "signal_id", "op": "eq", "value": signal_id},
+        ], limit=20))
+        for r in rows:
+            if r.get("status") in ACTIVE_STATUSES:
+                return r
+    except Exception:
+        pass
+    return None
+
 def _audit(pod, action, actor_type="user", actor_user_id=None, actor_agent_name=None, resource_type=None, resource_id=None, ticket_id=None, signal_id=None, details=None):
     try:
         row={"actor_type":actor_type,"action":action}
@@ -110,23 +141,48 @@ async def materialize_signal(ctx: FunctionContext, data: MaterializeSignalInput)
 
     incident_id = None
     if sig.get("proposed_priority") in ("high", "urgent"):
-        inc = pod.records.create("incidents", {
-            "title": f"[{sig['proposed_priority'].upper()}] {name}",
-            "signal_id": data.signal_id, "status": "open",
-            "severity": sig.get("proposed_priority", "normal"),
-            "summary": sig.get("summary"),
-            "blast_radius": f"{sig.get('evidence_count', 0)} tickets in recent window",
-            "opened_at": now,
-            "affected_ticket_count": sig.get("evidence_count", 0),
-        })
-        incident_id = inc["id"]
+        inc_title = f"[{sig['proposed_priority'].upper()}] {name}"
+        inc_severity = sig.get("proposed_priority", "normal")
+
+        # ── Dedup: reuse existing active incident ──────────────────────────
+        existing = _get_existing_incident(pod, data.signal_id)
+        if existing:
+            inc = existing
+            incident_id = inc["id"]
+            upd = {"last_detected_at": now}
+            if inc_title != inc.get("title"):
+                upd["title"] = inc_title
+            new_sev_rank = SEVERITY_RANK.get(inc_severity, -1)
+            cur_sev_rank = SEVERITY_RANK.get(inc.get("severity"), -1)
+            if new_sev_rank > cur_sev_rank:
+                upd["severity"] = inc_severity
+            old_count = inc.get("affected_ticket_count", 0) or 0
+            new_count = sig.get("evidence_count", 0)
+            if new_count > old_count:
+                upd["affected_ticket_count"] = new_count
+            pod.records.update("incidents", inc["id"], upd)
+            _audit(pod, "incident.updated", actor_type="system", actor_user_id=actor,
+                   resource_type="incident", resource_id=incident_id, signal_id=data.signal_id,
+                   details={"severity": inc_severity, "title": inc_title,
+                            "note": "Existing incident updated with new occurrences."})
+        else:
+            inc = pod.records.create("incidents", {
+                "title": inc_title,
+                "signal_id": data.signal_id, "status": "open",
+                "severity": inc_severity,
+                "summary": sig.get("summary"),
+                "blast_radius": f"{sig.get('evidence_count', 0)} tickets in recent window",
+                "opened_at": now,
+                "affected_ticket_count": sig.get("evidence_count", 0),
+            })
+            incident_id = inc["id"]
+            _audit(pod, "incident.created", actor_type="system", actor_user_id=actor,
+                   resource_type="incident", resource_id=incident_id, signal_id=data.signal_id,
+                   details={"severity": inc_severity, "title": name})
         try:
             pod.records.update("memory_entries", mem["id"], {"related_incident_id": incident_id})
         except Exception:
             pass
-        _audit(pod, "incident.created", actor_type="system", actor_user_id=actor,
-               resource_type="incident", resource_id=incident_id, signal_id=data.signal_id,
-               details={"severity": sig.get("proposed_priority"), "title": name})
         # Slack alert for high/urgent
         if sig.get("proposed_priority") in ("high", "urgent"):
             sev_label = "Critical" if sig.get("proposed_priority") == "urgent" else "High"

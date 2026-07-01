@@ -95,6 +95,7 @@ export const workspaces = [
       pendingDrafts: "Pending Reviews",
     },
     ticketCategories: [
+      { value: "portfolio", label: "Portfolio" },
       { value: "data", label: "Data Query" },
       { value: "technical", label: "Infrastructure" },
       { value: "account", label: "Account Admin" },
@@ -167,4 +168,9 @@ export const DEFAULT_WORKSPACE_ID = "signaldesk";
 
 export function getWorkspace(id) {
   return workspaces.find((w) => w.id === id) || workspaces.find((w) => w.id === DEFAULT_WORKSPACE_ID);
+}
+
+export function workspaceFilter(workspaceId) {
+  if (!workspaceId || workspaceId === DEFAULT_WORKSPACE_ID) return undefined;
+  return [{ field: "workspaceId", op: "eq", value: workspaceId }];
 }

@@ -1,0 +1,12 @@
+{
+  "name": "dedup_incidents",
+  "label": "Dedup Incidents",
+  "description": "Scan all incidents for duplicates by signal_id and merge/remove them.",
+  "type_name": "dedup_incidents",
+  "input_type_ref": "dedup_incidents_input",
+  "output_type_ref": "dedup_incidents_output",
+  "code": {"$file": "code.py"},
+  "permissions": [
+    {"role": "pod:member", "action": "run"}
+  ]
+}

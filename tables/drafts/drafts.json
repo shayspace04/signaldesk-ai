@@ -198,6 +198,38 @@
       "type": "DATETIME",
       "type_params": null,
       "unique": false
+    },
+    {
+      "auto": false,
+      "computed": false,
+      "default": null,
+      "description": null,
+      "expression": null,
+      "foreign_key": null,
+      "max_length": 80,
+      "name": "workspaceId",
+      "options": null,
+      "required": false,
+      "system": false,
+      "type": "TEXT",
+      "type_params": null,
+      "unique": false
+    },
+    {
+      "auto": false,
+      "computed": false,
+      "default": null,
+      "description": null,
+      "expression": null,
+      "foreign_key": null,
+      "max_length": 80,
+      "name": "workspaceName",
+      "options": null,
+      "required": false,
+      "system": false,
+      "type": "TEXT",
+      "type_params": null,
+      "unique": false
     }
   ],
   "config": {},

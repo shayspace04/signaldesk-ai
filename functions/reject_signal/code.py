@@ -7,6 +7,20 @@ from typing import Optional
 from pydantic import BaseModel
 from lemma_sdk import FunctionContext, Pod
 
+def _require_manager(ctx, action):
+    user_id = str(ctx.user_id) if ctx.user_id else None
+    if not user_id:
+        raise RuntimeError("Insufficient permissions: must be authenticated")
+    pod = Pod.from_env()
+    try:
+        rows = pod.records.list("user_roles", {"filters": {"user_id": user_id}, "limit": 1})
+        items = rows.get("items") or rows.get("data") or []
+        if items and items[0].get("role") == "support_manager":
+            return
+    except Exception:
+        pass
+    raise RuntimeError(f"Insufficient permissions: support_manager role required to {action}.")
+
 def _audit(pod, action, actor_type="user", actor_user_id=None, actor_agent_name=None, resource_type=None, resource_id=None, ticket_id=None, signal_id=None, details=None):
     try:
         row={"actor_type":actor_type,"action":action}
@@ -32,6 +46,7 @@ class RejectSignalOutput(BaseModel):
     approval_id: str
 
 async def reject_signal(ctx: FunctionContext, data: RejectSignalInput) -> RejectSignalOutput:
+    _require_manager(ctx, "reject signal")
     pod = Pod.from_env()
     decided_at = datetime.now(timezone.utc).isoformat()
     actor = data.approver_user_id or (str(ctx.user_id) if ctx.user_id else None)
