@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, BookOpen, Lightbulb, FileText, Target, Activity, CheckCircle2, Shield, Clock, Hash, BarChart3, Brain, Calendar, Link2, ExternalLink, Loader2, Ticket, AlertTriangle, GitBranch, TrendingUp, Users, DollarSign, Zap, RefreshCw, Eye } from "lucide-react";
+import { X, BookOpen, Lightbulb, FileText, Target, Activity, CheckCircle2, Shield, Clock, Hash, BarChart3, Brain, Calendar, Link2, ExternalLink, Loader2, Ticket, AlertTriangle, GitBranch, TrendingUp, Users, DollarSign, Zap, RefreshCw, Eye, Circle } from "lucide-react";
 import { format } from "date-fns";
 import client from "@/lib/lemmaClient";
 import ConfidenceBadge from "@/components/common/ConfidenceBadge";
@@ -10,12 +10,14 @@ import PriorityBadge from "@/components/common/PriorityBadge";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { workspaceFilter } from "@/lib/workspaceConfig";
 
+const REFRESH_INTERVAL_MS = 30000;
+
 function StatRow({ icon: Icon, label, value }) {
   return (
     <div className="flex items-center gap-2 rounded-lg bg-zinc-50 dark:bg-[#202024] px-3 py-2">
-      <Icon size={13} className="text-zinc-400 flex-shrink-0" />
-      <span className="text-xs text-zinc-500 dark:text-[#A1A1AA]">{label}</span>
-      <span className="ml-auto text-xs font-medium text-zinc-900 dark:text-[#FAFAFA]">{value != null ? value : "—"}</span>
+      <Icon size={13} className="text-zinc-400 dark:text-zinc-500 flex-shrink-0" />
+      <span className="text-xs text-zinc-500 dark:text-zinc-400">{label}</span>
+      <span className="ml-auto text-xs font-medium text-zinc-900 dark:text-zinc-50">{value != null ? value : "\u2014"}</span>
     </div>
   );
 }
@@ -23,8 +25,26 @@ function StatRow({ icon: Icon, label, value }) {
 function DetailSection({ title, content }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-[#A1A1AA] mb-1.5">{title}</p>
-      <div className="rounded-lg bg-zinc-50 dark:bg-[#202024] p-3 text-sm leading-relaxed text-zinc-700 dark:text-[#D4D4D8] whitespace-pre-wrap">{content || "No data available."}</div>
+      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-1.5">{title}</p>
+      <div className="rounded-lg bg-zinc-50 dark:bg-[#202024] p-3 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">{content || "No data available."}</div>
+    </div>
+  );
+}
+
+function TimelineEvent({ icon: Icon, color, time, label, detail, isLast }) {
+  return (
+    <div className="flex gap-3">
+      <div className="flex flex-col items-center">
+        <div className={`rounded-full p-1 ${color}`}>
+          <Icon size={12} className="text-white" />
+        </div>
+        {!isLast && <div className="w-px flex-1 bg-zinc-200 dark:bg-zinc-700" />}
+      </div>
+      <div className="pb-4 flex-1 min-w-0">
+        <p className="text-xs font-medium text-zinc-900 dark:text-zinc-50">{label}</p>
+        {detail && <p className="text-[10px] text-zinc-400 dark:text-zinc-500 truncate">{detail}</p>}
+        {time && <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-0.5">{format(new Date(time), "MMM d, yyyy HH:mm")}</p>}
+      </div>
     </div>
   );
 }
@@ -35,15 +55,15 @@ function RefItem({ icon: Icon, color, id, title, status, priority, date, subtitl
       <Icon size={13} className={`${color} flex-shrink-0`} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          {id && <span className="text-[10px] font-mono font-medium text-zinc-400 dark:text-[#71717A]">{typeof id === "string" && id.length > 12 ? id.slice(0, 8) + "..." : id}</span>}
-          <span className="text-xs font-medium text-zinc-900 dark:text-[#FAFAFA] truncate">{title || "Untitled"}</span>
+          {id && <span className="text-[10px] font-mono font-medium text-zinc-400 dark:text-zinc-500">{typeof id === "string" && id.length > 12 ? id.slice(0, 8) + "..." : id}</span>}
+          <span className="text-xs font-medium text-zinc-900 dark:text-zinc-50 truncate">{title || "Untitled"}</span>
         </div>
-        {subtitle && <p className="text-[10px] text-zinc-400 dark:text-[#71717A] truncate">{subtitle}</p>}
+        {subtitle && <p className="text-[10px] text-zinc-400 dark:text-zinc-500 truncate">{subtitle}</p>}
       </div>
       <div className="flex items-center gap-1.5 flex-shrink-0">
         {status && <StatusBadge status={status} size="sm" />}
         {priority && <PriorityBadge priority={priority} size="sm" />}
-        {date && <span className="text-[10px] text-zinc-400 dark:text-[#71717A]">{format(new Date(date), "MMM d")}</span>}
+        {date && <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{format(new Date(date), "MMM d")}</span>}
       </div>
     </button>
   );
@@ -51,12 +71,12 @@ function RefItem({ icon: Icon, color, id, title, status, priority, date, subtitl
 
 function ImpactCard({ label, value, icon: Icon, color }) {
   return (
-    <div className="rounded-lg border border-border dark:border-[#2A2A2E] p-3">
+    <div className="rounded-lg border border-border dark:border-border-dark p-3">
       <div className="flex items-center gap-2 mb-1">
         <Icon size={13} className={color} />
-        <span className="text-[10px] font-medium text-zinc-500 dark:text-[#A1A1AA] uppercase tracking-wide">{label}</span>
+        <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">{label}</span>
       </div>
-      <p className="text-sm font-bold text-zinc-900 dark:text-[#FAFAFA]">{value}</p>
+      <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50">{value}</p>
     </div>
   );
 }
@@ -64,13 +84,13 @@ function ImpactCard({ label, value, icon: Icon, color }) {
 function ConfidenceSection({ score, factors }) {
   const level = score >= 95 ? "Excellent" : score >= 85 ? "High" : score >= 70 ? "Medium" : score >= 50 ? "Low" : "Needs Review";
   const dotColor = score >= 95 ? "bg-green-500" : score >= 85 ? "bg-green-500" : score >= 70 ? "bg-amber-500" : score >= 50 ? "bg-orange-500" : "bg-red-500";
-  const textColor = score >= 95 ? "text-green-600" : score >= 85 ? "text-green-500" : score >= 70 ? "text-amber-500" : score >= 50 ? "text-orange-500" : "text-red-500";
+  const textColor = score >= 95 ? "text-green-600 dark:text-green-400" : score >= 85 ? "text-green-500 dark:text-green-400" : score >= 70 ? "text-amber-500 dark:text-amber-400" : score >= 50 ? "text-orange-500 dark:text-orange-400" : "text-red-500 dark:text-red-400";
   const barColor = score >= 95 ? "bg-green-500" : score >= 85 ? "bg-green-500" : score >= 70 ? "bg-amber-500" : score >= 50 ? "bg-orange-500" : "bg-red-500";
 
   return (
-    <div className="rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] p-4">
+    <div className="rounded-xl border border-border dark:border-border-dark bg-white dark:bg-surface-dark p-4">
       <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-[#A1A1AA]">AI Confidence</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">AI Confidence</p>
         <span className={`text-xl font-bold ${textColor}`}>{score}%</span>
       </div>
       <div className="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden mb-2">
@@ -83,12 +103,12 @@ function ConfidenceSection({ score, factors }) {
       </div>
       {factors.length > 0 && (
         <>
-          <p className="text-[10px] font-semibold text-zinc-500 dark:text-[#A1A1AA] mb-1.5">Why this confidence?</p>
+          <p className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5">Why this confidence?</p>
           <div className="space-y-1">
             {factors.map((f, i) => (
               <div key={i} className="flex items-center justify-between text-[11px]">
-                <span className="text-zinc-500 dark:text-[#A1A1AA]">{f.label}</span>
-                <span className="font-medium text-zinc-700 dark:text-[#D4D4D8]">{f.value}</span>
+                <span className="text-zinc-500 dark:text-zinc-400">{f.label}</span>
+                <span className="font-medium text-zinc-700 dark:text-zinc-300">{f.value}</span>
               </div>
             ))}
           </div>
@@ -102,12 +122,12 @@ function ReferenceSection({ title, icon: Icon, color, items, emptyText, onNaviga
   const safeItems = Array.isArray(items) ? items : [];
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-[#A1A1AA] mb-2">
+      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">
         <Icon size={12} className={`inline ${color} mr-1`} />
         {title} ({safeItems.length})
       </p>
       {safeItems.length === 0 ? (
-        <p className="text-xs text-zinc-400 dark:text-[#71717A] italic">{emptyText || "No supporting references yet."}</p>
+        <p className="text-xs text-zinc-400 dark:text-zinc-500 italic">{emptyText || "No supporting references yet."}</p>
       ) : (
         <div className="space-y-1.5">{safeItems}</div>
       )}
@@ -128,8 +148,8 @@ function KnowledgeGraph({ graph, onNavigate }) {
 
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-[#A1A1AA] mb-3">Knowledge Relationships</p>
-      <div className="rounded-xl border border-border dark:border-[#2A2A2E] bg-zinc-50/50 dark:bg-[#18181B] p-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-3">Knowledge Relationships</p>
+      <div className="rounded-xl border border-border dark:border-border-dark bg-zinc-50/50 dark:bg-[#18181B] p-4">
         <div className="flex flex-col items-center gap-1">
           {visible.map((n, i) => {
             const Icon = n.icon;
@@ -137,12 +157,12 @@ function KnowledgeGraph({ graph, onNavigate }) {
               <div key={n.key} className="flex flex-col items-center">
                 <button
                   onClick={() => onNavigate?.(n.key, n.id)}
-                  className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${n.active ? "bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300" : "bg-white dark:bg-[#202024] text-zinc-600 dark:text-[#A1A1AA] hover:bg-zinc-100 dark:hover:bg-[#27272A]"}`}
+                  className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${n.active ? "bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300" : "bg-white dark:bg-[#202024] text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-[#27272A]"}`}
                 >
                   <Icon size={12} className={n.color} />
                   {n.label}
                 </button>
-                {i < visible.length - 1 && <div className="h-3 w-px bg-zinc-300 dark:bg-[#2A2A2E]" />}
+                {i < visible.length - 1 && <div className="h-3 w-px bg-zinc-300 dark:bg-zinc-600" />}
               </div>
             );
           })}
@@ -192,7 +212,7 @@ function generateRootCause(entry, incident, tickets) {
   }
   if (entry.category) parts.push(`Category: ${entry.category}`);
   if (entry.tags && entry.tags.length > 0) parts.push(`Tags: ${entry.tags.join(", ")}`);
-  return parts.length > 0 ? parts.join("\n\n") : "Root cause analysis in progress. Linked records are being analyzed for contributing factors.";
+  return parts.length > 0 ? parts.join("\n\n") : null;
 }
 
 function generateBusinessImpact(entry, tickets, incident) {
@@ -207,7 +227,11 @@ function generateBusinessImpact(entry, tickets, incident) {
     const durations = resolved.map((t) => t.created_at && t.updated_at ? (new Date(t.updated_at) - new Date(t.created_at)) / 3600000 : 0).filter(Boolean);
     resHours = durations.length > 0 ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length * 10) / 10 : 0;
   }
-  const revenueRisk = sev === "critical" || sev === "urgent" ? "High" : sev === "high" ? "Medium" : "Low";
+  const customersAffected = entry.customers_affected || affected;
+  const resolutionTime = entry.resolution_time_hours || resHours;
+  const severityScore = { critical: 5, urgent: 4, high: 3, medium: 2, low: 1 }[sev] || 2;
+  const revenueRiskScore = (customersAffected * severityScore) + (resolutionTime > 0 ? Math.round(resolutionTime) : 0);
+  const revenueRisk = revenueRiskScore >= 20 ? "High" : revenueRiskScore >= 8 ? "Medium" : "Low";
   return { affectedCustomers: affected, relatedTickets: tkts.length, resolutionTime: resHours, severity: sev, revenueRisk };
 }
 
@@ -227,7 +251,7 @@ function generateTechnicalImpact(entry, tickets, signals) {
     if (urgent.length > 0) parts.push(`${urgent.length} high-priority ticket${urgent.length !== 1 ? "s" : ""} reported`);
   }
   if (entry.root_cause) parts.push(`System behavior: ${entry.root_cause.slice(0, 120)}`);
-  return parts.length > 0 ? parts.join("\n") : "Technical impact assessment in progress.";
+  return parts.length > 0 ? parts.join("\n") : null;
 }
 
 function generateCustomerImpact(entry, tickets) {
@@ -246,7 +270,7 @@ function generateCustomerImpact(entry, tickets) {
     const complaints = bodies.slice(0, 3).map((b) => b.slice(0, 100)).join("\n");
     parts.push(`Customer feedback summary:\n${complaints}`);
   }
-  return parts.length > 0 ? parts.join("\n") : "Customer impact data being collected from linked records.";
+  return parts.length > 0 ? parts.join("\n") : null;
 }
 
 function generatePreventiveActions(entry, incident, tickets) {
@@ -295,7 +319,7 @@ function generateLessonsLearned(entry, incident, tickets) {
   if (incident?.linearIssueId) lessons.push("Engineering handoff was required — improve signal-to-incident automation to reduce manual escalation.");
   lessons.push("Post-incident documentation should be completed within 24 hours of resolution.");
   lessons.push("All customer communications should be reviewed and approved before sending.");
-  return lessons.length > 0 ? lessons.map((l, i) => `${i + 1}. ${l}`).join("\n") : "Lessons learned documentation in progress.";
+  return lessons.length > 0 ? lessons.map((l, i) => `${i + 1}. ${l}`).join("\n") : null;
 }
 
 function generateMonitoring(entry, tickets) {
@@ -315,7 +339,7 @@ function generateMonitoring(entry, tickets) {
   if (categories.has("security")) recs.push("Alert on unusual access patterns and failed authentication attempts");
   recs.push("Create dashboard for real-time monitoring of related metrics");
   recs.push("Set up weekly report on incident trends and resolution SLAs");
-  return recs.length > 0 ? recs.map((r, i) => `${i + 1}. ${r}`).join("\n") : "Standard monitoring recommendations will be generated as more data becomes available.";
+  return recs.length > 0 ? recs.map((r, i) => `${i + 1}. ${r}`).join("\n") : null;
 }
 
 function computeConfidence(entry, tickets, signals, incident, hasEngineeringConfirm) {
@@ -391,6 +415,20 @@ export default function KnowledgeDrawer({ entry, onClose }) {
     recordView();
   }, [entry?.id]);
 
+  const [refreshKey, setRefreshKey] = useState(0);
+  const refreshTimerRef = useRef(null);
+
+  const handleRefresh = useCallback(() => {
+    setRefreshKey((k) => k + 1);
+  }, []);
+
+  useEffect(() => {
+    refreshTimerRef.current = setInterval(handleRefresh, REFRESH_INTERVAL_MS);
+    return () => {
+      if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
+    };
+  }, [handleRefresh]);
+
   useEffect(() => {
     if (!entry) return;
     let mounted = true;
@@ -422,12 +460,15 @@ export default function KnowledgeDrawer({ entry, onClose }) {
 
       const sigIds = new Set();
       if (entry.signal_id) sigIds.add(entry.signal_id);
+      if (entry.source_signal_id) sigIds.add(entry.source_signal_id);
       (entry.signal_ids || []).forEach((id) => sigIds.add(id));
 
       const directSignals = allSigs.filter((s) => sigIds.has(s.id));
       const matchedSignals = allSigs.filter((s) => {
         if (sigIds.has(s.id)) return false;
         if (entry.root_cause && (s.summary || "").toLowerCase().includes((entry.root_cause || "").toLowerCase())) return true;
+        const rc = entry.root_cause || "";
+        if (rc && (s.name || "").toLowerCase().includes(rc.toLowerCase())) return true;
         if (entry.incident_id && s.incident_id === entry.incident_id) return true;
         if (entry.category && s.category === entry.category) return true;
         if (entry.tags && entry.tags.length > 0 && s.tags) {
@@ -435,20 +476,31 @@ export default function KnowledgeDrawer({ entry, onClose }) {
           const sTags = (Array.isArray(s.tags) ? s.tags : []).map((t) => String(t).toLowerCase());
           if (eTags.some((t) => sTags.includes(t))) return true;
         }
+        const titleWords = (entry.title || "").toLowerCase().split(/\s+/).filter((w) => w.length > 3);
+        if (titleWords.length > 0) {
+          const sText = ((s.name || "") + " " + (s.summary || "")).toLowerCase();
+          if (titleWords.some((w) => sText.includes(w))) return true;
+        }
         return false;
       });
       const seenSig = new Set();
       const uniqueSignals = [...directSignals, ...matchedSignals].filter((s) => { if (seenSig.has(s.id)) return false; seenSig.add(s.id); return true; });
+      const foundSignalIds = uniqueSignals.map((s) => s.id);
 
       let incident = null;
       if (entry.incident_id) {
         incident = allIncs.find((i) => i.id === entry.incident_id) || null;
         try { if (!incident) incident = await client.records.get("incidents", entry.incident_id).catch(() => null); } catch {}
       }
+      if (!incident && entry.related_incident_id) {
+        incident = allIncs.find((i) => i.id === entry.related_incident_id) || null;
+        try { if (!incident) incident = await client.records.get("incidents", entry.related_incident_id).catch(() => null); } catch {}
+      }
 
       const relTkts = allTkts.filter((t) => {
         if (entry.ticket_ids && entry.ticket_ids.includes(t.id)) return true;
         if (entry.signal_id && t.signal_id === entry.signal_id) return true;
+        if (foundSignalIds.length > 0 && t.signal_id && foundSignalIds.includes(t.signal_id)) return true;
         if (entry.incident_id && t.incident_id === entry.incident_id) return true;
         if (entry.root_cause && (t.title || "").toLowerCase().includes((entry.root_cause || "").toLowerCase())) return true;
         if (entry.root_cause && (t.body || "").toLowerCase().includes((entry.root_cause || "").toLowerCase())) return true;
@@ -457,6 +509,11 @@ export default function KnowledgeDrawer({ entry, onClose }) {
           const eTags = entry.tags.map((tg) => String(tg).toLowerCase());
           const tTags = (Array.isArray(t.tags) ? t.tags : []).map((tg) => String(tg).toLowerCase());
           if (eTags.some((tg) => tTags.includes(tg))) return true;
+        }
+        const titleWords = (entry.title || "").toLowerCase().split(/\s+/).filter((w) => w.length > 3);
+        if (titleWords.length > 0) {
+          const tText = ((t.title || "") + " " + (t.body || "")).toLowerCase();
+          if (titleWords.some((w) => tText.includes(w))) return true;
         }
         return false;
       });
@@ -501,7 +558,7 @@ export default function KnowledgeDrawer({ entry, onClose }) {
     };
     load();
     return () => { mounted = false; };
-  }, [entry, workspace.id]);
+  }, [entry, workspace.id, refreshKey]);
 
   const businessImpact = useMemo(() => generateBusinessImpact(entry, relatedTickets, relatedIncident), [entry, relatedTickets, relatedIncident]);
   const summaryText = useMemo(() => generateSummary(entry, relatedTickets, relatedSignals, relatedIncident), [entry, relatedTickets, relatedSignals, relatedIncident]);
@@ -514,7 +571,7 @@ export default function KnowledgeDrawer({ entry, onClose }) {
     const tkts = Array.isArray(relatedTickets) ? relatedTickets : [];
     const bodies = tkts.filter((t) => t.status === "resolved").map((t) => t.body || "").filter(Boolean);
     if (bodies.length > 0) return bodies.slice(0, 3).join("\n---\n");
-    return "Resolution details will be populated from linked incident and ticket data.";
+    return null;
   }, [entry, relatedIncident, relatedTickets]);
   const prevActionsText = useMemo(() => generatePreventiveActions(entry, relatedIncident, relatedTickets), [entry, relatedIncident, relatedTickets]);
   const lessonsText = useMemo(() => generateLessonsLearned(entry, relatedIncident, relatedTickets), [entry, relatedIncident, relatedTickets]);
@@ -560,6 +617,70 @@ export default function KnowledgeDrawer({ entry, onClose }) {
     };
   }, [relatedTickets, relatedSignals, relatedIncident, relatedLinear, entry]);
 
+  const timelineEvents = useMemo(() => {
+    const events = [];
+    const tkts = Array.isArray(relatedTickets) ? relatedTickets : [];
+    const sigs = Array.isArray(relatedSignals) ? relatedSignals : [];
+
+    if (entry.created_at) {
+      events.push({ type: "knowledge", time: entry.created_at, label: "Knowledge article created", icon: BookOpen, color: "bg-amber-500", detail: entry.title });
+    }
+    if (entry.captured_at) {
+      events.push({ type: "capture", time: entry.captured_at, label: "Issue captured", icon: Activity, color: "bg-green-500", detail: "Pattern recorded in knowledge base" });
+    }
+    if (entry.updated_at && entry.updated_at !== entry.created_at) {
+      events.push({ type: "update", time: entry.updated_at, label: "Article updated", icon: RefreshCw, color: "bg-blue-500" });
+    }
+    if (relatedIncident?.created_at) {
+      events.push({ type: "incident", time: relatedIncident.created_at, label: "Incident created", icon: Shield, color: "bg-red-500", detail: relatedIncident.title });
+    }
+    if (relatedIncident?.resolved_at) {
+      events.push({ type: "resolved", time: relatedIncident.resolved_at, label: "Incident resolved", icon: CheckCircle2, color: "bg-green-500" });
+    }
+    sigs.forEach((s) => {
+      if (s.detected_at) {
+        events.push({ type: "signal", time: s.detected_at, label: "Signal detected", icon: Activity, color: "bg-green-500", detail: s.name || s.summary });
+      }
+    });
+    tkts.forEach((t) => {
+      if (t.created_at) {
+        events.push({ type: "ticket", time: t.created_at, label: "Ticket created", icon: Ticket, color: "bg-blue-500", detail: t.title });
+      }
+      if (t.updated_at && t.status === "resolved") {
+        events.push({ type: "ticket_resolved", time: t.updated_at, label: "Ticket resolved", icon: CheckCircle2, color: "bg-green-500", detail: t.title });
+      }
+    });
+    events.sort((a, b) => new Date(a.time) - new Date(b.time));
+    return events;
+  }, [entry, relatedTickets, relatedSignals, relatedIncident]);
+
+  const operationalImpact = useMemo(() => {
+    const tkts = Array.isArray(relatedTickets) ? relatedTickets : [];
+    const sigs = Array.isArray(relatedSignals) ? relatedSignals : [];
+    const totalTickets = tkts.length;
+    const totalSignals = sigs.length;
+    const openTickets = tkts.filter((t) => t.status !== "resolved" && t.status !== "closed").length;
+    const sev = relatedIncident?.severity || entry.severity || "medium";
+    const severityScore = { critical: 5, urgent: 4, high: 3, medium: 2, low: 1 }[sev] || 2;
+    const impactScore = (totalTickets * 2) + (totalSignals * 3) + (openTickets * 1) + severityScore;
+    if (impactScore >= 15) return "Critical";
+    if (impactScore >= 8) return "Significant";
+    if (impactScore >= 4) return "Moderate";
+    return "Low";
+  }, [relatedTickets, relatedSignals, relatedIncident, entry]);
+
+  const wsTerm = useMemo(() => {
+    const name = workspace?.name || "Workspace";
+    const kn = workspace?.knowledge;
+    return {
+      articleLabel: kn?.title || "Knowledge Base",
+      ticketsLabel: workspace?.kpi?.openTickets?.replace("Open ", "") || "Tickets",
+      signalsLabel: workspace?.kpi?.activeSignals?.replace("Active ", "") || "Signals",
+      incidentsLabel: workspace?.kpi?.criticalIncidents?.replace("Critical ", "") || "Incidents",
+      subtitle: kn?.subtitle || "Organizational memory",
+    };
+  }, [workspace]);
+
   const handleNavigate = (type, id) => {
     if (!id) return;
     switch (type) {
@@ -593,25 +714,31 @@ export default function KnowledgeDrawer({ entry, onClose }) {
       <motion.div
         initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
         transition={{ type: "spring", damping: 30, stiffness: 300, mass: 0.8 }}
-        className="relative flex h-full w-full max-w-[600px] flex-col bg-white dark:bg-[#111113] border-l border-border dark:border-[#2A2A2E] shadow-2xl">
-        <div className="flex-shrink-0 border-b border-border dark:border-[#2A2A2E] bg-white dark:bg-[#111113] px-6 py-4">
+        className="relative flex h-full w-full max-w-[600px] flex-col bg-white dark:bg-[#111113] border-l border-border dark:border-border-dark shadow-2xl">
+        <div className="flex-shrink-0 border-b border-border dark:border-border-dark bg-white dark:bg-[#111113] px-6 py-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <BookOpen size={15} className="text-amber-500" />
-                <span className="text-xs font-semibold text-zinc-500 dark:text-[#A1A1AA] uppercase tracking-wide">Knowledge</span>
+                <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">{wsTerm.articleLabel}</span>
                 <ConfidenceBadge value={confidence.score} />
               </div>
-              <h2 className="text-lg font-bold text-zinc-900 dark:text-[#FAFAFA] leading-snug">{entry.title || "Untitled Article"}</h2>
+              <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50 leading-snug">{entry.title || "Untitled Article"}</h2>
             </div>
-            <button onClick={onClose}
-              className="flex-shrink-0 rounded-lg p-2 text-zinc-400 hover:text-zinc-700 dark:hover:text-[#FAFAFA] hover:bg-zinc-100 dark:hover:bg-[#27272A] transition-colors">
-              <X size={18} />
-            </button>
+            <div className="flex items-center gap-1">
+              <button onClick={handleRefresh} title="Refresh data"
+                className="flex-shrink-0 rounded-lg p-2 text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-[#27272A] transition-colors">
+                <RefreshCw size={16} />
+              </button>
+              <button onClick={onClose}
+                className="flex-shrink-0 rounded-lg p-2 text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-[#27272A] transition-colors">
+                <X size={18} />
+              </button>
+            </div>
           </div>
-          <div className="mt-3 flex items-center gap-3 text-xs text-zinc-500 dark:text-[#A1A1AA] flex-wrap">
+          <div className="mt-3 flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400 flex-wrap">
             {entry.category && (
-              <span className="rounded-md bg-zinc-100 dark:bg-[#202024] px-2 py-0.5 text-[10px] font-medium text-zinc-600 dark:text-[#A1A1AA]">{entry.category}</span>
+              <span className="rounded-md bg-zinc-100 dark:bg-[#202024] px-2 py-0.5 text-[10px] font-medium text-zinc-600 dark:text-zinc-400">{entry.category}</span>
             )}
             {entry.created_at && <span className="flex items-center gap-1"><Calendar size={12} />Created {format(new Date(entry.created_at), "MMM d, yyyy")}</span>}
             {entry.updated_at && <span className="flex items-center gap-1">Updated {format(new Date(entry.updated_at), "MMM d, yyyy")}</span>}
@@ -621,21 +748,21 @@ export default function KnowledgeDrawer({ entry, onClose }) {
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
           {loading ? (
-            <div className="flex items-center justify-center py-12"><Loader2 size={20} className="animate-spin text-zinc-400" /></div>
+            <div className="flex items-center justify-center py-12"><Loader2 size={20} className="animate-spin text-zinc-400 dark:text-zinc-500" /></div>
           ) : (
             <>
               <DetailSection title="Executive Summary" content={summaryText} />
               <DetailSection title="Detailed Root Cause" content={rootCauseText} />
 
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-[#A1A1AA] mb-2">Business Impact</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">Business Impact</p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   <ImpactCard icon={Users} color="text-blue-500" label="Customers Affected" value={businessImpact.affectedCustomers} />
                   <ImpactCard icon={FileText} color="text-violet-500" label="Related Tickets" value={businessImpact.relatedTickets} />
-                  <ImpactCard icon={Clock} color="text-cyan-500" label="Resolution Time" value={businessImpact.resolutionTime > 0 ? `${businessImpact.resolutionTime}h` : "In progress"} />
+                  <ImpactCard icon={Clock} color="text-cyan-500" label="Resolution Time" value={businessImpact.resolutionTime > 0 ? `${businessImpact.resolutionTime}h` : "\u2014"} />
                   <ImpactCard icon={Shield} color={businessImpact.severity === "critical" || businessImpact.severity === "urgent" ? "text-red-500" : "text-amber-500"} label="Severity" value={businessImpact.severity.charAt(0).toUpperCase() + businessImpact.severity.slice(1)} />
                   <ImpactCard icon={DollarSign} color={businessImpact.revenueRisk === "High" ? "text-red-500" : businessImpact.revenueRisk === "Medium" ? "text-amber-500" : "text-green-500"} label="Revenue Risk" value={businessImpact.revenueRisk} />
-                  <ImpactCard icon={Zap} color="text-orange-500" label="Operational Impact" value={businessImpact.relatedTickets > 10 ? "Significant" : businessImpact.relatedTickets > 3 ? "Moderate" : "Low"} />
+                  <ImpactCard icon={Zap} color={operationalImpact === "Critical" ? "text-red-500" : operationalImpact === "Significant" ? "text-orange-500" : "text-amber-500"} label="Operational Impact" value={operationalImpact} />
                 </div>
               </div>
 
@@ -646,9 +773,21 @@ export default function KnowledgeDrawer({ entry, onClose }) {
               <DetailSection title="Lessons Learned" content={lessonsText} />
               <DetailSection title="Recommended Monitoring" content={monitoringText} />
 
+              {timelineEvents.length >= 2 && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">Timeline</p>
+                  <div className="rounded-xl border border-border dark:border-border-dark bg-zinc-50/50 dark:bg-[#18181B] p-4">
+                    {timelineEvents.map((evt, i) => (
+                      <TimelineEvent key={i} icon={evt.icon} color={evt.color} time={evt.time}
+                        label={evt.label} detail={evt.detail} isLast={i === timelineEvents.length - 1} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <ConfidenceSection score={confidence.score} factors={confidence.factors} />
 
-              <ReferenceSection title="Related Tickets" icon={FileText} color="text-blue-500"
+              <ReferenceSection title={"Related " + wsTerm.ticketsLabel} icon={FileText} color="text-blue-500"
                 items={relatedTickets.slice(0, 8).map((t) => (
                   <RefItem key={t.id} icon={FileText} color="text-blue-400" id={t.id} title={t.title || t.customer_name || t.id}
                     status={t.status} priority={t.priority} date={t.created_at}
@@ -657,7 +796,7 @@ export default function KnowledgeDrawer({ entry, onClose }) {
                 emptyText="No related tickets yet."
               />
 
-              <ReferenceSection title="Related Signals" icon={Activity} color="text-green-500"
+              <ReferenceSection title={"Related " + wsTerm.signalsLabel} icon={Activity} color="text-green-500"
                 items={relatedSignals.slice(0, 5).map((s) => (
                   <RefItem key={s.id} icon={Activity} color="text-green-400" id={s.id} title={s.name || s.summary || s.id}
                     status={s.status} priority={s.proposed_priority} date={s.detected_at}
@@ -666,7 +805,7 @@ export default function KnowledgeDrawer({ entry, onClose }) {
                 emptyText="No related signals yet."
               />
 
-              <ReferenceSection title="Related Incidents" icon={Shield} color="text-red-500"
+              <ReferenceSection title={"Related " + wsTerm.incidentsLabel} icon={Shield} color="text-red-500"
                 items={relatedIncident ? [
                   <RefItem key={relatedIncident.id} icon={Shield} color="text-red-400" id={relatedIncident.id} title={relatedIncident.title || relatedIncident.id}
                     status={relatedIncident.status} priority={relatedIncident.severity} date={relatedIncident.created_at}
@@ -688,22 +827,22 @@ export default function KnowledgeDrawer({ entry, onClose }) {
                 items={relatedAuditEvents.map((l, i) => (
                   <div key={i} className="flex items-center gap-2 rounded-lg bg-zinc-50 dark:bg-[#202024] px-3 py-2">
                     <span className="min-w-0 flex-1">
-                      <span className="text-xs text-zinc-700 dark:text-[#D4D4D8]">{(l.action || "event").replace(/\./g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</span>
-                      {l.created_at && <span className="ml-2 text-[10px] text-zinc-400">{format(new Date(l.created_at), "MMM d, HH:mm")}</span>}
+                      <span className="text-xs text-zinc-700 dark:text-zinc-300">{(l.action || "event").replace(/\./g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</span>
+                      {l.created_at && <span className="ml-2 text-[10px] text-zinc-400 dark:text-zinc-500">{format(new Date(l.created_at), "MMM d, HH:mm")}</span>}
                     </span>
                   </div>
                 ))}
                 emptyText="No audit events recorded yet."
               />
 
-              <ReferenceSection title="Related Knowledge Articles" icon={BookOpen} color="text-amber-500"
+              <ReferenceSection title={"Related " + wsTerm.articleLabel} icon={BookOpen} color="text-amber-500"
                 items={relatedKnowledgeArticles.map((k) => (
                   <button key={k.id}
                     onClick={() => handleNavigate("knowledge", k.id)}
                     className="flex w-full items-center gap-2 rounded-lg bg-zinc-50 dark:bg-[#202024] px-3 py-2 transition hover:bg-zinc-100 dark:hover:bg-[#27272A] text-left">
                     <BookOpen size={13} className="text-amber-400 flex-shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <span className="text-xs font-medium text-zinc-900 dark:text-[#FAFAFA] truncate block">{k.title || "Untitled"}</span>
+                      <span className="text-xs font-medium text-zinc-900 dark:text-zinc-50 truncate block">{k.title || "Untitled"}</span>
                     </div>
                     {k.confidence != null && <ConfidenceBadge value={k.confidence} />}
                   </button>
@@ -714,7 +853,7 @@ export default function KnowledgeDrawer({ entry, onClose }) {
               <KnowledgeGraph graph={graph} onNavigate={handleNavigate} />
 
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-[#A1A1AA] mb-2">Usage Statistics</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">Usage Statistics</p>
                 <div className="grid grid-cols-2 gap-2">
                   <StatRow icon={Hash} label="References" value={usageStats.referenceCount} />
                   <StatRow icon={Eye} label="Views" value={usageStats.viewCount} />

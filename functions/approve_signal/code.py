@@ -91,8 +91,8 @@ async def approve_signal(ctx: FunctionContext, data: ApproveSignalInput) -> Appr
     decided_at = datetime.now(timezone.utc).isoformat()
     actor = data.approver_user_id or (str(ctx.user_id) if ctx.user_id else None)
 
-    # 1. Flip signal status
-    upd = {"status": "approved", "decided_at": decided_at}
+    # 1. Flip signal status and workflow stage
+    upd = {"status": "approved", "workflowStage": "approved", "decided_at": decided_at}
     if data.approver_user_id: upd["approver_user_id"] = data.approver_user_id
     if data.approver_notes: upd["approver_notes"] = data.approver_notes
     updated = pod.records.update("signals", data.signal_id, upd)

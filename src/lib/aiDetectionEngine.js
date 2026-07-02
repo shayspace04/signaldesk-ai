@@ -513,6 +513,7 @@ function buildCluster(tickets) {
     proposed_priority: tickets.some((t) => t.priority === "urgent") ? "urgent"
       : tickets.some((t) => t.priority === "high") ? "high" : "normal",
     status: "pending",
+    workflowStage: "new",
   };
 }
 
@@ -531,6 +532,46 @@ function buildClusterDescription(cluster) {
     `**Related Tickets**:`,
     ...cluster.ticket_ids.map((id) => `- ${id}`),
   ].join("\n");
+}
+
+/* ── Historical root cause check ────────────────────────────────── */
+async function loadExistingSignalsAndIncidents() {
+  try {
+    const [sigRes, incRes] = await Promise.allSettled([
+      client.records.list("signals", { limit: 200 }),
+      client.records.list("incidents", { limit: 200 }),
+    ]);
+    const signals = (sigRes.status === "fulfilled" ? sigRes.value.items || sigRes.value.records || sigRes.value.data || [] : []);
+    const incidents = (incRes.status === "fulfilled" ? incRes.value.items || incRes.value.records || incRes.value.data || [] : []);
+    return { signals, incidents };
+  } catch {
+    return { signals: [], incidents: [] };
+  }
+}
+
+function checkHistoricalRootCause(ticket, signals, incidents) {
+  let historicalScore = 0;
+  const ticketCat = (ticket.category || "").toLowerCase();
+  const ticketWords = tokenize(ticket.title || "");
+
+  for (const sig of signals) {
+    const sigCat = (sig.category || "").toLowerCase();
+    if (sigCat === ticketCat && sigCat) {
+      historicalScore += 0.3;
+      const sigWords = tokenize(sig.name || sig.summary || "");
+      const overlap = ticketWords.filter((w) => sigWords.includes(w)).length;
+      if (overlap > 1) historicalScore += 0.2;
+    }
+  }
+
+  for (const inc of incidents) {
+    const incCat = (inc.category || inc.title || "").toLowerCase();
+    if (incCat.includes(ticketCat) && ticketCat) {
+      historicalScore += 0.2;
+    }
+  }
+
+  return Math.min(historicalScore, 1);
 }
 
 /* ── Audit log ──────────────────────────────────────────────────── */
@@ -576,6 +617,7 @@ async function createSignalFromCluster(cluster, workspaceId, workspaceName) {
   signalUpdates.workspaceId = workspaceId;
   signalUpdates.workspaceName = workspaceName;
   signalUpdates.status = "pending";
+  signalUpdates.workflowStage = "new";
 
   await client.records.update("signals", signalId, signalUpdates);
 
@@ -634,6 +676,9 @@ async function escalateToIncident(cluster, signalForEscalation, workspaceId, wor
   });
 
   const incId = result.output_data?.incident_id || result.incident_id || result.id;
+  if (incId) {
+    try { await client.records.update("signals", signalForEscalation.id, { incident_id: incId, workflowStage: "incident_created", status: "approved" }); } catch { /* skip */ }
+  }
   log("Incident created:", incId);
   return incId;
 }
@@ -671,7 +716,7 @@ async function postIncidentActions(cluster, signalId, incidentId, workspaceId, w
 
 /* ── Main: run detection for a single ticket ────────────────────── */
 export async function runDetection(ticketId, workspaceId, workspaceName) {
-  const results = { signal_created: false, ticket_linked: false, incident_created: false, cluster: null, logs: [] };
+  const results = { signal_created: false, ticket_linked: false, incident_created: false, signal_id: null, incident_id: null, cluster: null, logs: [] };
 
   log("========== AI DETECTION STARTED ==========");
   log("Ticket:", ticketId, "Workspace:", workspaceId);
@@ -742,12 +787,11 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
     }
     results.logs.push("Similarity Matrix Built");
 
-    /* 5. Graph-based clustering (edge threshold = 0.35) */
-    const EDGE_THRESHOLD = 0.35;
+    /* 5. Graph-based clustering (edge threshold from config) */
     const adjacency = candidates.map(() => []);
     let edgesFormed = 0;
     pairs.forEach((p) => {
-      if (p.score >= EDGE_THRESHOLD) {
+      if (p.score >= thresholds.edgeThreshold) {
         adjacency[p.i].push(p.j);
         adjacency[p.j].push(p.i);
         edgesFormed++;
@@ -819,8 +863,21 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
     log("Risk score:", cluster.risk_score, "Confidence:", cluster.confidence, "%");
     results.logs.push(`Risk Score: ${cluster.risk_score}, Confidence: ${cluster.confidence}%`);
 
+    /* 7b. Historical root cause check — boost risk by matching existing signals/incidents */
+    try {
+      const { signals: existingSignals, incidents: existingIncidents } = await loadExistingSignalsAndIncidents();
+      const historicalBoost = checkHistoricalRootCause(triggerTicket, existingSignals, existingIncidents);
+      if (historicalBoost > 0) {
+        cluster.risk_score = Math.min(cluster.risk_score + historicalBoost * 3, 10);
+        cluster.affected_customer_count = Math.max(cluster.affected_customer_count, Math.round(historicalBoost * 5));
+        log("Historical boost applied:", historicalBoost);
+        results.logs.push(`Historical root cause match (boost: ${(historicalBoost * 100).toFixed(0)}%)`);
+      }
+    } catch { /* skip historical check on failure */ }
+
     /* 8. Find or create signal — check if any cluster ticket already belongs to a signal */
     let existingSignal = null;
+    let createdSignalId = null;
     for (const t of matchCluster) {
       if (t.id === ticketId) continue;
       const sig = await findExistingSignalForTicket(t.id, workspaceId);
@@ -830,13 +887,15 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
     if (existingSignal) {
       results.ticket_linked = await attachTicketToSignal(existingSignal, cluster, ticketId);
       results.cluster = { ...cluster, id: existingSignal.id };
+      results.signal_id = existingSignal.id;
       if (results.ticket_linked) results.logs.push("Ticket linked to existing signal");
       else results.logs.push("Ticket already in signal");
     } else {
       try {
-        const signalId = await createSignalFromCluster(cluster, workspaceId, workspaceName);
+        createdSignalId = await createSignalFromCluster(cluster, workspaceId, workspaceName);
         results.signal_created = true;
-        results.cluster = { ...cluster, id: signalId };
+        results.signal_id = createdSignalId;
+        results.cluster = { ...cluster, id: createdSignalId };
         results.logs.push("Signal Created");
       } catch (err) {
         warn("Failed to create signal:", err);
@@ -864,6 +923,7 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
             const incId = await escalateToIncident(cluster, signalForEscalation, workspaceId, workspaceName);
             if (incId) {
               results.incident_created = true;
+              results.incident_id = incId;
               results.logs.push("Incident Created");
               await postIncidentActions(cluster, signalForEscalation.id, incId, workspaceId, workspaceName, config);
               results.logs.push("Post-incident automation complete");

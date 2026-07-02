@@ -9,7 +9,8 @@ const DEFAULTS = {
 
   /* Thresholds */
   minSimilarTickets: 3,
-  similarityThreshold: 35,
+  similarityThreshold: 75,
+  edgeSimilarityThreshold: 35,
   timeWindow: 48,
   minCustomersAffected: 2,
   signalRiskThreshold: 60,
@@ -36,6 +37,14 @@ const DEFAULTS = {
   /* Knowledge */
   autoGenerateKnowledgeArticles: true,
   autoUpdateExistingKnowledge: true,
+
+  /* Developer AI Detection settings */
+  aiSimilarityThreshold: 75,
+  aiAutoSignal: true,
+  aiMinSimilarTickets: 3,
+  aiIncidentThreshold: 5,
+  aiAutoGmail: true,
+  aiAutoLinear: true,
 };
 
 function loadConfig(workspaceId) {
@@ -73,6 +82,7 @@ export function getThresholds(workspaceId) {
   return {
     minTickets: c.minSimilarTickets,
     minSimilarity: c.similarityThreshold / 100,
+    edgeThreshold: c.edgeSimilarityThreshold / 100,
     maxAgeMs: c.timeWindow * 3600000,
     riskThreshold: c.signalRiskThreshold,
     escalationThreshold: c.incidentEscalationThreshold,
@@ -127,6 +137,18 @@ export function isSignalAutomationEnabled(workspaceId) {
 
 export function isSemanticMatchingEnabled(workspaceId) {
   return loadConfig(workspaceId).semanticMatching;
+}
+
+export function getDevDetectionConfig(workspaceId) {
+  const c = loadConfig(workspaceId);
+  return {
+    similarityThreshold: c.aiSimilarityThreshold,
+    autoSignal: c.aiAutoSignal,
+    minSimilarTickets: c.aiMinSimilarTickets,
+    incidentThreshold: c.aiIncidentThreshold,
+    autoGmail: c.aiAutoGmail,
+    autoLinear: c.aiAutoLinear,
+  };
 }
 
 export function useAIDetectionConfig(workspaceId) {

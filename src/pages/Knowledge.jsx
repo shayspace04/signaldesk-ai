@@ -92,14 +92,14 @@ export default function Knowledge() {
   return (
     <motion.div className="flex flex-col min-h-full" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
       <div className="mb-6">
-        <h1 className="text-[36px] font-bold tracking-tight text-zinc-900 dark:text-[#FAFAFA]">{workspace.knowledge.title}</h1>
-        <p className="mt-1 text-sm text-muted dark:text-[#A1A1AA]">{workspace.knowledge.subtitle} · {entries.length} article{entries.length !== 1 ? "s" : ""}</p>
+        <h1 className="text-[36px] font-bold tracking-tight text-primary">{workspace.knowledge.title}</h1>
+        <p className="mt-1 text-sm text-muted dark:text-muted-dark">{workspace.knowledge.subtitle} · {entries.length} article{entries.length !== 1 ? "s" : ""}</p>
       </div>
 
       <div className="relative max-w-md mb-6">
-        <Search className="absolute left-3 top-2.5 text-muted dark:text-[#A1A1AA]" size={16} />
+        <Search className="absolute left-3 top-2.5 text-muted dark:text-muted-dark" size={16} />
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search knowledge by title, category, root cause..."
-          className="w-full rounded-xl border border-border dark:border-[#2A2A2E] bg-surface dark:bg-[#111113] py-2 pl-9 pr-3 text-sm outline-none transition-all duration-200 focus:border-zinc-300 dark:focus:border-[#2A2A2E] focus:ring-1 focus:ring-zinc-200 dark:focus:ring-zinc-600 placeholder:text-muted dark:text-[#A1A1AA]" />
+          className="w-full rounded-xl border border-border dark:border-border-dark bg-surface dark:bg-[#111113] py-2 pl-9 pr-3 text-sm outline-none transition-all duration-200 focus:border-zinc-300 dark:focus:border-[#2A2A2E] focus:ring-1 focus:ring-zinc-200 dark:focus:ring-zinc-600 placeholder:text-muted dark:text-muted-dark" />
       </div>
 
       {loading ? (
@@ -108,30 +108,30 @@ export default function Knowledge() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 dark:border-[#2A2A2E] bg-zinc-50/50 py-20">
-          <BookOpen size={36} className="mb-4 text-zinc-300 dark:text-[#71717A]" />
-          <p className="text-zinc-600 dark:text-[#A1A1AA] font-medium">{search ? "No entries match your search" : "No knowledge entries yet"}</p>
-          <p className="mt-1 text-sm text-muted dark:text-[#A1A1AA]">{search ? "Try a different search term." : "Knowledge entries appear when incidents are resolved."}</p>
+          <BookOpen size={36} className="mb-4 text-zinc-300 dark:text-zinc-500" />
+          <p className="text-secondary-body font-medium">{search ? "No entries match your search" : "No knowledge entries yet"}</p>
+          <p className="mt-1 text-sm text-muted dark:text-muted-dark">{search ? "Try a different search term." : "Knowledge entries appear when incidents are resolved."}</p>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((entry) => (
             <motion.div key={entry.id} onClick={() => setSelectedEntry(entry)}
               whileHover={{ y: -2 }}
-              className="rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] p-5 shadow-sm transition-all duration-200 hover:border-zinc-300 dark:hover:border-[#2A2A2E] hover:shadow-card cursor-pointer">
+              className="rounded-xl border border-border dark:border-border-dark bg-card p-5 shadow-sm transition-all duration-200 hover:border-zinc-300 dark:hover:border-[#2A2A2E] hover:shadow-card cursor-pointer">
               <div className="flex items-start gap-3">
-                <Lightbulb size={16} className="mt-0.5 text-amber-500 flex-shrink-0" />
+                <Lightbulb size={16} className="mt-0.5 text-amber-500 dark:text-amber-400 flex-shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-zinc-900 dark:text-[#FAFAFA] truncate">{entry.title || "Untitled"}</h3>
+                  <h3 className="font-semibold text-primary truncate">{entry.title || "Untitled"}</h3>
                   {entry.confidence != null && <div className="mt-1"><ConfidenceBadge value={entry.confidence} /></div>}
                 </div>
               </div>
-              {(entry.summary || entry.body) && <p className="mt-3 text-sm text-zinc-500 dark:text-[#A1A1AA] line-clamp-3">{entry.summary || entry.body}</p>}
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] text-zinc-400 dark:text-[#71717A]">
-                {entry.category && <span className="rounded-md bg-zinc-100 dark:bg-[#202024] px-2 py-0.5 font-medium text-zinc-500 dark:text-[#A1A1AA]">{entry.category}</span>}
+              {(entry.summary || entry.body) && <p className="mt-3 text-sm text-muted-base line-clamp-3">{entry.summary || entry.body}</p>}
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] text-zinc-400 dark:text-zinc-500">
+                {entry.category && <span className="rounded-md bg-zinc-100 dark:bg-[#202024] px-2 py-0.5 font-medium text-muted-base">{entry.category}</span>}
                 {entry.reference_count > 0 && <span className="flex items-center gap-0.5"><Hash size={10} />{entry.reference_count}</span>}
                 {entry.captured_at && <span className="flex items-center gap-0.5"><Clock size={10} />{format(new Date(entry.captured_at), "MMM d, yyyy")}</span>}
-                {entry.incident_id && <ShieldAlert size={10} className="text-red-400" />}
-                {entry.linear_issue_id && <ExternalLink size={10} className="text-indigo-400" />}
+                {entry.incident_id && <ShieldAlert size={10} className="text-red-400 dark:text-red-300" />}
+                {entry.linear_issue_id && <ExternalLink size={10} className="text-indigo-400 dark:text-indigo-300" />}
                 {entry.root_cause && <span className="flex items-center gap-0.5"><FileText size={10} />Root cause</span>}
               </div>
             </motion.div>

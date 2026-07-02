@@ -19,6 +19,9 @@ export default {
         border: "#ECECEC",
         surface: "#FAFAFA",
         muted: "#71717A",
+        "border-dark": "#2A2A2E",
+        "surface-dark": "#18181B",
+        "muted-dark": "#A1A1AA",
       },
       boxShadow: {
         card: "0 1px 3px 0 rgb(0 0 0 / 0.02), 0 1px 2px -1px rgb(0 0 0 / 0.04)",

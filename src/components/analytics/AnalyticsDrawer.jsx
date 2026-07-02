@@ -10,11 +10,11 @@ function ChartBar({ label, count, max, color }) {
   const pct = max > 0 ? (count / max) * 100 : 0;
   return (
     <div className="flex items-center gap-3">
-      <span className="w-20 text-xs text-muted dark:text-[#A1A1AA] truncate text-right">{label}</span>
+      <span className="w-20 text-xs text-muted dark:text-muted-dark truncate text-right">{label}</span>
       <div className="flex-1 h-5 rounded-lg bg-zinc-100 dark:bg-[#202024] overflow-hidden">
         <div className={`h-full rounded-lg transition-all duration-700 ${color}`} style={{ width: `${Math.max(pct, 2)}%` }} />
       </div>
-      <span className="w-8 text-xs text-zinc-500 dark:text-[#A1A1AA] text-right">{count}</span>
+      <span className="w-8 text-xs text-zinc-500 dark:text-zinc-400 text-right">{count}</span>
     </div>
   );
 }
@@ -24,10 +24,10 @@ function RecentItem({ icon: Icon, color, title, subtitle, date }) {
     <div className="flex items-center gap-2 rounded-lg bg-zinc-50 dark:bg-[#202024] px-3 py-2">
       <Icon size={13} className={`${color} flex-shrink-0`} />
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium text-zinc-900 dark:text-[#FAFAFA] truncate">{title || "—"}</p>
-        {subtitle && <p className="text-[10px] text-zinc-400 dark:text-[#71717A] truncate">{subtitle}</p>}
+        <p className="text-xs font-medium text-zinc-900 dark:text-zinc-50 truncate">{title || "\u2014"}</p>
+        {subtitle && <p className="text-[10px] text-zinc-400 dark:text-zinc-500 truncate">{subtitle}</p>}
       </div>
-      {date && <span className="text-[10px] text-zinc-400 dark:text-[#71717A] flex-shrink-0">{format(new Date(date), "MMM d")}</span>}
+      {date && <span className="text-[10px] text-zinc-400 dark:text-zinc-500 flex-shrink-0">{format(new Date(date), "MMM d")}</span>}
     </div>
   );
 }
@@ -52,38 +52,38 @@ function TicketsDrawer({ m, onClose }) {
     <DrawerShell title="Ticket Analytics" icon={TicketCheck} color="text-blue-500" onClose={onClose} navigate={navigate} csvData={csvData} pagePath="/tickets" pageLabel="Open Tickets">
       {statuses.length > 0 && (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-[#A1A1AA] mb-2">Status Breakdown</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">Status Breakdown</p>
           <ChartSection data={Object.fromEntries(statuses)} color="bg-blue-500" />
         </div>
       )}
       {priorities.length > 0 && (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-[#A1A1AA] mb-2">Priority Breakdown</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">Priority Breakdown</p>
           <ChartSection data={Object.fromEntries(priorities)} color="bg-violet-500" />
         </div>
       )}
       {categories.length > 0 && (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-[#A1A1AA] mb-2">Category Breakdown</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">Category Breakdown</p>
           <ChartSection data={Object.fromEntries(categories)} color="bg-emerald-500" />
         </div>
       )}
       {customers.length > 0 && (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-[#A1A1AA] mb-2">Top Customers</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">Top Customers</p>
           <div className="space-y-1">
             {customers.slice(0, 5).map(([name, count], i) => (
               <div key={name} className="flex items-center gap-3 rounded-lg bg-zinc-50 dark:bg-[#202024] px-3 py-2">
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-[9px] font-bold text-white">{i + 1}</span>
-                <span className="flex-1 text-xs text-zinc-900 dark:text-[#FAFAFA] truncate">{name}</span>
-                <span className="text-xs text-zinc-500 dark:text-[#A1A1AA]">{count} tickets</span>
+                <span className="flex-1 text-xs text-zinc-900 dark:text-zinc-50 truncate">{name}</span>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">{count} tickets</span>
               </div>
             ))}
           </div>
         </div>
       )}
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-[#A1A1AA] mb-2">Recent Tickets</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">Recent Tickets</p>
         <div className="space-y-1">
           {recent.map((t) => (
             <RecentItem key={t.id} icon={TicketCheck} color="text-blue-400" title={t.title || t.id} subtitle={t.customer_name || t.customer_email} date={t.created_at} />
@@ -112,21 +112,21 @@ function SignalsDrawer({ m, onClose }) {
     <DrawerShell title="Signal Analytics" icon={Activity} color="text-green-500" onClose={onClose} navigate={navigate} csvData={csvData} pagePath="/signals" pageLabel="Open Signals">
       {sigStatus.length > 0 && (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-[#A1A1AA] mb-2">Signal Distribution</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">Signal Distribution</p>
           <ChartSection data={Object.fromEntries(sigStatus)} color="bg-green-500" />
         </div>
       )}
       {sigSev.length > 0 && (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-[#A1A1AA] mb-2">Root Causes by Severity</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">Root Causes by Severity</p>
           <ChartSection data={Object.fromEntries(sigSev)} color="bg-orange-500" />
         </div>
       )}
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-[#A1A1AA] mb-2">Recent Signals</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">Recent Signals</p>
         <div className="space-y-1">
           {recent.map((s) => (
-            <RecentItem key={s.id} icon={Activity} color="text-green-400" title={s.name || s.summary || s.id} subtitle={`${s.category || "general"} · ${s.status || "pending"}`} date={s.detected_at} />
+            <RecentItem key={s.id} icon={Activity} color="text-green-400" title={s.name || s.summary || s.id} subtitle={`${s.category || "general"} \u00B7 ${s.status || "pending"}`} date={s.detected_at} />
           ))}
         </div>
       </div>
@@ -152,13 +152,13 @@ function IncidentsDrawer({ m, onClose }) {
     <DrawerShell title="Incident Analytics" icon={ShieldAlert} color="text-amber-500" onClose={onClose} navigate={navigate} csvData={csvData} pagePath="/incidents" pageLabel="Open Incidents">
       {incByStatus.length > 0 && (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-[#A1A1AA] mb-2">Incidents by Status</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">Incidents by Status</p>
           <ChartSection data={Object.fromEntries(incByStatus)} color="bg-amber-500" />
         </div>
       )}
       {incBySev.length > 0 && (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-[#A1A1AA] mb-2">Severity Distribution</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">Severity Distribution</p>
           <ChartSection data={Object.fromEntries(incBySev)} color="bg-orange-500" />
         </div>
       )}
@@ -168,10 +168,10 @@ function IncidentsDrawer({ m, onClose }) {
         <StatMini label="Escalated" value={m.incidents.escalated} color="text-indigo-500" />
       </div>
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-[#A1A1AA] mb-2">Recent Incidents</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">Recent Incidents</p>
         <div className="space-y-1">
           {recent.map((i) => (
-            <RecentItem key={i.id} icon={ShieldAlert} color="text-amber-400" title={i.title || i.id} subtitle={`${i.severity || "medium"} · ${i.status || "open"}`} date={i.created_at} />
+            <RecentItem key={i.id} icon={ShieldAlert} color="text-amber-400" title={i.title || i.id} subtitle={`${i.severity || "medium"} \u00B7 ${i.status || "open"}`} date={i.created_at} />
           ))}
         </div>
       </div>
@@ -198,7 +198,7 @@ function DraftsDrawer({ m, onClose }) {
     <DrawerShell title="Draft Analytics" icon={MessageSquare} color="text-violet-500" onClose={onClose} navigate={navigate} csvData={csvData} pagePath="/tickets" pageLabel="Open Tickets">
       {draftStatus.length > 0 && (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-[#A1A1AA] mb-2">Draft Status</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">Draft Status</p>
           <ChartSection data={Object.fromEntries(draftStatus)} color="bg-violet-500" />
         </div>
       )}
@@ -208,7 +208,7 @@ function DraftsDrawer({ m, onClose }) {
         <StatMini label="Rejected" value={m.drafts.rejected} color="text-red-500" />
       </div>
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-[#A1A1AA] mb-2">Recent Drafts</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">Recent Drafts</p>
         <div className="space-y-1">
           {recent.map((d) => (
             <RecentItem key={d.id} icon={MessageSquare} color="text-violet-400" title={`Draft for ${d.ticket_id || "unknown"}`} subtitle={d.status || "pending"} date={d.created_at} />
@@ -240,13 +240,13 @@ function KnowledgeDrawerView({ m, onClose }) {
       </div>
       {topArticles.length > 0 && (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-[#A1A1AA] mb-2">Top Articles</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">Top Articles</p>
           <div className="space-y-1">
             {topArticles.slice(0, 5).map((a, i) => (
               <div key={a.id} className="flex items-center gap-2 rounded-lg bg-zinc-50 dark:bg-[#202024] px-3 py-2">
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-white">{i + 1}</span>
-                <span className="flex-1 text-xs text-zinc-900 dark:text-[#FAFAFA] truncate">{a.title}</span>
-                <span className="text-[10px] text-zinc-400">{a.refs} refs</span>
+                <span className="flex-1 text-xs text-zinc-900 dark:text-zinc-50 truncate">{a.title}</span>
+                <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{a.refs} refs</span>
                 <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">{a.confidence}%</span>
               </div>
             ))}
@@ -276,13 +276,13 @@ function EngineeringDrawer({ m, onClose }) {
         <StatMini label="Avg Esc Time" value={`${m.incidents.avgEscalationTime || 0}h`} color="text-indigo-500" />
       </div>
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-[#A1A1AA] mb-2">Escalation History</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">Escalation History</p>
         {(m.all.incidents || []).filter((i) => i.linearIssueId).length === 0 ? (
-          <p className="text-xs text-zinc-400 dark:text-[#71717A] italic">No engineering escalations yet.</p>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 italic">No engineering escalations yet.</p>
         ) : (
           <div className="space-y-1">
             {(m.all.incidents || []).filter((i) => i.linearIssueId).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)).slice(0, 10).map((i) => (
-              <RecentItem key={i.id} icon={ExternalLink} color="text-indigo-400" title={i.title || i.id} subtitle={`${i.linearIssueId || ""} · ${i.linearStatus || "Todo"}`} date={i.created_at} />
+              <RecentItem key={i.id} icon={ExternalLink} color="text-indigo-400" title={i.title || i.id} subtitle={`${i.linearIssueId || ""} \u00B7 ${i.linearStatus || "Todo"}`} date={i.created_at} />
             ))}
           </div>
         )}
@@ -293,9 +293,9 @@ function EngineeringDrawer({ m, onClose }) {
 
 function StatMini({ label, value, color }) {
   return (
-    <div className="rounded-lg border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] p-3 text-center">
-      <p className={`text-lg font-bold ${color}`}>{value}</p>
-      <p className="text-[10px] text-zinc-500 dark:text-[#A1A1AA] uppercase tracking-wide mt-0.5">{label}</p>
+    <div className="rounded-lg border border-border dark:border-border-dark bg-white dark:bg-surface-dark p-3 text-center">
+      <p className={`text-lg font-bold ${color} dark:brightness-110`}>{value}</p>
+      <p className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mt-0.5">{label}</p>
     </div>
   );
 }
@@ -303,7 +303,7 @@ function StatMini({ label, value, color }) {
 function ChartSection({ data, color }) {
   const entries = Object.entries(data || {});
   const maxCount = Math.max(...entries.map(([, c]) => c), 1);
-  if (entries.length === 0) return <p className="text-xs text-zinc-400 dark:text-[#71717A] italic py-2">No data.</p>;
+  if (entries.length === 0) return <p className="text-xs text-zinc-400 dark:text-zinc-500 italic py-2">No data.</p>;
   return (
     <div className="space-y-1.5">
       {entries.map(([label, count]) => (
@@ -321,14 +321,14 @@ function DrawerShell({ title, icon: Icon, color, children, onClose, navigate, cs
       <motion.div
         initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
         transition={{ type: "spring", damping: 30, stiffness: 300, mass: 0.8 }}
-        className="relative flex h-full w-full max-w-[520px] flex-col bg-white dark:bg-[#111113] border-l border-border dark:border-[#2A2A2E] shadow-2xl">
-        <div className="flex-shrink-0 border-b border-border dark:border-[#2A2A2E] bg-white dark:bg-[#111113] px-6 py-4">
+        className="relative flex h-full w-full max-w-[520px] flex-col bg-white dark:bg-[#111113] border-l border-border dark:border-border-dark shadow-2xl">
+        <div className="flex-shrink-0 border-b border-border dark:border-border-dark bg-white dark:bg-[#111113] px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Icon size={16} className={color} />
-              <h2 className="text-base font-bold text-zinc-900 dark:text-[#FAFAFA]">{title}</h2>
+              <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-50">{title}</h2>
             </div>
-            <button onClick={onClose} className="rounded-lg p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-[#FAFAFA] hover:bg-zinc-100 dark:hover:bg-[#27272A] transition-colors">
+            <button onClick={onClose} className="rounded-lg p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-[#27272A] transition-colors">
               <X size={16} />
             </button>
           </div>
@@ -337,7 +337,7 @@ function DrawerShell({ title, icon: Icon, color, children, onClose, navigate, cs
               <ExternalLink size={12} /> {pageLabel}
             </button>
             <button onClick={() => { const blob = new Blob([csvData], { type: "text/csv" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${title.toLowerCase().replace(/\s+/g, "-")}.csv`; a.click(); URL.revokeObjectURL(url); }}
-              className="flex items-center gap-1.5 rounded-lg border border-border dark:border-[#2A2A2E] px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-[#A1A1AA] hover:bg-zinc-50 dark:hover:bg-[#27272A] transition-colors">
+              className="flex items-center gap-1.5 rounded-lg border border-border dark:border-border-dark px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-[#27272A] transition-colors">
               <Download size={12} /> Export CSV
             </button>
           </div>

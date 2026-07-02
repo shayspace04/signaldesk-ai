@@ -40,11 +40,11 @@ export default function TicketTimeline({ ticketId }) {
   const items = logs.length > 0 ? logs.map((l) => l.action || l.event || l.description) : DEFAULT_STEPS;
 
   return (
-    <div className="rounded-xl border border-[#EFEFEF] dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] bg-white p-6">
-      <h2 className="mb-6 text-lg font-semibold text-zinc-900 dark:text-[#FAFAFA]">Timeline</h2>
+    <div className="rounded-xl border border-border dark:border-border-dark bg-white dark:bg-surface-dark p-6">
+      <h2 className="mb-6 text-lg font-semibold text-zinc-900 dark:text-zinc-50">Timeline</h2>
       {loading ? (
         <div className="flex justify-center py-6">
-          <Loader2 size={20} className="animate-spin text-zinc-400 dark:text-[#71717A]" />
+          <Loader2 size={20} className="animate-spin text-zinc-400 dark:text-zinc-500" />
         </div>
       ) : (
         <div className="space-y-5">
@@ -52,8 +52,8 @@ export default function TicketTimeline({ ticketId }) {
             <div key={`${event}-${index}`} className="flex gap-4">
               <div className="mt-2 h-3 w-3 rounded-full bg-violet-500" />
               <div>
-                <p className="text-zinc-900 dark:text-[#FAFAFA]">{event}</p>
-                <span className="text-sm text-zinc-400 dark:text-[#71717A]">Step {index + 1}</span>
+                <p className="text-zinc-900 dark:text-zinc-50">{event}</p>
+                <span className="text-sm text-zinc-400 dark:text-zinc-500">Step {index + 1}</span>
               </div>
             </div>
           ))}

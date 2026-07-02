@@ -25,6 +25,27 @@
     --radius: 0.625rem;
   }
 
+  .dark {
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.145 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.145 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.985 0 0);
+    --primary-foreground: oklch(0.145 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.708 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --border: #2A2A2E;
+    --input: #27272A;
+    --ring: oklch(0.439 0 0);
+  }
+
   html {
     font-family: "Inter", system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -95,17 +116,55 @@
   .from-accent { --tw-gradient-from: var(--accent); }
   .to-accent-dark { --tw-gradient-to: var(--accent-dark); }
   .ring-accent { --tw-ring-color: var(--accent); }
-}
 
-@layer utilities {
-  .bg-accent { background-color: var(--accent); }
-  .text-accent { color: var(--accent); }
-  .border-accent { border-color: var(--accent); }
-  .hover\:bg-accent:hover { background-color: var(--accent); }
-  .hover\:bg-accent-dark:hover { background-color: var(--accent-dark); }
-  .hover\:border-accent:hover { border-color: var(--accent); }
-  .focus\:border-accent:focus { border-color: var(--accent); }
-  .from-accent { --tw-gradient-from: var(--accent); }
-  .to-accent-dark { --tw-gradient-to: var(--accent-dark); }
-  .ring-accent { --tw-ring-color: var(--accent); }
+  /* ── Semantic typography ─────────────────────────────── */
+  .text-primary {
+    @apply text-zinc-900 dark:text-zinc-50;
+  }
+  .text-secondary {
+    @apply text-zinc-800 dark:text-zinc-100;
+  }
+  .text-body {
+    @apply text-zinc-700 dark:text-zinc-300;
+  }
+  .text-secondary-body {
+    @apply text-zinc-600 dark:text-zinc-400;
+  }
+  .text-muted-base {
+    @apply text-zinc-500 dark:text-zinc-400;
+  }
+  .text-success {
+    @apply text-emerald-600 dark:text-emerald-400;
+  }
+  .text-warning {
+    @apply text-amber-600 dark:text-amber-400;
+  }
+  .text-danger {
+    @apply text-red-600 dark:text-red-400;
+  }
+  .text-info {
+    @apply text-blue-600 dark:text-blue-400;
+  }
+  .text-on-primary {
+    @apply text-white dark:text-zinc-900;
+  }
+
+  /* ── Semantic backgrounds ────────────────────────────── */
+  .bg-card {
+    @apply bg-white dark:bg-[#18181B];
+  }
+  .bg-surface {
+    @apply bg-[#FAFAFA] dark:bg-[#18181B];
+  }
+  .bg-canvas {
+    @apply bg-white dark:bg-[#09090B];
+  }
+  .bg-muted-surface {
+    @apply bg-zinc-100 dark:bg-[#202024];
+  }
+
+  /* ── Borders ─────────────────────────────────────────── */
+  .border-card {
+    @apply border border-[#ECECEC] dark:border-[#2A2A2E];
+  }
 }

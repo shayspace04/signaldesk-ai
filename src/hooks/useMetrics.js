@@ -4,6 +4,7 @@ import { useRefreshListener } from "@/lib/refreshEvents";
 import { workspaceFilter } from "@/lib/workspaceConfig";
 import { format } from "date-fns";
 import { calculateChurnRisk } from "@/lib/churnRisk";
+import { deriveWorkflowStage } from "@/lib/workflowStage";
 
 function pctChange(current, previous) {
   if (previous <= 0) return current > 0 ? "+100%" : "0%";
@@ -148,22 +149,21 @@ export function useMetrics(workspaceId, options = {}) {
   }, [allTickets, curT, prevT, curD, prevT]);
 
   const signalMetrics = useMemo(() => {
-    const pending = allSignals.filter((s) => s.status === "pending" || !s.status);
-    const underReview = allSignals.filter((s) => s.status === "under_review" || s.status === "triaged");
-    const approved = allSignals.filter((s) => s.status === "approved");
-    const incidentCreated = allSignals.filter((s) => s.status === "incident_created");
-    const resolved = allSignals.filter((s) => s.status === "resolved");
+    const newStage = allSignals.filter((s) => deriveWorkflowStage(s) === "new" && s.status !== "rejected");
+    const underReview = allSignals.filter((s) => deriveWorkflowStage(s) === "review" && s.status !== "rejected");
+    const approved = allSignals.filter((s) => deriveWorkflowStage(s) === "approved");
+    const incidentCreated = allSignals.filter((s) => deriveWorkflowStage(s) === "incident_created");
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const createdToday = allSignals.filter((s) => s.detected_at && new Date(s.detected_at) >= today);
 
     return {
       total: allSignals.length,
       totalInPeriod: curS.length,
-      pending: pending.length,
+      pending: newStage.length,
       underReview: underReview.length,
       approved: approved.length,
       incidentCreated: incidentCreated.length,
-      resolved: resolved.length,
+      resolved: allSignals.filter((s) => s.status === "memory").length,
       createdToday: createdToday.length,
       trendCreation: bounds != null ? pctChange(curS.length, prevS.length) : null,
     };
@@ -303,7 +303,7 @@ export function useMetrics(workspaceId, options = {}) {
     allTickets.forEach((t) => { if (t.created_at) { const d = format(new Date(t.created_at), "MMM d"); byDay[d] = (byDay[d] || 0) + 1; } });
 
     const sigByStatus = {};
-    allSignals.forEach((s) => { const st = s.status || "pending"; sigByStatus[st] = (sigByStatus[st] || 0) + 1; });
+    allSignals.forEach((s) => { const st = deriveWorkflowStage(s); if (st) sigByStatus[st] = (sigByStatus[st] || 0) + 1; });
     const sigBySev = {};
     allSignals.forEach((s) => { const sv = s.proposed_priority || s.severity || "normal"; sigBySev[sv] = (sigBySev[sv] || 0) + 1; });
 

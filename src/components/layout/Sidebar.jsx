@@ -81,15 +81,15 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="flex w-60 flex-col border-r border-border dark:border-[#2A2A2E] bg-white dark:bg-[#111113] flex-shrink-0 h-screen sticky top-0 z-30">
+    <aside className="flex w-60 flex-col border-r border-border dark:border-border-dark bg-white dark:bg-[#111113] flex-shrink-0 h-screen sticky top-0 z-30">
       <div className="flex items-center gap-3 px-5 pt-6 pb-4">
         <Logo size={28} />
-        <span className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-[#FAFAFA]">SignalDesk</span>
+        <span className="text-[15px] font-semibold tracking-tight text-primary">SignalDesk</span>
       </div>
 
       <div className="relative px-4 pb-3">
         <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-all duration-200 ${searchFocused ? "border-zinc-300 dark:border-[#2A2A2E] ring-1 ring-zinc-200 dark:ring-zinc-600" : "border-border dark:border-[#2A2A2E]"} bg-surface dark:bg-[#111113]`}>
-          <Search size={15} className="text-muted dark:text-[#A1A1AA] flex-shrink-0" />
+          <Search size={15} className="text-muted dark:text-muted-dark flex-shrink-0" />
           <input
             type="text"
             value={searchQuery}
@@ -98,11 +98,11 @@ export default function Sidebar() {
             onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
             onKeyDown={handleSearchKeyDown}
             placeholder="Search tickets, signals, knowledge..."
-            className="w-full bg-transparent outline-none text-sm placeholder:text-muted dark:text-[#A1A1AA]"
+            className="w-full bg-transparent outline-none text-sm placeholder:text-muted dark:placeholder:text-muted-dark dark:text-muted-dark"
           />
         </div>
         {searchResults.length > 0 && (
-          <div className="absolute left-4 right-4 top-full mt-1.5 z-50 rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] py-2 shadow-dropdown">
+          <div className="absolute left-4 right-4 top-full mt-1.5 z-50 rounded-xl border border-border dark:border-border-dark bg-card py-2 shadow-dropdown">
             {searchResults.map((r, i) => (
               <button
                 key={i}
@@ -110,8 +110,8 @@ export default function Sidebar() {
                 className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-zinc-50 dark:hover:bg-[#27272A] transition-colors"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate text-zinc-900 dark:text-[#FAFAFA]">{r.label}</p>
-                  <p className="text-xs text-muted dark:text-[#A1A1AA] truncate">{r.sub}</p>
+                  <p className="text-sm font-medium truncate text-primary">{r.label}</p>
+                  <p className="text-xs text-muted dark:text-muted-dark truncate">{r.sub}</p>
                 </div>
               </button>
             ))}
@@ -129,7 +129,7 @@ export default function Sidebar() {
               <button
                 key={item.path}
                 onClick={() => navigate("/notifications")}
-                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all duration-150 text-zinc-500 dark:text-[#A1A1AA] hover:bg-zinc-100 hover:text-zinc-700 dark:hover:text-[#FAFAFA]"
+                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all duration-150 text-muted-base hover:bg-zinc-100 hover:text-body dark:hover:text-primary"
               >
                 <Icon size={17} className="flex-shrink-0" />
                 <span className="truncate">{item.name}</span>
@@ -146,7 +146,7 @@ export default function Sidebar() {
                 `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all duration-150 ${
                   isActive
                     ? "bg-zinc-900 font-medium text-white"
-                    : "text-zinc-500 dark:text-[#A1A1AA] hover:bg-zinc-100 hover:text-zinc-700 dark:hover:text-[#FAFAFA]"
+                    : "text-muted-base hover:bg-zinc-100 hover:text-body dark:hover:text-primary"
                 }`
               }
             >
@@ -158,7 +158,7 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="border-t border-border dark:border-[#2A2A2E] px-4 py-3 space-y-3">
+      <div className="border-t border-border dark:border-border-dark px-4 py-3 space-y-3">
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -171,14 +171,14 @@ export default function Sidebar() {
               {workspace.initials}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate text-zinc-900 dark:text-[#FAFAFA]">{workspace.name}</p>
-              <p className="text-[11px] text-muted dark:text-[#A1A1AA]">Demo Workspace</p>
+              <p className="text-sm font-medium truncate text-primary">{workspace.name}</p>
+              <p className="text-[11px] text-muted dark:text-muted-dark">Demo Workspace</p>
             </div>
-            <ChevronDown size={14} className="text-muted dark:text-[#A1A1AA] flex-shrink-0" />
+            <ChevronDown size={14} className="text-muted dark:text-muted-dark flex-shrink-0" />
           </button>
 
           {dropdownOpen && (
-            <div className="absolute bottom-full left-0 right-0 mb-1.5 rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] shadow-dropdown overflow-hidden z-40">
+            <div className="absolute bottom-full left-0 right-0 mb-1.5 rounded-xl border border-border dark:border-border-dark bg-card shadow-dropdown overflow-hidden z-40">
               {workspaces.map((w) => (
                 <button
                   key={w.id}
@@ -194,8 +194,8 @@ export default function Sidebar() {
                     {w.initials}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate text-zinc-900 dark:text-[#FAFAFA]">{w.name}</p>
-                    <p className="text-[10px] text-muted dark:text-[#A1A1AA]">{w.subtitle}</p>
+                    <p className="text-sm font-medium truncate text-primary">{w.name}</p>
+                    <p className="text-[10px] text-muted dark:text-muted-dark">{w.subtitle}</p>
                   </div>
                   {w.id === workspace.id && (
                     <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: w.accent }} />
@@ -206,13 +206,13 @@ export default function Sidebar() {
           )}
         </div>
 
-        <div className="flex rounded-xl border border-border dark:border-[#2A2A2E] overflow-hidden">
+        <div className="flex rounded-xl border border-border dark:border-border-dark overflow-hidden">
           <button
             onClick={() => setRole("agent")}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-all duration-150 ${
               role === "support_agent"
                 ? "bg-zinc-900 text-white"
-                : "text-zinc-500 dark:text-[#A1A1AA] hover:bg-zinc-50 hover:text-zinc-700 dark:hover:bg-[#27272A] dark:hover:text-[#FAFAFA]"
+                : "text-muted-base hover:bg-zinc-50 hover:text-body dark:hover:bg-[#27272A] dark:hover:text-primary"
             }`}
           >
             <UserCheck size={12} />
@@ -224,7 +224,7 @@ export default function Sidebar() {
             className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-all duration-150 ${
               role === "support_manager"
                 ? "bg-zinc-900 text-white"
-                : "text-zinc-500 dark:text-[#A1A1AA] hover:bg-zinc-50 hover:text-zinc-700 dark:hover:bg-[#27272A] dark:hover:text-[#FAFAFA]"
+                : "text-muted-base hover:bg-zinc-50 hover:text-body dark:hover:bg-[#27272A] dark:hover:text-primary"
             }`}
           >
             <UserCog size={12} />
@@ -232,8 +232,8 @@ export default function Sidebar() {
           </button>
         </div>
 
-        <div className="flex items-center justify-between rounded-xl border border-border dark:border-[#2A2A2E] px-3 py-2">
-          <span className="text-xs text-muted dark:text-[#A1A1AA]">Theme</span>
+        <div className="flex items-center justify-between rounded-xl border border-border dark:border-border-dark px-3 py-2">
+          <span className="text-xs text-muted dark:text-muted-dark">Theme</span>
           <ThemeToggle compact />
         </div>
       </div>

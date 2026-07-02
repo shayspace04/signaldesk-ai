@@ -134,7 +134,7 @@ async def materialize_signal(ctx: FunctionContext, data: MaterializeSignalInput)
         "expected_impact": expected_impact or None,
         "business_priority": business_priority or None,
     })
-    upd = {"status": "memory", "memory_entry_id": mem["id"], "decided_at": now}
+    upd = {"status": "memory", "workflowStage": "knowledge", "memory_entry_id": mem["id"], "decided_at": now}
     if data.approver_user_id: upd["approver_user_id"] = data.approver_user_id
     if data.approver_notes: upd["approver_notes"] = data.approver_notes
     pod.records.update("signals", data.signal_id, upd)

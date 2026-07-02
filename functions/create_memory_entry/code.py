@@ -26,8 +26,13 @@ class CreateMemoryEntryInput(BaseModel):
     body: str
     source_signal_id: Optional[str] = None
     related_incident_id: Optional[str] = None
+    summary: Optional[str] = None
+    root_cause: Optional[str] = None
+    category: Optional[str] = None
     tags: Optional[List[str]] = None
     confidence: Optional[int] = 80
+    workspaceId: Optional[str] = None
+    workspaceName: Optional[str] = None
 
 class CreateMemoryEntryOutput(BaseModel):
     memory_entry_id: str
@@ -38,7 +43,12 @@ async def create_memory_entry(ctx: FunctionContext, data: CreateMemoryEntryInput
         "title": data.title, "body": data.body,
         "source_signal_id": data.source_signal_id,
         "related_incident_id": data.related_incident_id,
+        "summary": data.summary,
+        "root_cause": data.root_cause,
+        "category": data.category,
         "tags": data.tags, "confidence": data.confidence,
+        "workspaceId": data.workspaceId,
+        "workspaceName": data.workspaceName,
         "captured_at": datetime.now(timezone.utc).isoformat(),
     })
     _audit(pod, "memory.created", actor_type="user",

@@ -14,11 +14,11 @@ function ChartBar({ label, count, max, color }) {
   const pct = max > 0 ? (count / max) * 100 : 0;
   return (
     <div className="flex items-center gap-3">
-      <span className="w-20 text-xs text-muted dark:text-[#A1A1AA] truncate text-right">{label}</span>
-      <div className="flex-1 h-6 rounded-lg bg-zinc-100 dark:bg-[#202024] overflow-hidden">
+      <span className="w-20 text-xs text-muted dark:text-muted-dark truncate text-right">{label}</span>
+      <div className="flex-1 h-6 rounded-lg bg-muted-surface overflow-hidden">
         <div className={`h-full rounded-lg transition-all duration-700 ${color}`} style={{ width: `${Math.max(pct, 2)}%` }} />
       </div>
-      <span className="w-8 text-xs text-zinc-500 dark:text-[#A1A1AA] text-right">{count}</span>
+      <span className="w-8 text-xs text-muted-base text-right">{count}</span>
     </div>
   );
 }
@@ -27,10 +27,10 @@ function ChartSection({ title, data, color }) {
   const entries = useMemo(() => Object.entries(data || {}), [data]);
   const maxCount = Math.max(...entries.map(([, c]) => c), 1);
   return (
-    <div className="rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] p-5 shadow-sm">
-      <h2 className="text-base font-semibold text-zinc-900 dark:text-[#FAFAFA] mb-4">{title}</h2>
+    <div className="rounded-xl border border-border dark:border-border-dark bg-card p-5 shadow-sm">
+      <h2 className="text-base font-semibold text-primary mb-4">{title}</h2>
       {entries.length === 0 ? (
-        <p className="text-sm text-muted dark:text-[#A1A1AA]">No data.</p>
+        <p className="text-sm text-muted dark:text-muted-dark">No data.</p>
       ) : (
         <div className="space-y-2">
           {entries.map(([lbl, count]) => (
@@ -45,17 +45,17 @@ function ChartSection({ title, data, color }) {
 function TopList({ title, data, color }) {
   const items = useMemo(() => data || [], [data]);
   return (
-    <div className="rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] p-5 shadow-sm">
-      <h2 className="text-base font-semibold text-zinc-900 dark:text-[#FAFAFA] mb-4">{title}</h2>
+    <div className="rounded-xl border border-border dark:border-border-dark bg-card p-5 shadow-sm">
+      <h2 className="text-base font-semibold text-primary mb-4">{title}</h2>
       {items.length === 0 ? (
-        <p className="text-sm text-muted dark:text-[#A1A1AA]">No data.</p>
+        <p className="text-sm text-muted dark:text-muted-dark">No data.</p>
       ) : (
         <div className="space-y-2">
           {items.map(([name, count], i) => (
             <div key={name} className="flex items-center gap-3">
               <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white ${color}`}>{i + 1}</span>
-              <span className="flex-1 text-sm text-zinc-900 dark:text-[#FAFAFA] truncate">{name}</span>
-              <span className="text-xs text-muted dark:text-[#A1A1AA]">{count}</span>
+              <span className="flex-1 text-sm text-primary truncate">{name}</span>
+              <span className="text-xs text-muted dark:text-muted-dark">{count}</span>
             </div>
           ))}
         </div>
@@ -67,9 +67,9 @@ function TopList({ title, data, color }) {
 function SectionHeader({ title, icon: Icon }) {
   return (
     <div className="flex items-center gap-2 mb-5 mt-2 first:mt-0">
-      {Icon && <Icon size={18} className="text-zinc-400 dark:text-[#71717A]" />}
-      <h2 className="text-lg font-semibold text-zinc-800 dark:text-[#E4E4E7]">{title}</h2>
-      <div className="flex-1 h-px bg-zinc-200 dark:bg-[#27272A] ml-2" />
+      {Icon && <Icon size={18} className="text-zinc-400 dark:text-zinc-500" />}
+      <h2 className="text-lg font-semibold text-secondary">{title}</h2>
+      <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-700 ml-2" />
     </div>
   );
 }
@@ -140,8 +140,8 @@ export default function Analytics() {
     <motion.div className="flex flex-col min-h-full" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-[36px] font-bold tracking-tight text-zinc-900 dark:text-[#FAFAFA]">Analytics</h1>
-          <p className="mt-1 text-sm text-muted dark:text-[#A1A1AA]">{workspace.name} · Platform metrics and insights</p>
+          <h1 className="text-[36px] font-bold tracking-tight text-primary">Analytics</h1>
+          <p className="mt-1 text-sm text-muted dark:text-muted-dark">{workspace.name} · Platform metrics and insights</p>
         </div>
         <div className="flex items-center gap-2">
           {TIMEFILTERS.map((f) => (
@@ -149,7 +149,7 @@ export default function Analytics() {
               key={f.value}
               onClick={() => setTimeFilter(f.value)}
               className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                timeFilter === f.value ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-[#A1A1AA] hover:bg-zinc-100 dark:hover:bg-[#27272A]"
+                timeFilter === f.value ? "bg-zinc-900 text-white" : "text-muted-base hover:bg-zinc-100 dark:hover:bg-zinc-700"
               }`}
             >
               {f.label}
@@ -215,16 +215,16 @@ export default function Analytics() {
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 mb-8">
-        <div className="rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] p-5 shadow-sm">
+        <div className="rounded-xl border border-border dark:border-border-dark bg-card p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold text-zinc-900 dark:text-[#FAFAFA]">Ticket Analysis</h2>
-            <div className="flex rounded-lg border border-border dark:border-[#2A2A2E] overflow-hidden">
+            <h2 className="text-base font-semibold text-primary">Ticket Analysis</h2>
+            <div className="flex rounded-lg border border-border dark:border-border-dark overflow-hidden">
               {chartOptions.map((o) => (
                 <button
                   key={o.value}
                   onClick={() => setChartFilter(o.value)}
                   className={`px-2.5 py-1 text-xs font-medium transition-colors ${
-                    chartFilter === o.value ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-[#A1A1AA] hover:bg-zinc-50 dark:hover:bg-[#27272A]"
+                    chartFilter === o.value ? "bg-zinc-900 text-white" : "text-muted-base hover:bg-zinc-50 dark:hover:bg-zinc-700"
                   }`}
                 >
                   {o.label}
@@ -233,7 +233,7 @@ export default function Analytics() {
             </div>
           </div>
           {Object.keys(chartData).length === 0 ? (
-            <p className="text-sm text-muted dark:text-[#A1A1AA] py-8 text-center">No ticket data.</p>
+            <p className="text-sm text-muted dark:text-muted-dark py-8 text-center">No ticket data.</p>
           ) : (
             <div className="space-y-2">
               {Object.entries(chartData).map(([lbl, count]) => {
@@ -241,11 +241,11 @@ export default function Analytics() {
                 const pct = (count / max) * 100;
                 return (
                   <div key={lbl} className="flex items-center gap-3">
-                    <span className="w-20 text-xs text-muted dark:text-[#A1A1AA] truncate text-right">{lbl}</span>
-                    <div className="flex-1 h-6 rounded-lg bg-zinc-100 dark:bg-[#202024] overflow-hidden">
+                    <span className="w-20 text-xs text-muted dark:text-muted-dark truncate text-right">{lbl}</span>
+                    <div className="flex-1 h-6 rounded-lg bg-muted-surface overflow-hidden">
                       <div className={`h-full rounded-lg transition-all duration-700 ${chartColor}`} style={{ width: `${Math.max(pct, 2)}%` }} />
                     </div>
-                    <span className="w-8 text-xs text-zinc-500 dark:text-[#A1A1AA] text-right">{count}</span>
+                    <span className="w-8 text-xs text-muted-base text-right">{count}</span>
                   </div>
                 );
               })}
@@ -254,7 +254,7 @@ export default function Analytics() {
         </div>
 
         <div className="grid grid-cols-1 gap-4">
-          <ChartSection title="Signals by Status" data={m.analytics.signalsByStatus} color="bg-green-500" />
+          <ChartSection title="Signals by Stage" data={m.analytics.signalsByStatus} color="bg-green-500" />
           <ChartSection title="Signals by Severity" data={m.analytics.signalsBySeverity} color="bg-orange-500" />
         </div>
       </div>
@@ -272,29 +272,29 @@ export default function Analytics() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 mb-8">
-        <div className="rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] p-5 shadow-sm">
-          <h2 className="text-base font-semibold text-zinc-900 dark:text-[#FAFAFA] mb-4">SLA Compliance</h2>
+        <div className="rounded-xl border border-border dark:border-border-dark bg-card p-5 shadow-sm">
+          <h2 className="text-base font-semibold text-primary mb-4">SLA Compliance</h2>
           <div className="flex items-center gap-4">
-            <span className="text-[36px] font-bold tracking-tight text-zinc-900 dark:text-[#FAFAFA]">
+            <span className="text-[36px] font-bold tracking-tight text-primary">
               <CountUp end={m.analytics.slaCompliance} duration={1.5} suffix="%" />
             </span>
-            <p className="text-sm text-muted dark:text-[#A1A1AA]">Tickets resolved within 24 hours</p>
+            <p className="text-sm text-muted dark:text-muted-dark">Tickets resolved within 24 hours</p>
           </div>
-          <div className="mt-4 h-3 rounded-full bg-zinc-100 dark:bg-[#202024] overflow-hidden">
+          <div className="mt-4 h-3 rounded-full bg-muted-surface overflow-hidden">
             <div className={`h-full rounded-full transition-all duration-700 ${m.analytics.slaCompliance >= 90 ? "bg-emerald-500" : m.analytics.slaCompliance >= 70 ? "bg-amber-500" : "bg-red-500"}`}
               style={{ width: `${m.analytics.slaCompliance}%` }} />
           </div>
         </div>
         <ChartSection title="Resolution Time Trend (hours)" data={Object.fromEntries(m.analytics.avgResTimeByDay)} color="bg-cyan-500" />
-        <div className="rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] p-5 shadow-sm">
-          <h2 className="text-base font-semibold text-zinc-900 dark:text-[#FAFAFA] mb-4">Engineering Response</h2>
+        <div className="rounded-xl border border-border dark:border-border-dark bg-card p-5 shadow-sm">
+          <h2 className="text-base font-semibold text-primary mb-4">Engineering Response</h2>
           <div className="flex items-center gap-4">
-            <span className="text-[36px] font-bold tracking-tight text-zinc-900 dark:text-[#FAFAFA]">
+            <span className="text-[36px] font-bold tracking-tight text-primary">
               <CountUp end={m.analytics.engineeringResponseTime} duration={1.5} suffix="h" decimals={1} />
             </span>
-            <p className="text-sm text-muted dark:text-[#A1A1AA]">Avg response time</p>
+            <p className="text-sm text-muted dark:text-muted-dark">Avg response time</p>
           </div>
-          <div className="mt-4 flex justify-between text-xs text-muted">
+          <div className="mt-4 flex justify-between text-xs text-muted dark:text-muted-dark">
             <span>{m.analytics.escalatedCount} escalated</span>
             <span>{m.analytics.incidentResolved} resolved</span>
           </div>
@@ -304,17 +304,17 @@ export default function Analytics() {
       {m.knowledge.total > 0 && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 mb-8">
           <ChartSection title="Knowledge Articles by Day" data={m.analytics.knowledgeByDay} color="bg-amber-500" />
-          <div className="rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] p-5 shadow-sm lg:col-span-2">
-            <h2 className="text-base font-semibold text-zinc-900 dark:text-[#FAFAFA] mb-4">Top Knowledge Articles</h2>
+          <div className="rounded-xl border border-border dark:border-border-dark bg-card p-5 shadow-sm lg:col-span-2">
+            <h2 className="text-base font-semibold text-primary mb-4">Top Knowledge Articles</h2>
             {m.knowledge.topArticles.length === 0 ? (
-              <p className="text-sm text-muted dark:text-[#A1A1AA]">No articles yet.</p>
+              <p className="text-sm text-muted dark:text-muted-dark">No articles yet.</p>
             ) : (
               <div className="space-y-2">
                 {m.knowledge.topArticles.map((a, i) => (
                   <div key={a.id} className="flex items-center gap-3">
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-xs font-bold text-white">{i + 1}</span>
-                    <span className="flex-1 text-sm text-zinc-900 dark:text-[#FAFAFA] truncate">{a.title}</span>
-                    <span className="text-xs text-muted dark:text-[#A1A1AA]">{a.refs} refs</span>
+                    <span className="flex-1 text-sm text-primary truncate">{a.title}</span>
+                    <span className="text-xs text-muted dark:text-muted-dark">{a.refs} refs</span>
                     <span className="rounded-md bg-amber-50 dark:bg-amber-950/20 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">{a.confidence}%</span>
                   </div>
                 ))}

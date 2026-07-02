@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { workspaceFilter } from "@/lib/workspaceConfig";
 import { createNotification } from "@/lib/notifications";
+import { deriveWorkflowStage } from "@/lib/workflowStage";
 
 function timeAgo(dateStr) {
   if (!dateStr) return "";
@@ -98,7 +99,7 @@ export default function Incidents() {
           <div className="flex flex-col gap-1">
             <span>Engineering issue created successfully.</span>
             <a href={result.linearIssueUrl} target="_blank" rel="noopener noreferrer"
-              className="text-indigo-600 underline font-medium">{result.linearIssueIdentifier} ↗</a>
+              className="text-indigo-600 dark:text-indigo-400 underline font-medium">{result.linearIssueIdentifier} ↗</a>
           </div>,
           { duration: 5000 }
         );
@@ -151,7 +152,7 @@ export default function Incidents() {
       if (current.signal_id) {
         const relatedSignals = signals.filter((s) => s.id === current.signal_id);
         for (const sig of relatedSignals) {
-          await client.records.update("signals", sig.id, { status: "resolved" });
+          await client.records.update("signals", sig.id, { status: "memory" });
         }
       }
       const relatedTickets = tickets.filter((t) => t.signal_id === current.signal_id);
@@ -284,13 +285,13 @@ export default function Incidents() {
     <motion.div className="flex flex-col min-h-full" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-[36px] font-bold tracking-tight text-zinc-900 dark:text-[#FAFAFA]">Incidents</h1>
-          <p className="mt-1 text-sm text-muted dark:text-[#A1A1AA]">Track and investigate active incidents.</p>
+          <h1 className="text-[36px] font-bold tracking-tight text-primary">Incidents</h1>
+          <p className="mt-1 text-sm text-muted dark:text-muted-dark">Track and investigate active incidents.</p>
         </div>
         <div className="flex items-center gap-2">
           {[{ value: "all", label: "All" }, { value: "escalated", label: "Escalated" }, { value: "not_escalated", label: "Not Escalated" }].map((f) => (
             <button key={f.value} onClick={() => setLinearFilter(f.value)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${linearFilter === f.value ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-[#A1A1AA] hover:bg-zinc-100 dark:hover:bg-[#27272A]"}`}>{f.label}</button>
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${linearFilter === f.value ? "bg-zinc-900 text-white" : "text-muted-base hover:bg-zinc-100 dark:hover:bg-[#27272A]"}`}>{f.label}</button>
           ))}
         </div>
       </div>
@@ -301,22 +302,22 @@ export default function Incidents() {
           <div className="h-64 animate-pulse rounded-xl bg-zinc-100 dark:bg-[#202024] lg:col-span-3" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 dark:border-[#2A2A2E] bg-zinc-50/50 py-20 dark:border-[#2A2A2E] dark:bg-[#202024]/50">
-          <ShieldAlert size={36} className="mb-4 text-zinc-300 dark:text-[#71717A]" />
-          <p className="text-zinc-600 dark:text-[#A1A1AA] font-medium">No incidents</p>
-          <p className="mt-1 text-sm text-muted dark:text-[#A1A1AA]">{workspace.name} &mdash; all systems operational.</p>
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border dark:border-border-dark bg-zinc-50/50 py-20 dark:bg-[#202024]/50">
+          <ShieldAlert size={36} className="mb-4 text-muted dark:text-muted-dark" />
+          <p className="text-secondary-body font-medium">No incidents</p>
+          <p className="mt-1 text-sm text-muted dark:text-muted-dark">{workspace.name} &mdash; all systems operational.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-5">
           <div className="space-y-2 lg:col-span-2">
             {filtered.map((inc) => (
               <button key={inc.id} onClick={() => setSelected(inc)}
-                className={`w-full rounded-xl border p-4 text-left transition-all duration-200 ${current?.id === inc.id ? "border-zinc-300 dark:border-[#2A2A2E] bg-zinc-50 shadow-sm dark:border-[#2A2A2E] dark:bg-[#202024]" : "border-border dark:border-[#2A2A2E] bg-white dark:border-[#2A2A2E] dark:bg-[#18181B] hover:border-zinc-200 dark:hover:border-[#2A2A2E] hover:shadow-card"}`}>
+                className={`w-full rounded-xl border p-4 text-left transition-all duration-200 ${current?.id === inc.id ? "border-border dark:border-border-dark bg-zinc-50 shadow-sm dark:bg-[#202024]" : "border-border dark:border-border-dark bg-card hover:border-zinc-200 dark:hover:border-[#2A2A2E] hover:shadow-card"}`}>
                 <div className="flex items-center justify-between gap-2">
-                  <h3 className="truncate text-sm font-semibold text-zinc-900 dark:text-[#FAFAFA]">{inc.title || inc.id}</h3>
+                  <h3 className="truncate text-sm font-semibold text-primary">{inc.title || inc.id}</h3>
                   <PriorityBadge priority={inc.severity} />
                 </div>
-                <p className="mt-1.5 text-xs text-muted dark:text-[#A1A1AA]">
+                <p className="mt-1.5 text-xs text-muted dark:text-muted-dark">
                   {inc.affected_ticket_count ? `${inc.affected_ticket_count} affected tickets` : ""}{inc.status ? ` · ${inc.status}` : ""}
                 </p>
                 <div className="mt-1.5 flex items-center gap-2">
@@ -325,7 +326,7 @@ export default function Incidents() {
                       <ExternalLink size={10} /> {inc.linearIssueIdentifier}
                     </span>
                   ) : (
-                    <span className="text-[10px] text-zinc-400 dark:text-[#71717A]">Not Escalated</span>
+                    <span className="text-[10px] text-muted dark:text-muted-dark">Not Escalated</span>
                   )}
                   {inc.status === "resolved" && (
                     <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-300">
@@ -339,11 +340,11 @@ export default function Incidents() {
 
           <div className="lg:col-span-3">
             {current && (
-              <div className="space-y-5 rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] p-6 shadow-card">
+              <div className="space-y-5 rounded-xl border border-border dark:border-border-dark bg-card p-6 shadow-card">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h2 className="text-xl font-bold text-zinc-900 dark:text-[#FAFAFA]">{current.title || current.id}</h2>
+                      <h2 className="text-xl font-bold text-primary">{current.title || current.id}</h2>
                       {current.linearIssueIdentifier && (
                         <a href={current.linearIssueUrl} target="_blank" rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 rounded-md bg-indigo-50 dark:bg-indigo-900/20 px-2.5 py-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors">
@@ -351,7 +352,7 @@ export default function Incidents() {
                         </a>
                       )}
                     </div>
-                    <p className="mt-1 text-sm text-muted dark:text-[#A1A1AA]">{current.summary || ""}</p>
+                    <p className="mt-1 text-sm text-muted dark:text-muted-dark">{current.summary || ""}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0 ml-4">
                     <StatusBadge status={current.status} />
@@ -371,21 +372,21 @@ export default function Incidents() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024] relative">
-                    <p className="text-xs text-muted dark:text-[#A1A1AA]">Severity</p>
+                    <p className="text-xs text-muted dark:text-muted-dark">Severity</p>
                     <div className="flex items-center gap-2 mt-1">
                       <PriorityBadge priority={current.severity} />
                       {canCompleteApproval && current.status !== "resolved" && current.status !== "closed" && (
                         <div className="relative">
                           <button onClick={(e) => { e.stopPropagation(); setShowEscalate(!showEscalate); }} disabled={escalating}
-                            className="flex items-center gap-1 rounded-lg bg-zinc-200/70 px-2 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-200 transition-all disabled:opacity-50 dark:bg-[#2A2A2E] dark:text-[#A1A1AA] dark:hover:bg-[#3A3A3E]">
+                            className="flex items-center gap-1 rounded-lg bg-zinc-200/70 px-2 py-1 text-xs font-medium text-secondary-body dark:bg-[#2A2A2E] hover:bg-zinc-200 transition-all disabled:opacity-50">
                             {escalating ? <Loader2 size={12} className="animate-spin" /> : <ArrowUp size={12} />} Escalate
                           </button>
                           {showEscalate && (
-                            <div onClick={(e) => e.stopPropagation()} className="absolute right-0 top-full z-10 mt-1 min-w-[120px] rounded-xl border border-zinc-200 bg-white p-1 shadow-lg dark:border-[#2A2A2E] dark:bg-[#202024]">
+                            <div onClick={(e) => e.stopPropagation()} className="absolute right-0 top-full z-10 mt-1 min-w-[120px] rounded-xl border border-border bg-card p-1 shadow-lg dark:border-border-dark dark:bg-[#202024]">
                               {severityOrder.filter((s) => severityOrder.indexOf(s) > severityOrder.indexOf(current.severity)).map((s) => (
                                 <button key={s} onClick={(e) => { e.stopPropagation(); handleEscalate(s); }}
-                                  className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100 dark:text-[#A1A1AA] dark:hover:bg-[#2A2A2E]">
-                                  <ArrowUp size={12} className="text-orange-500" /> {s.charAt(0).toUpperCase() + s.slice(1)}
+                                  className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-body dark:hover:bg-[#2A2A2E]">
+                                  <ArrowUp size={12} className="text-orange-500 dark:text-orange-400" /> {s.charAt(0).toUpperCase() + s.slice(1)}
                                 </button>
                               ))}
                             </div>
@@ -394,21 +395,24 @@ export default function Incidents() {
                       )}
                     </div>
                   </div>
-                  <div className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024]"><p className="text-xs text-muted dark:text-[#A1A1AA]">Affected</p><p className="mt-1 text-sm font-medium text-zinc-900 dark:text-[#FAFAFA]">{current.affected_ticket_count || "N/A"} tickets</p></div>
-                  {current.owner_user_id && <div className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024]"><p className="text-xs text-muted dark:text-[#A1A1AA]">Owner</p><p className="mt-1 text-sm font-medium text-zinc-900 dark:text-[#FAFAFA]">{current.owner_user_id}</p></div>}
-                  {current.opened_at && <div className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024]"><p className="text-xs text-muted dark:text-[#A1A1AA]">Opened</p><p className="mt-1 text-sm font-medium text-zinc-900 dark:text-[#FAFAFA]">{format(new Date(current.opened_at), "MMM d, HH:mm")}</p></div>}
-                  {current.resolved_at && <div className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024]"><p className="text-xs text-muted dark:text-[#A1A1AA]">Resolved</p><p className="mt-1 text-sm font-medium text-emerald-700 dark:text-emerald-300">{format(new Date(current.resolved_at), "MMM d, HH:mm")}</p></div>}
+                  <div className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024]"><p className="text-xs text-muted dark:text-muted-dark">Affected</p><p className="mt-1 text-sm font-medium text-primary">{current.affected_ticket_count || "N/A"} tickets</p></div>
+                  {current.owner_user_id && <div className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024]"><p className="text-xs text-muted dark:text-muted-dark">Owner</p><p className="mt-1 text-sm font-medium text-primary">{current.owner_user_id}</p></div>}
+                  {current.opened_at && <div className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024]"><p className="text-xs text-muted dark:text-muted-dark">Opened</p><p className="mt-1 text-sm font-medium text-primary">{format(new Date(current.opened_at), "MMM d, HH:mm")}</p></div>}
+                  {current.resolved_at && <div className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024]"><p className="text-xs text-muted dark:text-muted-dark">Resolved</p><p className="mt-1 text-sm font-medium text-emerald-700 dark:text-emerald-300">{format(new Date(current.resolved_at), "MMM d, HH:mm")}</p></div>}
                 </div>
 
-                {relatedSignal && (
+                  {relatedSignal && (
                   <div className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024] flex items-center justify-between">
                     <div>
-                      <p className="text-xs text-muted dark:text-[#A1A1AA]">Linked Signal</p>
-                      <p className="mt-0.5 text-sm font-medium text-zinc-900 dark:text-[#FAFAFA]">{relatedSignal.name || relatedSignal.summary || relatedSignal.id}</p>
+                      <p className="text-xs text-muted dark:text-muted-dark">Linked Signal</p>
+                      <p className="mt-0.5 text-sm font-medium text-primary">{relatedSignal.name || relatedSignal.summary || relatedSignal.id}</p>
                     </div>
-                    <span className={`rounded-md px-2 py-0.5 text-[10px] font-semibold ${relatedSignal.status === "resolved" ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700"}`}>
-                      {relatedSignal.status || "pending"}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`rounded-md px-2 py-0.5 text-[10px] font-semibold ${deriveWorkflowStage(relatedSignal) === "incident_created" ? "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300" : deriveWorkflowStage(relatedSignal) === "approved" ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300" : deriveWorkflowStage(relatedSignal) === "review" ? "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300" : "bg-zinc-100 dark:bg-[#202024] text-zinc-600 dark:text-muted-dark"}`}>
+                        {deriveWorkflowStage(relatedSignal).charAt(0).toUpperCase() + deriveWorkflowStage(relatedSignal).slice(1)}
+                      </span>
+                      <StatusBadge status={relatedSignal.status} />
+                    </div>
                   </div>
                 )}
 
@@ -420,13 +424,13 @@ export default function Incidents() {
                     <div className="flex items-center gap-2">
                       {current.linearIssueId && (
                         <button onClick={handleFetchLinear} disabled={syncingLinear}
-                          className="flex items-center gap-1 rounded-lg bg-white dark:bg-[#202024] px-2.5 py-1 text-[10px] font-medium text-zinc-600 dark:text-[#A1A1AA] hover:bg-zinc-100 dark:hover:bg-[#2A2A2E] transition-all border border-zinc-200 dark:border-[#2A2A2E] disabled:opacity-50">
+                          className="flex items-center gap-1 rounded-lg bg-white dark:bg-[#202024] px-2.5 py-1 text-[10px] font-medium text-secondary-body dark:hover:bg-[#2A2A2E] transition-all border border-border dark:border-border-dark disabled:opacity-50">
                           {syncingLinear ? <Loader2 size={10} className="animate-spin" /> : <RefreshCw size={10} />} Sync
                         </button>
                       )}
                       {current.linearIssueUrl && (
                         <a href={current.linearIssueUrl} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 rounded-lg bg-white dark:bg-[#202024] px-2.5 py-1 text-[10px] font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all border border-zinc-200 dark:border-[#2A2A2E]">
+                          className="inline-flex items-center gap-1 rounded-lg bg-white dark:bg-[#202024] px-2.5 py-1 text-[10px] font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all border border-border dark:border-border-dark">
                           <ExternalLink size={10} /> Open Linear
                         </a>
                       )}
@@ -437,28 +441,28 @@ export default function Incidents() {
                     <div className="space-y-2">
                       <div className="grid grid-cols-2 gap-2">
                         <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
-                          <p className="text-[10px] text-zinc-400 dark:text-[#71717A]">Issue</p>
-                          <p className="text-xs font-medium text-zinc-900 dark:text-[#FAFAFA]">{current.linearIssueIdentifier || "—"}</p>
+                          <p className="text-[10px] text-muted dark:text-muted-dark">Issue</p>
+                          <p className="text-xs font-medium text-primary">{current.linearIssueIdentifier || "—"}</p>
                         </div>
                         <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
-                          <p className="text-[10px] text-zinc-400 dark:text-[#71717A]">Status</p>
-                          <p className={`text-xs font-medium ${current.linearStatus === "Done" ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-900 dark:text-[#FAFAFA]"}`}>
+                          <p className="text-[10px] text-muted dark:text-muted-dark">Status</p>
+                          <p className={`text-xs font-medium ${current.linearStatus === "Done" ? "text-emerald-600 dark:text-emerald-400" : "text-primary"}`}>
                             {current.linearStatus || "—"}
                           </p>
                         </div>
                         <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
-                          <p className="text-[10px] text-zinc-400 dark:text-[#71717A]">Priority</p>
-                          <p className="text-xs font-medium text-zinc-900 dark:text-[#FAFAFA]">{current.linearPriority || "—"}</p>
+                          <p className="text-[10px] text-muted dark:text-muted-dark">Priority</p>
+                          <p className="text-xs font-medium text-primary">{current.linearPriority || "—"}</p>
                         </div>
                         <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
-                          <p className="text-[10px] text-zinc-400 dark:text-[#71717A]">Last Sync</p>
-                          <p className="text-xs font-medium text-zinc-900 dark:text-[#FAFAFA]">{timeAgo(current.linearSyncedAt) || "—"}</p>
+                          <p className="text-[10px] text-muted dark:text-muted-dark">Last Sync</p>
+                          <p className="text-xs font-medium text-primary">{timeAgo(current.linearSyncedAt) || "—"}</p>
                         </div>
                       </div>
                       {current.linearAssignee && (
                         <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
-                          <p className="text-[10px] text-zinc-400 dark:text-[#71717A]">Assignee</p>
-                          <p className="text-xs font-medium text-zinc-900 dark:text-[#FAFAFA]">{current.linearAssignee}</p>
+                          <p className="text-[10px] text-muted dark:text-muted-dark">Assignee</p>
+                          <p className="text-xs font-medium text-primary">{current.linearAssignee}</p>
                         </div>
                       )}
                       {linearIsDone && current.status !== "resolved" && current.status !== "closed" && (
@@ -473,24 +477,24 @@ export default function Incidents() {
                           {syncingLinear ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Sync Now
                         </button>
                         <a href={current.linearIssueUrl} target="_blank" rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 rounded-lg bg-white dark:bg-[#202024] border border-zinc-200 dark:border-[#2A2A2E] px-3 py-1.5 text-xs font-medium text-zinc-700 dark:text-[#A1A1AA] hover:bg-zinc-50 dark:hover:bg-[#2A2A2E] transition-all">
+                          className="flex items-center gap-1.5 rounded-lg bg-white dark:bg-[#202024] border border-border dark:border-border-dark px-3 py-1.5 text-xs font-medium text-body dark:hover:bg-[#2A2A2E] transition-all">
                           <ExternalLink size={12} /> View in Linear
                         </a>
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <p className="text-xs text-zinc-500 dark:text-[#A1A1AA]">This incident has not been escalated to engineering.</p>
+                      <p className="text-xs text-muted-base">This incident has not been escalated to engineering.</p>
                       <button onClick={handleCreateLinearIssue} disabled={creatingLinear || (current.linearIssueId && !current.linearIssueUrl)}
                         className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all disabled:opacity-50 ${canCreateLinearIssue
                           ? "bg-indigo-600 text-white hover:bg-indigo-500"
-                          : "bg-zinc-200 dark:bg-[#2A2A2E] text-zinc-500 dark:text-[#71717A] cursor-not-allowed"}`}
+                          : "bg-zinc-200 dark:bg-[#2A2A2E] text-muted-base cursor-not-allowed"}`}
                         title={!canCreateLinearIssue ? "Only Support Managers can escalate incidents to Engineering." : undefined}>
                         {creatingLinear ? <Loader2 size={12} className="animate-spin" /> : <ArrowRight size={12} />}
                         {current.linearIssueId ? "Open Linear" : creatingLinear ? "Creating..." : "Create Linear Issue"}
                       </button>
                       {!canCreateLinearIssue && (
-                        <p className="text-[10px] text-zinc-400 dark:text-[#71717A]">Only Support Managers can escalate incidents to Engineering.</p>
+                        <p className="text-[10px] text-muted dark:text-muted-dark">Only Support Managers can escalate incidents to Engineering.</p>
                       )}
                     </div>
                   )}
@@ -498,13 +502,13 @@ export default function Incidents() {
 
                 {current.linearIssueId && (
                   <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted dark:text-[#A1A1AA] flex items-center gap-1.5">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted dark:text-muted-dark flex items-center gap-1.5">
                       <MessageSquare size={12} /> Engineering Notes
                     </p>
                     <div className="flex gap-2">
                       <input type="text" value={commentText} onChange={(e) => setCommentText(e.target.value)}
                         placeholder="Add an engineering note (synced to Linear)..."
-                        className="flex-1 rounded-xl border border-zinc-200 dark:border-[#2A2A2E] bg-zinc-50 dark:bg-[#202024] px-3 py-2 text-sm text-zinc-900 dark:text-[#FAFAFA] placeholder:text-zinc-400 dark:placeholder:text-[#71717A] focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                        className="flex-1 rounded-xl border border-border dark:border-border-dark bg-zinc-50 dark:bg-[#202024] px-3 py-2 text-sm text-primary placeholder:text-muted dark:placeholder:text-muted-dark focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                         onKeyDown={(e) => { if (e.key === "Enter") handleAddComment(); }} />
                       <button onClick={handleAddComment} disabled={!commentText.trim() || sendingComment}
                         className="flex items-center gap-1 rounded-xl bg-indigo-600 dark:bg-indigo-500 px-3 py-2 text-xs font-medium text-white hover:bg-indigo-500 dark:hover:bg-indigo-400 transition-all disabled:opacity-50">
@@ -515,30 +519,30 @@ export default function Incidents() {
                 )}
 
                 {current.description && (
-                  <div><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted dark:text-[#A1A1AA]">Description</p>
-                    <p className="rounded-xl bg-zinc-50 p-3 text-sm leading-relaxed text-zinc-600 dark:bg-[#202024] dark:text-[#A1A1AA]">{current.description}</p></div>
+                  <div><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted dark:text-muted-dark">Description</p>
+                    <p className="rounded-xl bg-zinc-50 p-3 text-sm leading-relaxed text-secondary-body dark:bg-[#202024]">{current.description}</p></div>
                 )}
                 {current.blast_radius && (
-                  <div><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted dark:text-[#A1A1AA]">Blast Radius</p>
-                    <p className="rounded-xl bg-zinc-50 p-3 text-sm text-zinc-600 dark:bg-[#202024] dark:text-[#A1A1AA]">{current.blast_radius}</p></div>
+                  <div><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted dark:text-muted-dark">Blast Radius</p>
+                    <p className="rounded-xl bg-zinc-50 p-3 text-sm text-secondary-body dark:bg-[#202024]">{current.blast_radius}</p></div>
                 )}
                 {relatedTickets.length > 0 && (
-                  <div><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted dark:text-[#A1A1AA]">Related Tickets ({relatedTickets.length})</p>
+                  <div><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted dark:text-muted-dark">Related Tickets ({relatedTickets.length})</p>
                     <div className="space-y-2">{relatedTickets.slice(0, 5).map((t) => (
                       <div key={t.id} className="flex items-center justify-between rounded-xl bg-zinc-50 p-3 dark:bg-[#202024]">
-                        <div className="min-w-0 flex-1"><p className="truncate text-sm text-zinc-900 dark:text-[#FAFAFA]">{t.title || t.customer_name || t.id}</p><p className="text-xs text-muted dark:text-[#A1A1AA]">{t.customer_name || ""}</p></div>
+                        <div className="min-w-0 flex-1"><p className="truncate text-sm text-primary">{t.title || t.customer_name || t.id}</p><p className="text-xs text-muted dark:text-muted-dark">{t.customer_name || ""}</p></div>
                         <StatusBadge status={t.status} />
                       </div>
                     ))}</div></div>
                 )}
                 {current.resolution_notes && (
-                  <div><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted dark:text-[#A1A1AA]">Resolution Notes</p>
-                    <p className="rounded-xl bg-zinc-50 p-3 text-sm text-zinc-600 dark:bg-[#202024] dark:text-[#A1A1AA]">{current.resolution_notes}</p></div>
+                  <div><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted dark:text-muted-dark">Resolution Notes</p>
+                    <p className="rounded-xl bg-zinc-50 p-3 text-sm text-secondary-body dark:bg-[#202024]">{current.resolution_notes}</p></div>
                 )}
 
                 {current.linearHistory && current.linearHistory.length > 0 && (
                   <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted dark:text-[#A1A1AA] flex items-center gap-1.5">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted dark:text-muted-dark flex items-center gap-1.5">
                       <Clock size={12} /> Engineering Timeline
                     </p>
                     <div className="space-y-2">
@@ -548,10 +552,10 @@ export default function Incidents() {
                             <RefreshCw size={11} className="text-indigo-600 dark:text-indigo-400" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-medium text-zinc-900 dark:text-[#FAFAFA]">
+                            <p className="text-xs font-medium text-primary">
                               Status changed to <span className="text-indigo-600 dark:text-indigo-400">{entry.to || entry.status}</span>
                             </p>
-                            <p className="text-[10px] text-muted dark:text-[#A1A1AA]">{timeAgo(entry.timestamp || entry.at)}</p>
+                            <p className="text-[10px] text-muted dark:text-muted-dark">{timeAgo(entry.timestamp || entry.at)}</p>
                           </div>
                         </div>
                       ))}

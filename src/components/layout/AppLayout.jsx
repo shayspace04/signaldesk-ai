@@ -23,7 +23,7 @@ function LayoutContent() {
   const { workspace } = useWorkspace();
 
   return (
-    <div className="flex h-screen bg-white dark:bg-[#09090B] text-zinc-900 dark:text-[#FAFAFA]" style={{ "--accent": workspace.accent, "--accent-dark": workspace.accentDark }}>
+    <div className="flex h-screen bg-white dark:bg-[#09090B] text-primary" style={{ "--accent": workspace.accent, "--accent-dark": workspace.accentDark }}>
 
       <Sidebar />
 

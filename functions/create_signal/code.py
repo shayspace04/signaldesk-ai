@@ -43,7 +43,7 @@ async def create_signal(ctx: FunctionContext, data: CreateSignalInput) -> Create
         "example_ticket_ids": data.example_ticket_ids or [],
         "recurring_terms": data.recurring_terms or [],
         "proposed_priority": data.proposed_priority or "normal",
-        "status": "pending", "detected_at": now,
+        "status": "pending", "workflowStage": "new", "detected_at": now,
     })
     linked = 0
     for tid in (data.example_ticket_ids or []):

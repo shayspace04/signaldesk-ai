@@ -50,30 +50,30 @@ function ListCard({ ticket, onClick }) {
     <motion.div
       onClick={() => onClick(ticket)}
       whileHover={{ y: -1 }}
-      className="group flex items-center gap-4 rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] dark:border-[#2A2A2E] dark:bg-[#18181B] p-4 shadow-sm transition-all duration-200 hover:border-zinc-300 dark:hover:border-[#2A2A2E] hover:shadow-card cursor-pointer dark:hover:border-[#2A2A2E]"
+      className="group flex items-center gap-4 rounded-xl border border-border dark:border-border-dark bg-card p-4 shadow-sm transition-all duration-200 hover:border-zinc-300 dark:hover:border-border-dark hover:shadow-card cursor-pointer"
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs font-mono text-muted dark:text-[#A1A1AA]">SD-{ticket.id.slice(-4)}</span>
+          <span className="text-xs font-mono text-muted dark:text-muted-dark">SD-{ticket.id.slice(-4)}</span>
           <PriorityBadge priority={ticket.priority} />
           <StatusBadge status={ticket.status} />
         </div>
-        <p className="text-sm font-medium text-zinc-900 dark:text-[#FAFAFA] truncate dark:text-[#FAFAFA]">{ticket.title || ticket.customer_name || ticket.id}</p>
-        <p className="text-xs text-muted dark:text-[#A1A1AA] mt-0.5">{ticket.customer_name || ticket.customer_email || ""}</p>
+        <p className="text-sm font-medium text-primary truncate">{ticket.title || ticket.customer_name || ticket.id}</p>
+        <p className="text-xs text-muted dark:text-muted-dark mt-0.5">{ticket.customer_name || ticket.customer_email || ""}</p>
       </div>
       <div className="flex items-center gap-3 flex-shrink-0">
         {ticket.category && (
-          <span className="text-xs text-muted dark:text-[#A1A1AA] hidden sm:inline">{ticket.category}</span>
+          <span className="text-xs text-muted dark:text-muted-dark hidden sm:inline">{ticket.category}</span>
         )}
         {ticket.created_at && (
-          <span className="text-xs text-muted dark:text-[#A1A1AA] hidden md:inline">{format(new Date(ticket.created_at), "MMM d")}</span>
+          <span className="text-xs text-muted dark:text-muted-dark hidden md:inline">{format(new Date(ticket.created_at), "MMM d")}</span>
         )}
         <div className="flex items-center gap-1.5">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-200 text-[9px] font-semibold text-zinc-600 dark:bg-[#27272A] dark:text-[#A1A1AA]">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-200 text-[9px] font-semibold text-secondary-body dark:bg-[#27272A] dark:text-muted-dark">
             {AVATARS[Math.abs(ticket.id?.length || 0) % AVATARS.length]}
           </span>
         </div>
-        <button className="opacity-0 group-hover:opacity-100 p-1 rounded text-muted dark:text-[#A1A1AA] hover:text-zinc-700 dark:hover:text-[#FAFAFA] hover:bg-zinc-100 dark:hover:bg-[#27272A] transition-all">
+        <button className="opacity-0 group-hover:opacity-100 p-1 rounded text-muted dark:text-muted-dark hover:text-body dark:hover:text-primary hover:bg-muted-surface dark:hover:bg-[#27272A] transition-all">
           <Eye size={14} />
         </button>
       </div>
@@ -97,42 +97,42 @@ function KanbanCard({ ticket, columnId, onMove }) {
       layout
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="group rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] dark:border-[#2A2A2E] dark:bg-[#18181B] p-4 shadow-sm transition-all duration-200 hover:border-zinc-300 dark:hover:border-[#2A2A2E] hover:shadow-card"
+      className="group rounded-xl border border-border dark:border-border-dark bg-card p-4 shadow-sm transition-all duration-200 hover:border-zinc-300 dark:hover:border-border-dark hover:shadow-card"
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex flex-wrap gap-1.5">
           <PriorityBadge priority={ticket.priority} />
           {ticket.category && (
-            <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600 dark:bg-[#202024] dark:text-[#A1A1AA]">
+            <span className="rounded-md bg-muted-surface px-2 py-0.5 text-[10px] font-medium text-secondary-body">
               {ticket.category}
             </span>
           )}
         </div>
-        <button className="flex-shrink-0 rounded p-1 text-muted dark:text-[#A1A1AA] opacity-0 group-hover:opacity-100 hover:bg-zinc-100 dark:hover:bg-[#27272A] transition-all">
+        <button className="flex-shrink-0 rounded p-1 text-muted dark:text-muted-dark opacity-0 group-hover:opacity-100 hover:bg-muted-surface dark:hover:bg-[#27272A] transition-all">
           <MoreHorizontal size={14} />
         </button>
       </div>
-      <p className="text-sm font-semibold text-zinc-900 dark:text-[#FAFAFA] leading-snug line-clamp-2 mb-2">
+      <p className="text-sm font-semibold text-primary leading-snug line-clamp-2 mb-2">
         {ticket.title || ticket.customer_name || ticket.id}
       </p>
-      <p className="text-xs text-muted dark:text-[#A1A1AA] mb-3">{ticket.customer_name || ticket.customer_email || ""}</p>
+      <p className="text-xs text-muted dark:text-muted-dark mb-3">{ticket.customer_name || ticket.customer_email || ""}</p>
       <div className="mb-3">
-        <div className="h-1.5 rounded-full bg-zinc-100 dark:bg-[#202024]">
+        <div className="h-1.5 rounded-full bg-muted-surface">
           <div className="h-1.5 rounded-full bg-zinc-900 transition-all" style={{ width: `${progress}%` }} />
         </div>
       </div>
       <div className="flex items-center justify-between">
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-200 text-[8px] font-semibold text-zinc-600 dark:bg-[#27272A] dark:text-[#A1A1AA]">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-200 text-[8px] font-semibold text-secondary-body dark:bg-[#27272A] dark:text-muted-dark">
           {AVATARS[Math.abs(ticket.id?.length || 0) % AVATARS.length]}
         </span>
         <div className="flex items-center gap-3">
           {attachmentCount > 0 && (
-            <span className="flex items-center gap-1 text-[11px] text-muted dark:text-[#A1A1AA]">
+            <span className="flex items-center gap-1 text-[11px] text-muted dark:text-muted-dark">
               <Paperclip size={11} />{attachmentCount}
             </span>
           )}
           {commentCount > 0 && (
-            <span className="flex items-center gap-1 text-[11px] text-muted dark:text-[#A1A1AA]">
+            <span className="flex items-center gap-1 text-[11px] text-muted dark:text-muted-dark">
               <MessageSquare size={11} />{commentCount}
             </span>
           )}
@@ -335,7 +335,7 @@ export default function Tickets() {
 
   const SortHeader = ({ field, label, className }) => (
     <th
-      className={`px-4 py-3.5 text-left text-xs font-medium text-muted dark:text-[#A1A1AA] uppercase tracking-wider cursor-pointer hover:text-zinc-700 dark:hover:text-[#FAFAFA] transition-colors select-none ${className || ""}`}
+      className={`px-4 py-3.5 text-left text-xs font-medium text-muted dark:text-muted-dark uppercase tracking-wider cursor-pointer hover:text-body dark:hover:text-primary transition-colors select-none ${className || ""}`}
       onClick={() => handleTableSort(field)}
     >
       <div className="flex items-center gap-1.5">
@@ -359,37 +359,37 @@ export default function Tickets() {
     >
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-[36px] font-bold tracking-tight text-zinc-900 dark:text-[#FAFAFA]">Tickets</h1>
-          <p className="mt-1 text-sm text-muted dark:text-[#A1A1AA]">
+          <h1 className="text-[36px] font-bold tracking-tight text-primary">Tickets</h1>
+          <p className="mt-1 text-sm text-muted dark:text-muted-dark">
             {hasActiveFilters || search
               ? `${filtered.length} of ${m.tickets.total} ticket${m.tickets.total !== 1 ? "s" : ""}`
               : `${m.tickets.total} ticket${m.tickets.total !== 1 ? "s" : ""}`}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center rounded-xl border border-border dark:border-[#2A2A2E] overflow-hidden shadow-sm">
+          <div className="flex items-center rounded-xl border border-border dark:border-border-dark overflow-hidden shadow-sm">
             <button
               onClick={() => setView("list")}
               className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium transition-all duration-150 ${
-                view === "list" ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-[#A1A1AA] hover:bg-zinc-50 dark:hover:bg-[#27272A] hover:text-zinc-700 dark:hover:text-[#FAFAFA]"
+                view === "list" ? "bg-zinc-900 text-white" : "text-muted-base dark:text-muted-dark hover:bg-zinc-50 dark:hover:bg-[#27272A] hover:text-body dark:hover:text-primary"
               }`}
             >
               <List size={14} /> List
             </button>
-            <div className="w-px h-4 bg-border dark:bg-[#2A2A2E]" />
+            <div className="w-px h-4 bg-border dark:bg-border-dark" />
             <button
               onClick={() => setView("table")}
               className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium transition-all duration-150 ${
-                view === "table" ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-[#A1A1AA] hover:bg-zinc-50 dark:hover:bg-[#27272A] hover:text-zinc-700 dark:hover:text-[#FAFAFA]"
+                view === "table" ? "bg-zinc-900 text-white" : "text-muted-base dark:text-muted-dark hover:bg-zinc-50 dark:hover:bg-[#27272A] hover:text-body dark:hover:text-primary"
               }`}
             >
               <Table2 size={14} /> Table
             </button>
-            <div className="w-px h-4 bg-border dark:bg-[#2A2A2E]" />
+            <div className="w-px h-4 bg-border dark:bg-border-dark" />
             <button
               onClick={() => setView("kanban")}
               className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium transition-all duration-150 ${
-                view === "kanban" ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-[#A1A1AA] hover:bg-zinc-50 dark:hover:bg-[#27272A] hover:text-zinc-700 dark:hover:text-[#FAFAFA]"
+                view === "kanban" ? "bg-zinc-900 text-white" : "text-muted-base dark:text-muted-dark hover:bg-zinc-50 dark:hover:bg-[#27272A] hover:text-body dark:hover:text-primary"
               }`}
             >
               <Columns3 size={14} /> Kanban
@@ -408,33 +408,33 @@ export default function Tickets() {
 
       <div className="flex flex-wrap items-center gap-2 mb-6">
         <div className="relative flex-1 min-w-[200px] max-w-xs">
-          <Search className="absolute left-3 top-2.5 text-muted dark:text-[#A1A1AA]" size={15} />
+          <Search className="absolute left-3 top-2.5 text-muted dark:text-muted-dark" size={15} />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search tickets..."
-            className="w-full rounded-xl border border-border dark:border-[#2A2A2E] bg-surface dark:bg-[#111113] py-2 pl-9 pr-3 text-sm outline-none transition-all duration-200 focus:border-zinc-300 dark:focus:border-[#2A2A2E] focus:ring-1 focus:ring-zinc-200 dark:focus:ring-zinc-600 placeholder:text-muted dark:text-[#A1A1AA] dark:border-[#2A2A2E] dark:bg-[#111113] dark:focus:border-zinc-600 dark:focus:ring-zinc-600 dark:placeholder:text-[#71717A]"
+            className="w-full rounded-xl border border-border dark:border-border-dark bg-surface dark:bg-[#111113] py-2 pl-9 pr-3 text-sm outline-none transition-all duration-200 focus:border-zinc-300 dark:focus:border-border-dark focus:ring-1 focus:ring-zinc-200 dark:focus:ring-zinc-600 placeholder:text-muted dark:text-muted-dark dark:focus:border-zinc-600 dark:focus:ring-zinc-600 dark:placeholder:text-[#71717A]"
           />
         </div>
         <select value={filters.priority} onChange={(e) => setFilters({ ...filters, priority: e.target.value })}
-          className="rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] dark:border-[#2A2A2E] dark:bg-[#18181B] px-3 py-2 text-sm text-zinc-700 dark:text-[#FAFAFA] outline-none dark:text-[#FAFAFA] hover:border-zinc-300 dark:hover:border-[#2A2A2E] transition-colors">
+          className="rounded-xl border border-border dark:border-border-dark bg-card px-3 py-2 text-sm text-body outline-none hover:border-zinc-300 dark:hover:border-border-dark transition-colors">
           <option value="All">All Priorities</option>
           {filterOptions.priority.map((p) => <option key={p} value={p}>{p}</option>)}
         </select>
         <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-          className="rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] dark:border-[#2A2A2E] dark:bg-[#18181B] px-3 py-2 text-sm text-zinc-700 dark:text-[#FAFAFA] outline-none dark:text-[#FAFAFA] hover:border-zinc-300 dark:hover:border-[#2A2A2E] transition-colors">
+          className="rounded-xl border border-border dark:border-border-dark bg-card px-3 py-2 text-sm text-body outline-none hover:border-zinc-300 dark:hover:border-border-dark transition-colors">
           <option value="All">All Statuses</option>
           {filterOptions.status.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
         </select>
         <select value={filters.category} onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-          className="rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] dark:border-[#2A2A2E] dark:bg-[#18181B] px-3 py-2 text-sm text-zinc-700 dark:text-[#FAFAFA] outline-none dark:text-[#FAFAFA] hover:border-zinc-300 dark:hover:border-[#2A2A2E] transition-colors">
+          className="rounded-xl border border-border dark:border-border-dark bg-card px-3 py-2 text-sm text-body outline-none hover:border-zinc-300 dark:hover:border-border-dark transition-colors">
           <option value="All">All Categories</option>
           {filterOptions.category.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
         <select value={`${sortField}-${sortDir}`} onChange={(e) => {
           const [f, d] = e.target.value.split("-");
           setSortField(f); setSortDir(d);
-        }} className="rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] dark:border-[#2A2A2E] dark:bg-[#18181B] px-3 py-2 text-sm text-zinc-700 dark:text-[#FAFAFA] outline-none dark:text-[#FAFAFA] hover:border-zinc-300 dark:hover:border-[#2A2A2E] transition-colors">
+        }} className="rounded-xl border border-border dark:border-border-dark bg-card px-3 py-2 text-sm text-body outline-none hover:border-zinc-300 dark:hover:border-border-dark transition-colors">
           {SORT_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
@@ -443,15 +443,15 @@ export default function Tickets() {
           onClick={() => setChurnFilter(churnFilter === "at-risk" ? null : "at-risk")}
           className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm transition-all duration-200 ${
             churnFilter === "at-risk"
-              ? "border-red-200 bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400 dark:border-red-800"
-              : "border-border dark:border-[#2A2A2E] bg-white dark:border-[#2A2A2E] dark:bg-[#18181B] text-zinc-500 dark:text-[#A1A1AA] hover:bg-zinc-50 dark:hover:bg-[#27272A] hover:border-zinc-300 dark:hover:border-[#2A2A2E]"
+              ? "border-red-200 bg-red-50 text-danger dark:bg-red-950/30 dark:border-red-800"
+              : "border-border dark:border-border-dark bg-card text-muted-base dark:text-muted-dark hover:bg-zinc-50 dark:hover:bg-[#27272A] hover:border-zinc-300 dark:hover:border-border-dark"
           }`}
         >
           <AlertTriangle size={14} /> At Risk
         </button>
         {hasActiveFilters && (
           <button onClick={() => { setFilters(EMPTY_FILTERS); setChurnFilter(null); }}
-            className="flex items-center gap-1.5 rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] dark:border-[#2A2A2E] dark:bg-[#18181B] px-3 py-2 text-sm text-zinc-500 dark:text-[#A1A1AA] hover:bg-zinc-50 dark:hover:bg-[#27272A] hover:border-zinc-300 dark:hover:border-[#2A2A2E] transition-all duration-200">
+            className="flex items-center gap-1.5 rounded-xl border border-border dark:border-border-dark bg-card px-3 py-2 text-sm text-muted-base dark:text-muted-dark hover:bg-zinc-50 dark:hover:bg-[#27272A] hover:border-zinc-300 dark:hover:border-border-dark transition-all duration-200">
             <RotateCcw size={14} /> Clear
           </button>
         )}
@@ -459,14 +459,14 @@ export default function Tickets() {
 
       {loading ? (
         <div className="space-y-3">
-          {[1,2,3,4,5].map((i) => <div key={i} className="h-14 animate-pulse rounded-xl bg-zinc-100 dark:bg-[#202024]" />)}
+          {[1,2,3,4,5].map((i) => <div key={i} className="h-14 animate-pulse rounded-xl bg-muted-surface" />)}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 dark:border-[#2A2A2E]  bg-zinc-50/50 py-20 dark:border-[#2A2A2E] dark:bg-[#202024]/50">
-          <TicketIcon className="mb-4 text-zinc-300 dark:text-[#71717A]" size={36} />
-          <p className="text-zinc-600 dark:text-[#A1A1AA] font-medium dark:text-[#A1A1AA]">{search ? "No tickets match your search." : "No tickets yet."}</p>
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 dark:border-border-dark bg-zinc-50/50 py-20 dark:bg-[#202024]/50">
+          <TicketIcon className="mb-4 text-zinc-300 dark:text-zinc-600" size={36} />
+          <p className="text-secondary-body dark:text-muted-dark font-medium">{search ? "No tickets match your search." : "No tickets yet."}</p>
           {!search && canCreateTickets && (
-            <button onClick={() => setShowForm(true)} className="mt-3 text-sm font-medium text-zinc-900 dark:text-[#FAFAFA] hover:opacity-80 transition-opacity">
+            <button onClick={() => setShowForm(true)} className="mt-3 text-sm font-medium text-primary hover:opacity-80 transition-opacity">
               Create your first ticket
             </button>
           )}
@@ -480,14 +480,14 @@ export default function Tickets() {
               ))}
               {totalPages > 1 && (
                 <div className="flex items-center justify-between pt-4">
-                  <span className="text-sm text-muted dark:text-[#A1A1AA]">
+                  <span className="text-sm text-muted dark:text-muted-dark">
                     Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, filtered.length)} of {filtered.length}
                   </span>
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                       disabled={page === 1}
-                      className="flex items-center gap-1 rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] dark:border-[#2A2A2E] dark:bg-[#18181B] px-3 py-2 text-sm text-zinc-500 dark:text-[#A1A1AA] hover:bg-zinc-50 dark:hover:bg-[#27272A] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      className="flex items-center gap-1 rounded-xl border border-border dark:border-border-dark bg-card px-3 py-2 text-sm text-muted-base dark:text-muted-dark hover:bg-zinc-50 dark:hover:bg-[#27272A] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
                       <ChevronLeft size={14} /> Prev
                     </button>
@@ -496,14 +496,14 @@ export default function Tickets() {
                         className={`rounded-xl px-3.5 py-2 text-sm font-medium transition-all ${
                           p === page
                             ? "bg-zinc-900 text-white shadow-sm"
-                            : "border border-border dark:border-[#2A2A2E] bg-white dark:border-[#2A2A2E] dark:bg-[#18181B] text-zinc-500 dark:text-[#A1A1AA] hover:bg-zinc-50 dark:hover:bg-[#27272A]"
+                            : "border border-border dark:border-border-dark bg-card text-muted-base dark:text-muted-dark hover:bg-zinc-50 dark:hover:bg-[#27272A]"
                         }`}>{p}</button>
                     ))}
-                    {totalPages > 7 && <span className="px-2 text-muted dark:text-[#A1A1AA] text-sm">...</span>}
+                    {totalPages > 7 && <span className="px-2 text-muted dark:text-muted-dark text-sm">...</span>}
                     <button
                       onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                       disabled={page === totalPages}
-                      className="flex items-center gap-1 rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] dark:border-[#2A2A2E] dark:bg-[#18181B] px-3 py-2 text-sm text-zinc-500 dark:text-[#A1A1AA] hover:bg-zinc-50 dark:hover:bg-[#27272A] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      className="flex items-center gap-1 rounded-xl border border-border dark:border-border-dark bg-card px-3 py-2 text-sm text-muted-base dark:text-muted-dark hover:bg-zinc-50 dark:hover:bg-[#27272A] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
                       Next <ChevronRight size={14} />
                     </button>
@@ -514,13 +514,13 @@ export default function Tickets() {
           )}
 
           {view === "table" && (
-            <div className="overflow-hidden rounded-xl border border-border dark:border-[#2A2A2E] shadow-sm dark:border-[#2A2A2E]">
+            <div className="overflow-hidden rounded-xl border border-border dark:border-border-dark shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[900px]">
                   <thead className="bg-zinc-50 dark:bg-[#111113]">
-                    <tr className="border-b border-border dark:border-[#2A2A2E]">
-                      <th className="px-4 py-3.5 text-left text-xs font-medium text-muted dark:text-[#A1A1AA] uppercase tracking-wider w-10">
-                        <input type="checkbox" className="rounded border-border dark:border-[#2A2A2E]" />
+                    <tr className="border-b border-border dark:border-border-dark">
+                      <th className="px-4 py-3.5 text-left text-xs font-medium text-muted dark:text-muted-dark uppercase tracking-wider w-10">
+                        <input type="checkbox" className="rounded border-border dark:border-border-dark" />
                       </th>
                       <SortHeader field="id" label="ID" />
                       <SortHeader field="customer_name" label="Customer" />
@@ -530,12 +530,12 @@ export default function Tickets() {
                       <SortHeader field="status" label="Status" />
                       <SortHeader field="created_at" label="Created" />
                       <SortHeader field="updated_at" label="Updated" />
-                      <th className="px-4 py-3.5 text-left text-xs font-medium text-muted dark:text-[#A1A1AA] uppercase tracking-wider">
+                      <th className="px-4 py-3.5 text-left text-xs font-medium text-muted dark:text-muted-dark uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border dark:divide-[#2A2A2E]">
+                  <tbody className="divide-y divide-border dark:divide-border-dark">
                     {sortedForTable.slice(0, 50).map((t) => (
                       <tr
                         key={t.id}
@@ -543,28 +543,28 @@ export default function Tickets() {
                         className="group cursor-pointer transition-colors hover:bg-zinc-50 dark:hover:bg-[#27272A]"
                       >
                         <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                          <input type="checkbox" className="rounded border-border dark:border-[#2A2A2E]" />
+                          <input type="checkbox" className="rounded border-border dark:border-border-dark" />
                         </td>
-                        <td className="px-4 py-3 text-sm font-mono text-muted dark:text-[#A1A1AA]">
+                        <td className="px-4 py-3 text-sm font-mono text-muted dark:text-muted-dark">
                           SD-{String(Math.abs(t.id?.hashCode?.() || 0) % 999).padStart(3, "0")}
                         </td>
-                        <td className="px-4 py-3 text-sm text-zinc-900 dark:text-[#FAFAFA]">{t.customer_name || t.customer_email || "-"}</td>
-                        <td className="px-4 py-3 text-sm font-medium text-zinc-900 dark:text-[#FAFAFA] max-w-[250px] truncate">
+                        <td className="px-4 py-3 text-sm text-primary">{t.customer_name || t.customer_email || "-"}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-primary max-w-[250px] truncate">
                           {t.title || "(no title)"}
                         </td>
-                        <td className="px-4 py-3 text-sm text-muted dark:text-[#A1A1AA]">{t.category || "-"}</td>
+                        <td className="px-4 py-3 text-sm text-muted dark:text-muted-dark">{t.category || "-"}</td>
                         <td className="px-4 py-3"><PriorityBadge priority={t.priority} /></td>
                         <td className="px-4 py-3"><StatusBadge status={t.status} /></td>
-                        <td className="px-4 py-3 text-sm text-muted dark:text-[#A1A1AA]">
+                        <td className="px-4 py-3 text-sm text-muted dark:text-muted-dark">
                           {t.created_at ? format(new Date(t.created_at), "MMM d") : "-"}
                         </td>
-                        <td className="px-4 py-3 text-sm text-muted dark:text-[#A1A1AA]">
+                        <td className="px-4 py-3 text-sm text-muted dark:text-muted-dark">
                           {t.updated_at ? format(new Date(t.updated_at), "MMM d") : "-"}
                         </td>
                         <td className="px-4 py-3">
                           <button
                             onClick={(e) => { e.stopPropagation(); setSelected(t); }}
-                            className="opacity-0 group-hover:opacity-100 rounded-lg border border-border dark:border-[#2A2A2E] px-2.5 py-1 text-xs text-muted dark:text-[#A1A1AA] hover:bg-zinc-100 dark:hover:bg-[#27272A] transition-all dark:border-[#2A2A2E]"
+                            className="opacity-0 group-hover:opacity-100 rounded-lg border border-border dark:border-border-dark px-2.5 py-1 text-xs text-muted dark:text-muted-dark hover:bg-muted-surface dark:hover:bg-[#27272A] transition-all"
                           >
                             Open
                           </button>
@@ -585,17 +585,17 @@ export default function Tickets() {
                     <div className="flex items-center justify-between mb-4 px-1">
                       <div className="flex items-center gap-2">
                         <div className={`h-2.5 w-2.5 rounded-full ${col.color}`} />
-                        <h3 className="text-sm font-semibold text-zinc-800 dark:text-[#FAFAFA]">{col.label}</h3>
-                        <span className="text-xs font-medium text-muted dark:text-[#A1A1AA] bg-zinc-100 rounded-full px-2 py-0.5 dark:bg-[#202024]">{col.cards.length}</span>
+                        <h3 className="text-sm font-semibold text-secondary">{col.label}</h3>
+                        <span className="text-xs font-medium text-muted dark:text-muted-dark bg-muted-surface rounded-full px-2 py-0.5">{col.cards.length}</span>
                       </div>
-                      <button className="text-muted dark:text-[#A1A1AA] hover:text-zinc-700 dark:hover:text-[#FAFAFA] p-1 rounded hover:bg-zinc-100 dark:hover:bg-[#27272A] transition-all">
+                      <button className="text-muted dark:text-muted-dark hover:text-body dark:hover:text-primary p-1 rounded hover:bg-muted-surface dark:hover:bg-[#27272A] transition-all">
                         <MoreHorizontal size={14} />
                       </button>
                     </div>
-                    <div className="flex-1 space-y-3 overflow-y-auto min-h-[200px] rounded-xl bg-zinc-50/50 p-3 border border-dashed border-zinc-200 dark:border-[#2A2A2E] dark:bg-[#202024]/50 dark:border-[#2A2A2E]">
+                    <div className="flex-1 space-y-3 overflow-y-auto min-h-[200px] rounded-xl bg-zinc-50/50 p-3 border border-dashed border-zinc-200 dark:border-border-dark dark:bg-[#202024]/50">
                       {col.cards.length === 0 ? (
                         <div className="flex items-center justify-center h-full">
-                          <p className="text-sm text-muted dark:text-[#A1A1AA]">No tickets</p>
+                          <p className="text-sm text-muted dark:text-muted-dark">No tickets</p>
                         </div>
                       ) : (
                         col.cards.map((t) => (
@@ -617,45 +617,45 @@ export default function Tickets() {
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm dark:bg-black/60">
-          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] dark:border-[#2A2A2E] dark:bg-[#18181B] p-6 shadow-modal">
+          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-border dark:border-border-dark bg-card p-6 shadow-modal">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-zinc-900 dark:text-[#FAFAFA]">New Ticket</h2>
-              <button onClick={() => setShowForm(false)} className="rounded-lg p-1.5 text-muted dark:text-[#A1A1AA] hover:text-zinc-700 dark:hover:text-[#FAFAFA] hover:bg-zinc-100 dark:hover:bg-[#27272A] transition-all">
+              <h2 className="text-xl font-bold text-primary">New Ticket</h2>
+              <button onClick={() => setShowForm(false)} className="rounded-lg p-1.5 text-muted dark:text-muted-dark hover:text-body dark:hover:text-primary hover:bg-muted-surface dark:hover:bg-[#27272A] transition-all">
                 <X size={20} />
               </button>
             </div>
             <div className="space-y-5">
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-[#FAFAFA]">Subject *</label>
+                <label className="mb-1.5 block text-sm font-medium text-body">Subject *</label>
                 <input value={form.subject} onChange={(e) => { setForm({ ...form, subject: e.target.value }); setFormErrors({ ...formErrors, subject: "" }); }}
-                  className="w-full rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] dark:border-[#2A2A2E] dark:bg-[#18181B] p-3 text-sm outline-none transition-all focus:border-zinc-300 dark:focus:border-[#2A2A2E] focus:ring-1 focus:ring-zinc-200 dark:focus:ring-zinc-600 dark:focus:border-zinc-600 dark:focus:ring-zinc-600" />
+                  className="w-full rounded-xl border border-border dark:border-border-dark bg-card p-3 text-sm outline-none transition-all focus:border-zinc-300 dark:focus:border-border-dark focus:ring-1 focus:ring-zinc-200 dark:focus:ring-zinc-600 dark:focus:border-zinc-600 dark:focus:ring-zinc-600" />
                 {formErrors.subject && <p className="mt-1 text-xs text-red-500">{formErrors.subject}</p>}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-[#FAFAFA]">Customer Name *</label>
+                  <label className="mb-1.5 block text-sm font-medium text-body">Customer Name *</label>
                   <input value={form.customer_name} onChange={(e) => { setForm({ ...form, customer_name: e.target.value }); setFormErrors({ ...formErrors, customer_name: "" }); }}
-                    className="w-full rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] dark:border-[#2A2A2E] dark:bg-[#18181B] p-3 text-sm outline-none transition-all focus:border-zinc-300 dark:focus:border-[#2A2A2E] focus:ring-1 focus:ring-zinc-200 dark:focus:ring-zinc-600 dark:focus:border-zinc-600 dark:focus:ring-zinc-600" />
+                    className="w-full rounded-xl border border-border dark:border-border-dark bg-card p-3 text-sm outline-none transition-all focus:border-zinc-300 dark:focus:border-border-dark focus:ring-1 focus:ring-zinc-200 dark:focus:ring-zinc-600 dark:focus:border-zinc-600 dark:focus:ring-zinc-600" />
                   {formErrors.customer_name && <p className="mt-1 text-xs text-red-500">{formErrors.customer_name}</p>}
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-[#FAFAFA]">Customer Email *</label>
+                  <label className="mb-1.5 block text-sm font-medium text-body">Customer Email *</label>
                   <input value={form.customer_email} onChange={(e) => { setForm({ ...form, customer_email: e.target.value }); setFormErrors({ ...formErrors, customer_email: "" }); }}
-                    className="w-full rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] dark:border-[#2A2A2E] dark:bg-[#18181B] p-3 text-sm outline-none transition-all focus:border-zinc-300 dark:focus:border-[#2A2A2E] focus:ring-1 focus:ring-zinc-200 dark:focus:ring-zinc-600 dark:focus:border-zinc-600 dark:focus:ring-zinc-600" />
+                    className="w-full rounded-xl border border-border dark:border-border-dark bg-card p-3 text-sm outline-none transition-all focus:border-zinc-300 dark:focus:border-border-dark focus:ring-1 focus:ring-zinc-200 dark:focus:ring-zinc-600 dark:focus:border-zinc-600 dark:focus:ring-zinc-600" />
                   {formErrors.customer_email && <p className="mt-1 text-xs text-red-500">{formErrors.customer_email}</p>}
                 </div>
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-[#FAFAFA]">Description *</label>
+                <label className="mb-1.5 block text-sm font-medium text-body">Description *</label>
                 <textarea rows={4} value={form.description} onChange={(e) => { setForm({ ...form, description: e.target.value }); setFormErrors({ ...formErrors, description: "" }); }}
-                  className="w-full rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] dark:border-[#2A2A2E] dark:bg-[#18181B] p-3 text-sm text-zinc-900 dark:text-[#FAFAFA] outline-none transition-all focus:border-zinc-300 dark:focus:border-[#2A2A2E] focus:ring-1 focus:ring-zinc-200 dark:focus:ring-zinc-600 dark:text-[#FAFAFA] dark:focus:border-zinc-600 dark:focus:ring-zinc-600 resize-none" />
+                  className="w-full rounded-xl border border-border dark:border-border-dark bg-card p-3 text-sm text-primary outline-none transition-all focus:border-zinc-300 dark:focus:border-border-dark focus:ring-1 focus:ring-zinc-200 dark:focus:ring-zinc-600 resize-none" />
                 {formErrors.description && <p className="mt-1 text-xs text-red-500">{formErrors.description}</p>}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-[#FAFAFA]">Priority</label>
+                  <label className="mb-1.5 block text-sm font-medium text-body">Priority</label>
                   <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}
-                    className="w-full rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] dark:border-[#2A2A2E] dark:bg-[#18181B] p-3 text-sm text-zinc-900 dark:text-[#FAFAFA] outline-none transition-all focus:border-zinc-300 dark:focus:border-zinc-600 dark:text-[#FAFAFA]">
+                    className="w-full rounded-xl border border-border dark:border-border-dark bg-card p-3 text-sm text-primary outline-none transition-all focus:border-zinc-300 dark:focus:border-zinc-600">
                     <option value="low">Low</option>
                     <option value="normal">Normal</option>
                     <option value="high">High</option>
@@ -663,9 +663,9 @@ export default function Tickets() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-[#FAFAFA]">Category</label>
+                  <label className="mb-1.5 block text-sm font-medium text-body">Category</label>
                   <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}
-                    className="w-full rounded-xl border border-border dark:border-[#2A2A2E] bg-white dark:bg-[#18181B] dark:border-[#2A2A2E] dark:bg-[#18181B] p-3 text-sm text-zinc-900 dark:text-[#FAFAFA] outline-none transition-all focus:border-zinc-300 dark:focus:border-zinc-600 dark:text-[#FAFAFA]">
+                    className="w-full rounded-xl border border-border dark:border-border-dark bg-card p-3 text-sm text-primary outline-none transition-all focus:border-zinc-300 dark:focus:border-zinc-600">
                     <option value="">None</option>
                     {workspace.ticketCategories.map((cat) => (
                       <option key={cat.value} value={cat.value}>{cat.label}</option>
@@ -679,7 +679,7 @@ export default function Tickets() {
                   {submitting ? <><Loader2 size={16} className="animate-spin" /> Creating...</> : "Create Ticket"}
                 </button>
                 <button onClick={() => setShowForm(false)}
-                  className="rounded-xl border border-border dark:border-[#2A2A2E] px-6 py-3 text-sm font-medium text-zinc-600 dark:text-[#A1A1AA] hover:bg-zinc-50 dark:hover:bg-[#27272A] transition-all duration-200 dark:border-[#2A2A2E] dark:text-[#A1A1AA]">
+                  className="rounded-xl border border-border dark:border-border-dark px-6 py-3 text-sm font-medium text-secondary-body dark:text-muted-dark hover:bg-zinc-50 dark:hover:bg-[#27272A] transition-all duration-200">
                   Cancel
                 </button>
               </div>
