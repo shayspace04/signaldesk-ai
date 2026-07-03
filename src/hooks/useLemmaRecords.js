@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/set-state-in-effect */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import client from "../lib/lemmaClient";
 
 export function useLemmaRecords(table, options = {}) {
@@ -15,7 +15,9 @@ export function useLemmaRecords(table, options = {}) {
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    client.records.list(table, { filters, sort, limit })
+    const queryOptions = { filters, sort, limit };
+    if (refreshKey > 0) queryOptions._t = Date.now();
+    client.records.list(table, queryOptions)
       .then((res) => {
         if (mounted) {
           setData(res.items || []);
@@ -27,24 +29,9 @@ export function useLemmaRecords(table, options = {}) {
     return () => { mounted = false; };
   }, [depsKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { data, total, loading, error, refresh: () => setRefreshKey((k) => k + 1) };
+  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+
+  return { data, total, loading, error, refresh };
 }
 
-export function useLemmaRecord(table, recordId) {
-  const [record, setRecord] = useState(null);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!recordId) { setLoading(false); return; }
-    let mounted = true;
-    setLoading(true);
-    client.records.get(table, recordId)
-      .then((res) => { if (mounted) setRecord(res); })
-      .catch((err) => { if (mounted) setError(err.message); })
-      .finally(() => { if (mounted) setLoading(false); });
-    return () => { mounted = false; };
-  }, [table, recordId]);
-
-  return { record, loading, error };
-}

@@ -1,7 +1,9 @@
 import { motion } from "framer-motion";
-import { useState, useMemo, useCallback } from "react";
-import { Plus, MoreHorizontal, Calendar, Paperclip, MessageSquare, List, Columns3, ExternalLink, Copy, Check, X, Code, FileText, ShieldAlert, Loader2, BookOpen, Lightbulb } from "lucide-react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Plus, MoreHorizontal, Calendar, Paperclip, MessageSquare, List, Columns3, ExternalLink, Copy, Check, X, Code, FileText, ShieldAlert, Loader2, BookOpen, Lightbulb, CheckCircle2 } from "lucide-react";
 import { useLemmaRecords } from "@/hooks/useLemmaRecords";
+import { useLinearSync, SYNC_STATUS } from "@/hooks/useLinearSync";
 import { useRefreshListener, emitRefresh } from "@/lib/refreshEvents";
 import { toast } from "sonner";
 import client from "@/lib/lemmaClient";
@@ -62,7 +64,8 @@ function KanbanCard({ signal, index: cardIndex, isManager, onOpenHandoff, onDrag
     <motion.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
       draggable
       onDragStart={(e) => onDragStart?.(e, signal)}
-      className="group rounded-xl border border-border dark:border-border-dark bg-card p-4 transition-all duration-200 hover:border-zinc-300 hover:shadow-card cursor-grab active:cursor-grabbing">
+      onClick={() => onOpenHandoff?.(signal)}
+      className="group rounded-xl border border-border dark:border-border-dark bg-card p-4 transition-all duration-200 hover:border-zinc-300 hover:shadow-card cursor-pointer">
       <div className="mb-3 flex items-start justify-between gap-2">
         <div className="flex flex-wrap gap-1.5">
           {signal.category && (
@@ -133,51 +136,160 @@ function EngineeringHandoffModal({ signal, onClose }) {
   const { canCreateIncidentFromSignal } = useRole();
   const [copied, setCopied] = useState(null);
   const [creating, setCreating] = useState(false);
+  const [linkedTickets, setLinkedTickets] = useState([]);
+  const [loadingTickets, setLoadingTickets] = useState(true);
+  const [successState, setSuccessState] = useState(null);
+  const { syncStatus, syncLoading, syncResult, syncError, syncLinearIssue, resetSync } = useLinearSync();
 
-  const handoffData = useMemo(() => ({
-    title: signal.name || signal.summary || signal.id,
-    summary: signal.summary || "",
-    rootCause: signal.root_cause || signal.ai_summary || "",
-    priority: signal.proposed_priority || signal.severity || "normal",
-    confidence: signal.analysis_confidence || 85,
-    affectedCustomers: signal.affected_customer_count || 0,
-    affectedTickets: signal.ticket_count || signal.related_ticket_count || 0,
-    evidence: signal.evidence || [],
-    timeline: signal.detected_at || null,
-    category: signal.category || "N/A",
-    churnRisk: signal.churn_risk || "N/A",
-    recommendedTeam: signal.recommended_team || "Engineering",
-    estimatedRevenueRisk: signal.estimated_revenue_risk || "N/A",
-  }), [signal]);
+  useEffect(() => {
+    const ticketIds = signal.example_ticket_ids || signal.ticket_ids || [];
+    if (ticketIds.length === 0) {
+      setLoadingTickets(false);
+      return;
+    }
+    Promise.all(ticketIds.map((id) =>
+      client.records.get("tickets", id).catch(() => null)
+    )).then((tickets) => {
+      setLinkedTickets(tickets.filter(Boolean));
+      setLoadingTickets(false);
+    });
+  }, [signal]);
 
-  const markdown = useMemo(() => `# Engineering Handoff: ${handoffData.title}
+  const handoffData = useMemo(() => {
+    const tickets = linkedTickets;
+    const customerNames = [...new Set(tickets.map((t) => t.customer_name).filter(Boolean))];
+    const customerEmails = [...new Set(tickets.map((t) => t.customer_email).filter(Boolean))];
+    const categories = [...new Set(tickets.map((t) => t.category).filter(Boolean))];
+    const priorities = tickets.map((t) => t.priority).filter(Boolean);
+    const maxPriority = priorities.includes("urgent") ? "urgent" : priorities.includes("high") ? "high" : "normal";
+    const bodies = tickets.map((t) => t.body || "").filter(Boolean);
+    const allText = [...bodies, signal.summary || "", signal.root_cause || ""].join(" ");
+    const terms = allText.toLowerCase().split(/\s+/).filter((w) => w.length > 4);
+    const freq = {};
+    terms.forEach((w) => { freq[w] = (freq[w] || 0) + 1; });
+    const keyTerms = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([w]) => w);
+    const timestamps = tickets.map((t) => new Date(t.created_at || t.createdAt || 0).getTime()).filter((t) => !isNaN(t));
+    const firstSeen = timestamps.length > 0 ? new Date(Math.min(...timestamps)).toISOString() : null;
+    const lastSeen = timestamps.length > 0 ? new Date(Math.max(...timestamps)).toISOString() : null;
+    const duration = firstSeen && lastSeen ? Math.round((new Date(lastSeen) - new Date(firstSeen)) / 3600000 * 10) / 10 : 0;
 
-## Summary
-${handoffData.summary || "N/A"}
+    return {
+      title: signal.name || signal.summary || "Signal",
+      summary: signal.summary || tickets.map((t) => t.title || "").filter(Boolean).join("; ").slice(0, 500) || "",
+      rootCause: signal.root_cause || (tickets.length > 0 ? `Systemic issue identified across ${tickets.length} ticket(s) in ${categories[0] || "multiple"} categories. Common keywords: ${keyTerms.slice(0, 4).join(", ")}.` : ""),
+      confidence: signal.analysis_confidence || 0,
+      priority: signal.proposed_priority || maxPriority || "normal",
+      severity: signal.proposed_priority || maxPriority || "normal",
+      affectedTicketCount: tickets.length || signal.ticket_count || signal.evidence_count || 0,
+      affectedCustomerCount: Math.max(customerNames.length, customerEmails.length) || signal.affected_customer_count || 0,
+      customerNames,
+      customerEmails,
+      ticketIds: tickets.map((t) => t.id),
+      ticketTitles: tickets.map((t) => t.title || t.customer_name || t.id),
+      categories: categories.length > 0 ? categories.join(", ") : signal.category || (tickets.length > 0 ? "General" : "N/A"),
+      businessImpact: (() => {
+        const catSet = new Set(categories);
+        const highValue = catSet.has("billing") || catSet.has("payment") || catSet.has("financial") || catSet.has("portfolio");
+        const customerScale = customerNames.length > 3 ? "multiple customers" : customerNames.length > 1 ? "several customers" : "customer";
+        const financial = bodies.some((b) => /amount|balance|value|price|charge|cost|revenue|dollar|rupee|inflated|incorrect/i.test(b));
+        if (highValue && financial) return `Direct financial impact affecting ${customerNames.length} ${customerScale}. Potential revenue loss due to ${keyTerms.slice(0, 3).join(", ")}. Requires urgent remediation to prevent further ${financial ? "monetary" : "operational"} damage.`;
+        if (customerNames.length > 2) return `Service degradation affecting ${customerNames.length} ${customerScale}. Issue severity indicates escalation to engineering for root cause analysis and resolution.`;
+        return `Operational impact affecting ${customerNames.length} ${customerScale}. Technical investigation recommended to determine full blast radius.`;
+      })(),
+      technicalImpact: (() => {
+        const hasOcr = bodies.some((b) => /ocr|pars|extract|document|upload/i.test(b));
+        const hasData = bodies.some((b) => /data|import|sync|batch|process|pipeline|integrat/i.test(b));
+        const hasCalc = bodies.some((b) => /calculat|comput|formula|valuat|report|aggregat/i.test(b));
+        if (hasOcr) return `OCR processing pipeline affected — document parsing errors propagating incorrect values to downstream systems. Data integrity compromised across ${tickets.length} records.`;
+        if (hasData) return `Data processing pipeline error — imported or synchronized data contains systematic errors affecting ${tickets.length} operations. Recovery requires data validation and reprocessing.`;
+        if (hasCalc) return `Calculation engine producing incorrect outputs — formula or aggregation logic error affecting ${tickets.length} transactions. Financial and operational reports impacted.`;
+        return `System behavior anomaly detected across ${tickets.length} operation(s). Technical investigation required to identify root cause and affected components.`;
+      })(),
+      suggestedActions: (() => [
+        "Verify the affected systems and identify the blast radius",
+        "Review recent deployments or configuration changes",
+        `Engage the ${signal.recommended_team || "Engineering"} team for root cause analysis`,
+        customerNames.length > 0 ? `Notify affected customers: ${customerNames.slice(0, 3).join(", ")}${customerNames.length > 3 ? ` and ${customerNames.length - 3} more` : ""}` : "",
+        tickets.length >= 3 ? `Prioritize resolution — ${tickets.length} tickets indicate systemic issue` : "Investigate the reported issue and resolve per incident response playbook",
+        "Document root cause and resolution for knowledge base",
+      ].filter(Boolean))(),
+      rolloutPlan: tickets.length > 1
+        ? "1. Isolate affected systems to prevent further impact\n2. Implement hotfix or configuration change\n3. Deploy to staging for validation\n4. Roll out to production with monitoring\n5. Verify resolution across all affected accounts\n6. Post-mortem and knowledge documentation"
+        : "1. Investigate and reproduce the reported issue\n2. Implement fix in development environment\n3. Deploy to production after validation\n4. Verify resolution with reporter\n5. Document findings in knowledge base",
+      recommendedTeam: signal.recommended_team || "Engineering",
+      timeline: signal.detected_at || firstSeen || null,
+      firstSeen,
+      lastSeen,
+      durationHours: duration,
+      riskAssessment: (() => {
+        const ticketRisk = tickets.length >= 5 ? "Critical" : tickets.length >= 3 ? "High" : tickets.length >= 2 ? "Medium" : "Low";
+        const customerRisk = customerNames.length >= 5 ? "Critical" : customerNames.length >= 3 ? "High" : customerNames.length >= 2 ? "Medium" : "Low";
+        const severityRisk = maxPriority === "urgent" ? "Critical" : maxPriority === "high" ? "High" : "Medium";
+        const overall = [ticketRisk, customerRisk, severityRisk].sort((a, b) => ({ Critical: 3, High: 2, Medium: 1, Low: 0 }[b] - { Critical: 3, High: 2, Medium: 1, Low: 0 }[a]))[0];
+        return `Overall Risk: ${overall}\nTicket Volume Risk: ${ticketRisk}\nCustomer Impact Risk: ${customerRisk}\nSeverity Risk: ${severityRisk}`;
+      })(),
+      reproductionSummary: tickets.length > 0
+        ? `Reproduced across ${tickets.length} independent ticket(s).\nCommon symptoms: ${keyTerms.slice(0, 5).join(", ")}.\nFirst occurrence: ${firstSeen ? new Date(firstSeen).toISOString().split("T")[0] : "N/A"}\nDuration: ${duration > 0 ? `${durationHours} hours` : "Ongoing"}`
+        : "Awaiting linked ticket data for reproduction analysis.",
+      clusterConfidence: signal.analysis_confidence || 0,
+    };
+  }, [signal, linkedTickets]);
 
-## Root Cause
-${handoffData.rootCause || "N/A"}
-
-## Priority
-${handoffData.priority.charAt(0).toUpperCase() + handoffData.priority.slice(1)}
-
-## Confidence
-${handoffData.confidence}%
-
-## Affected Customers
-${handoffData.affectedCustomers}
-
-## Affected Tickets
-${handoffData.affectedTickets}
-
-## Evidence
-${Array.isArray(handoffData.evidence) && handoffData.evidence.length > 0 ? handoffData.evidence.map((e) => `- ${e}`).join("\n") : "N/A"}
-
-## Timeline
-${handoffData.timeline ? new Date(handoffData.timeline).toISOString().split("T")[0] : "N/A"}
-
----
-Generated by SignalDesk · Engineering Handoff Package`, [handoffData]);
+  const markdown = useMemo(() => {
+    const d = handoffData;
+    const lines = [
+      `# Engineering Handoff: ${d.title}`,
+      ``,
+      `## Executive Summary`,
+      d.summary || "N/A",
+      ``,
+      `## Detailed Root Cause`,
+      d.rootCause || "N/A",
+      ``,
+      `## Cluster Analysis`,
+      `- **Confidence**: ${d.clusterConfidence}%`,
+      `- **Affected Tickets**: ${d.affectedTicketCount}`,
+      `- **Affected Customers**: ${d.affectedCustomerCount}`,
+      d.customerNames.length > 0 ? `- **Customer Names**: ${d.customerNames.join(", ")}` : "",
+      `- **Categories**: ${d.categories}`,
+      `- **Priority**: ${d.priority.charAt(0).toUpperCase() + d.priority.slice(1)}`,
+      `- **Severity**: ${d.severity.charAt(0).toUpperCase() + d.severity.slice(1)}`,
+      ``,
+      `## Affected Ticket IDs`,
+      d.ticketIds.length > 0 ? d.ticketIds.map((id) => `- ${id}`).join("\n") : "N/A",
+      ``,
+      `## Business Impact`,
+      d.businessImpact,
+      ``,
+      `## Technical Impact`,
+      d.technicalImpact,
+      ``,
+      `## Suggested Engineering Actions`,
+      d.suggestedActions.map((a, i) => `${i + 1}. ${a}`).join("\n"),
+      ``,
+      `## Recommended Rollout Plan`,
+      d.rolloutPlan,
+      ``,
+      `## Suggested Owner / Team`,
+      d.recommendedTeam,
+      ``,
+      `## Timeline`,
+      d.timeline ? `- **Detected**: ${new Date(d.timeline).toISOString().split("T")[0]}` : "",
+      d.firstSeen ? `- **First Occurrence**: ${new Date(d.firstSeen).toISOString().split("T")[0]}` : "",
+      d.lastSeen ? `- **Last Occurrence**: ${new Date(d.lastSeen).toISOString().split("T")[0]}` : "",
+      d.durationHours > 0 ? `- **Duration**: ${d.durationHours} hours` : "",
+      ``,
+      `## Risk Assessment`,
+      d.riskAssessment,
+      ``,
+      `## Reproduction Summary`,
+      d.reproductionSummary,
+      ``,
+      `---`,
+      `*Generated by SignalDesk · Engineering Handoff Package*`,
+    ];
+    return lines.filter(Boolean).join("\n");
+  }, [handoffData]);
 
   const json = useMemo(() => JSON.stringify(handoffData, null, 2), [handoffData]);
 
@@ -189,58 +301,124 @@ Generated by SignalDesk · Engineering Handoff Package`, [handoffData]);
   const handleCreateIncident = async () => {
     setCreating(true);
     const toastId = toast.loading("Creating incident...");
+    const d = handoffData;
     try {
-      const sections = [
-        `**Summary**: ${handoffData.summary || "N/A"}`,
-        `**Root Cause**: ${handoffData.rootCause || "N/A"}`,
-        `**Priority**: ${handoffData.priority}`,
-        `**Confidence**: ${handoffData.confidence}%`,
-        `**Affected Customers**: ${handoffData.affectedCustomers}`,
-        `**Affected Tickets**: ${handoffData.affectedTickets}`,
-        `**Category**: ${handoffData.category}`,
-        `**Churn Risk**: ${handoffData.churnRisk}`,
-        `**Recommended Team**: ${handoffData.recommendedTeam}`,
-        `**Estimated Revenue Risk**: ${handoffData.estimatedRevenueRisk}`,
-      ];
+      const description = [
+        `**Executive Summary**: ${d.summary || "N/A"}`,
+        `**Root Cause**: ${d.rootCause || "N/A"}`,
+        `**Confidence**: ${d.clusterConfidence}%`,
+        `**Priority**: ${d.priority}`,
+        `**Severity**: ${d.severity}`,
+        `**Categories**: ${d.categories}`,
+        `**Affected Tickets**: ${d.affectedTicketCount}`,
+        `**Affected Customers**: ${d.affectedCustomerCount}${d.customerNames.length > 0 ? ` (${d.customerNames.join(", ")})` : ""}`,
+        ``,
+        `**Business Impact**: ${d.businessImpact}`,
+        `**Technical Impact**: ${d.technicalImpact}`,
+        ``,
+        `**Suggested Actions**:`,
+        ...d.suggestedActions.map((a) => `- ${a}`),
+        ``,
+        `**Rollout Plan**:`,
+        d.rolloutPlan,
+        ``,
+        `**Risk Assessment**:`,
+        d.riskAssessment,
+        ``,
+        `**Reproduction Summary**:`,
+        d.reproductionSummary,
+        ``,
+        `**Timeline**:`,
+        d.timeline ? `Detected: ${new Date(d.timeline).toISOString().split("T")[0]}` : "",
+        d.firstSeen ? `First occurrence: ${new Date(d.firstSeen).toISOString().split("T")[0]}` : "",
+        d.durationHours > 0 ? `Duration: ${d.durationHours} hours` : "",
+      ].filter(Boolean).join("\n");
+
+      let incId;
       let raw;
       if (signal.workspaceId) {
-        raw = await client.functions.run("link_incident", {
-          input: {
-            signal_id: signal.id,
-            title: `Incident: ${handoffData.title}`,
-            summary: handoffData.summary,
-            severity: handoffData.priority,
-            description: sections.join("\n"),
-            workspace_id: signal.workspaceId,
-            workspace_name: signal.workspaceName,
-          },
-        });
+        const incPayload = {
+          signal_id: signal.id,
+          title: `Incident: ${d.title}`,
+          summary: d.summary,
+          severity: d.severity,
+          description,
+          workspace_id: signal.workspaceId,
+          workspace_name: signal.workspaceName,
+          affected_customer_count: d.affectedCustomerCount || 0,
+          root_cause: d.rootCause || d.summary,
+          category: d.categories?.split(", ")[0] || signal.category || "general",
+        };
+
+        raw = await client.functions.run("link_incident", { input: incPayload });
+        const output = raw.output_data || raw || {};
+        incId = output.incident_id || output.id || output;
       } else {
         raw = await client.records.create("incidents", {
-          title: `Incident: ${handoffData.title}`,
-          summary: handoffData.summary,
+          title: `Incident: ${d.title}`,
+          summary: d.summary,
           status: "open",
-          severity: handoffData.priority,
-          description: sections.join("\n"),
-          affected_ticket_count: handoffData.affectedTickets,
+          severity: d.severity,
+          description,
+          signal_id: signal.id,
+          affected_ticket_count: d.affectedTicketCount,
+          affected_customer_count: d.affectedCustomerCount || 0,
+          root_cause: d.rootCause || d.summary,
+          category: d.categories?.split(", ")[0] || signal.category || "general",
+          workspaceId: workspace.id,
+          workspaceName: workspace.name,
         });
+        incId = raw.id || raw;
       }
-      const output = raw.output_data || raw || {};
-      const incId = output.incident_id || output.id || output;
-      if (incId) {
-        await client.records.update("signals", signal.id, { incident_id: incId, workflowStage: "incident_created", status: "approved" });
-        if (incId !== output) {
-          await client.records.create("ticket_incidents", {
-            id: crypto.randomUUID(), incident_id: incId,
-            linked_at: new Date().toISOString(),
-          });
-        }
+
+
+      if (!incId || typeof incId !== "string") throw new Error("Incident creation returned no ID");
+
+      /* Link signal to incident */
+      await client.records.update("signals", signal.id, {
+        incident_id: incId, workflowStage: "incident_created", status: "approved",
+      });
+
+      /* Link ALL clustered tickets */
+      for (const ticketId of d.ticketIds) {
+        await client.records.create("ticket_incidents", {
+          id: crypto.randomUUID(), incident_id: incId,
+          ticket_id: ticketId, linked_at: new Date().toISOString(),
+          workspaceId: signal.workspaceId || workspace.id,
+          workspaceName: signal.workspaceName || workspace.name,
+        }).catch(() => {});
       }
-      await createNotification({ action: "engineering.handoff", actor: "Support Manager", resourceType: "incident", resourceId: incId, details: { name: handoffData.title }, workspaceId: workspace.id, workspaceName: workspace.name });
+
+      /* Audit log */
+      await client.records.create("audit_logs", {
+        action: "engineering.handoff",
+        actor_type: "user",
+        resource_type: "incident",
+        resource_id: incId,
+        signal_id: signal.id,
+        details: { title: d.title, severity: d.severity, ticketCount: d.affectedTicketCount, customerCount: d.affectedCustomerCount },
+      }).catch(() => {});
+
+      /* Notification */
+      await createNotification({
+        action: "engineering.handoff",
+        actor: "Support Manager",
+        resourceType: "incident",
+        resourceId: incId,
+        details: { name: d.title, severity: d.severity, ticketCount: d.affectedTicketCount },
+        workspaceId: signal.workspaceId || workspace.id,
+        workspaceName: signal.workspaceName || workspace.name,
+      });
+
       toast.dismiss(toastId);
-      toast.success("Incident created from Engineering Handoff");
+      toast.success("Incident created");
       emitRefresh();
-      onClose();
+
+      resetSync();
+      setSuccessState({
+        incidentId: incId,
+        title: d.title, ticketCount: d.affectedTicketCount, customerCount: d.affectedCustomerCount,
+      });
     } catch (err) {
       toast.dismiss(toastId);
       toast.error(err?.message || "Failed to create incident");
@@ -249,6 +427,104 @@ Generated by SignalDesk · Engineering Handoff Package`, [handoffData]);
     }
   };
 
+  if (successState) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+        <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
+              <CheckCircle2 size={24} className="text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-primary">Incident Created</h2>
+              <p className="text-sm text-muted dark:text-muted-dark">{successState.title}</p>
+            </div>
+          </div>
+          <div className="space-y-2 mb-6">
+            <div className="flex items-center justify-between rounded-xl bg-zinc-50 dark:bg-[#202024] px-4 py-2.5">
+              <span className="text-sm text-muted dark:text-muted-dark">Incident ID</span>
+              <span className="text-sm font-mono text-primary">{successState.incidentId.slice(0, 8)}...</span>
+            </div>
+            <div className="flex items-center justify-between rounded-xl bg-zinc-50 dark:bg-[#202024] px-4 py-2.5">
+              <span className="text-sm text-muted dark:text-muted-dark">Affected Tickets</span>
+              <span className="text-sm font-medium text-primary">{successState.ticketCount}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-xl bg-zinc-50 dark:bg-[#202024] px-4 py-2.5">
+              <span className="text-sm text-muted dark:text-muted-dark">Affected Customers</span>
+              <span className="text-sm font-medium text-primary">{successState.customerCount}</span>
+            </div>
+            {/* Sync Section */}
+            {syncStatus === SYNC_STATUS.SYNCED && syncResult ? (
+              <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Synced</span>
+                </div>
+                {syncResult.identifier && (
+                  <div className="flex items-center justify-between rounded-lg bg-white dark:bg-[#202024] px-3 py-2 mb-2">
+                    <span className="text-xs text-muted dark:text-muted-dark">Issue Key</span>
+                    <span className="text-xs font-mono font-medium text-primary">{syncResult.identifier}</span>
+                  </div>
+                )}
+                {syncResult.issueUrl && (
+                  <div className="flex items-center justify-between rounded-lg bg-white dark:bg-[#202024] px-3 py-2 mb-2">
+                    <span className="text-xs text-muted dark:text-muted-dark">Issue URL</span>
+                    <a href={syncResult.issueUrl} target="_blank" rel="noopener noreferrer"
+                      className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline truncate max-w-[200px]">{syncResult.issueUrl}</a>
+                  </div>
+                )}
+                <div className="flex items-center justify-between rounded-lg bg-white dark:bg-[#202024] px-3 py-2">
+                  <span className="text-xs text-muted dark:text-muted-dark">Last Synced</span>
+                  <span className="text-xs font-medium text-primary">{new Date(syncResult.syncedAt).toLocaleTimeString()}</span>
+                </div>
+              </div>
+            ) : syncStatus === SYNC_STATUS.CONNECTOR_UNAVAILABLE ? (
+              <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm font-semibold text-amber-700 dark:text-amber-300">Ready to Sync</span>
+                </div>
+                <p className="text-xs text-amber-600 dark:text-amber-400">Linear connector is not configured.</p>
+              </div>
+            ) : syncStatus === SYNC_STATUS.ERROR ? (
+              <div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm font-semibold text-red-700 dark:text-red-300">Sync Failed</span>
+                </div>
+                <p className="text-xs text-red-600 dark:text-red-400 mb-3">{syncError || "Unknown error"}</p>
+                <button onClick={() => syncLinearIssue(successState.incidentId)} disabled={syncLoading}
+                  className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500 transition-all disabled:opacity-50">
+                  {syncLoading ? <Loader2 size={12} className="animate-spin" /> : null} Retry
+                </button>
+              </div>
+            ) : syncStatus === SYNC_STATUS.CONNECTING ? (
+              <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4">
+                <div className="flex items-center gap-2">
+                  <Loader2 size={14} className="animate-spin text-amber-600 dark:text-amber-400" />
+                  <span className="text-sm font-medium text-amber-700 dark:text-amber-300">Syncing with Linear...</span>
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => syncLinearIssue(successState.incidentId)} disabled={syncLoading}
+                className="w-full rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-700 py-3 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all disabled:opacity-50">
+                Ready to Sync
+              </button>
+            )}
+          </div>
+          <div className="flex gap-3">
+            <button onClick={onClose}
+              className="flex-1 rounded-xl bg-zinc-900 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 transition-all">Done</button>
+            {syncStatus === SYNC_STATUS.SYNCED && syncResult?.issueUrl && (
+              <a href={syncResult.issueUrl} target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-sm font-medium text-body hover:bg-zinc-50 dark:hover:bg-[#202024] transition-all flex-1">
+                <ExternalLink size={14} /> Open in Linear
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-modal" onClick={(e) => e.stopPropagation()}>
@@ -256,30 +532,110 @@ Generated by SignalDesk · Engineering Handoff Package`, [handoffData]);
           <div className="flex items-center gap-2">
             <ShieldAlert size={18} className="text-indigo-500" />
             <h2 className="text-xl font-bold text-primary">Engineering Handoff</h2>
+            {loadingTickets && <Loader2 size={14} className="animate-spin text-muted" />}
           </div>
           <button onClick={onClose} className="rounded-lg p-1.5 text-muted dark:text-muted-dark hover:text-body hover:bg-zinc-100 dark:hover:bg-[#202024] transition-all"><X size={20} /></button>
         </div>
 
-        <div className="mb-4 grid grid-cols-2 gap-3">
-          <div className="rounded-xl bg-zinc-50 dark:bg-[#202024] p-3"><p className="text-xs text-muted dark:text-muted-dark">Summary</p><p className="mt-1 text-sm font-medium text-primary">{handoffData.summary || "N/A"}</p></div>
-          <div className="rounded-xl bg-zinc-50 dark:bg-[#202024] p-3"><p className="text-xs text-muted dark:text-muted-dark">Root Cause</p><p className="mt-1 text-sm font-medium text-primary">{handoffData.rootCause || "N/A"}</p></div>
-          <div className="rounded-xl bg-zinc-50 dark:bg-[#202024] p-3"><p className="text-xs text-muted dark:text-muted-dark">Priority</p><p className="mt-1 text-sm font-medium text-primary">{handoffData.priority}</p></div>
-          <div className="rounded-xl bg-zinc-50 dark:bg-[#202024] p-3"><p className="text-xs text-muted dark:text-muted-dark">Confidence</p><p className="mt-1 text-sm font-medium text-primary">{handoffData.confidence}%</p></div>
-          <div className="rounded-xl bg-zinc-50 dark:bg-[#202024] p-3"><p className="text-xs text-muted dark:text-muted-dark">Affected Customers</p><p className="mt-1 text-sm font-medium text-primary">{handoffData.affectedCustomers}</p></div>
-          <div className="rounded-xl bg-zinc-50 dark:bg-[#202024] p-3"><p className="text-xs text-muted dark:text-muted-dark">Affected Tickets</p><p className="mt-1 text-sm font-medium text-primary">{handoffData.affectedTickets}</p></div>
+        <div className="mb-4 grid grid-cols-3 gap-3">
+          <div className="rounded-xl bg-zinc-50 dark:bg-[#202024] p-3">
+            <p className="text-xs text-muted dark:text-muted-dark">Confidence</p>
+            <p className="mt-1 text-sm font-semibold text-primary">{handoffData.clusterConfidence}%</p>
+          </div>
+          <div className="rounded-xl bg-zinc-50 dark:bg-[#202024] p-3">
+            <p className="text-xs text-muted dark:text-muted-dark">Affected Tickets</p>
+            <p className="mt-1 text-sm font-semibold text-primary">{handoffData.affectedTicketCount}</p>
+          </div>
+          <div className="rounded-xl bg-zinc-50 dark:bg-[#202024] p-3">
+            <p className="text-xs text-muted dark:text-muted-dark">Affected Customers</p>
+            <p className="mt-1 text-sm font-semibold text-primary">{handoffData.affectedCustomerCount}</p>
+          </div>
+          <div className="rounded-xl bg-zinc-50 dark:bg-[#202024] p-3">
+            <p className="text-xs text-muted dark:text-muted-dark">Priority</p>
+            <p className="mt-1 text-sm font-semibold text-primary">{handoffData.priority.charAt(0).toUpperCase() + handoffData.priority.slice(1)}</p>
+          </div>
+          <div className="rounded-xl bg-zinc-50 dark:bg-[#202024] p-3">
+            <p className="text-xs text-muted dark:text-muted-dark">Severity</p>
+            <p className="mt-1 text-sm font-semibold text-primary">{handoffData.severity.charAt(0).toUpperCase() + handoffData.severity.slice(1)}</p>
+          </div>
+          <div className="rounded-xl bg-zinc-50 dark:bg-[#202024] p-3">
+            <p className="text-xs text-muted dark:text-muted-dark">Categories</p>
+            <p className="mt-1 text-sm font-semibold text-primary truncate">{handoffData.categories}</p>
+          </div>
         </div>
 
-        {Array.isArray(handoffData.evidence) && handoffData.evidence.length > 0 && (
+        <div className="mb-4 rounded-xl bg-zinc-50 dark:bg-[#202024] p-3">
+          <p className="text-xs text-muted dark:text-muted-dark mb-1">Executive Summary</p>
+          <p className="text-sm text-body">{handoffData.summary || "N/A"}</p>
+        </div>
+
+        <div className="mb-4 rounded-xl bg-zinc-50 dark:bg-[#202024] p-3">
+          <p className="text-xs text-muted dark:text-muted-dark mb-1">Detailed Root Cause</p>
+          <p className="text-sm text-body">{handoffData.rootCause || "N/A"}</p>
+        </div>
+
+        {handoffData.customerNames.length > 0 && (
           <div className="mb-4 rounded-xl bg-zinc-50 dark:bg-[#202024] p-3">
-            <p className="text-xs text-muted dark:text-muted-dark mb-1">Evidence</p>
-            {handoffData.evidence.map((e, i) => <p key={i} className="text-sm text-body">• {e}</p>)}
+            <p className="text-xs text-muted dark:text-muted-dark mb-1">Customer Names</p>
+            <p className="text-sm text-body">{handoffData.customerNames.join(", ")}</p>
           </div>
         )}
 
-        {handoffData.timeline && (
+        <div className="mb-4 rounded-xl bg-zinc-50 dark:bg-[#202024] p-3">
+          <p className="text-xs text-muted dark:text-muted-dark mb-1">Business Impact</p>
+          <p className="text-sm text-body">{handoffData.businessImpact}</p>
+        </div>
+
+        <div className="mb-4 rounded-xl bg-zinc-50 dark:bg-[#202024] p-3">
+          <p className="text-xs text-muted dark:text-muted-dark mb-1">Technical Impact</p>
+          <p className="text-sm text-body">{handoffData.technicalImpact}</p>
+        </div>
+
+        <div className="mb-4 rounded-xl bg-zinc-50 dark:bg-[#202024] p-3">
+          <p className="text-xs text-muted dark:text-muted-dark mb-1">Suggested Engineering Actions</p>
+          <ol className="list-decimal list-inside text-sm text-body space-y-0.5">
+            {handoffData.suggestedActions.map((a, i) => <li key={i}>{a}</li>)}
+          </ol>
+        </div>
+
+        <div className="mb-4 rounded-xl bg-zinc-50 dark:bg-[#202024] p-3">
+          <p className="text-xs text-muted dark:text-muted-dark mb-1">Recommended Rollout Plan</p>
+          <pre className="text-sm text-body whitespace-pre-wrap font-sans">{handoffData.rolloutPlan}</pre>
+        </div>
+
+        <div className="mb-4 rounded-xl bg-zinc-50 dark:bg-[#202024] p-3">
+          <p className="text-xs text-muted dark:text-muted-dark mb-1">Risk Assessment</p>
+          <pre className="text-sm text-body whitespace-pre-wrap font-sans">{handoffData.riskAssessment}</pre>
+        </div>
+
+        <div className="mb-4 rounded-xl bg-zinc-50 dark:bg-[#202024] p-3">
+          <p className="text-xs text-muted dark:text-muted-dark mb-1">Reproduction Summary</p>
+          <pre className="text-sm text-body whitespace-pre-wrap font-sans">{handoffData.reproductionSummary}</pre>
+        </div>
+
+        <div className="mb-4 rounded-xl bg-zinc-50 dark:bg-[#202024] p-3">
+          <p className="text-xs text-muted dark:text-muted-dark mb-1">Timeline</p>
+          <div className="text-sm text-body space-y-0.5">
+            {handoffData.timeline && <p>Detected: {new Date(handoffData.timeline).toISOString().split("T")[0]}</p>}
+            {handoffData.firstSeen && <p>First occurrence: {new Date(handoffData.firstSeen).toISOString().split("T")[0]}</p>}
+            {handoffData.durationHours > 0 && <p>Duration: {handoffData.durationHours} hours</p>}
+            {!handoffData.timeline && !handoffData.firstSeen && <p>Awaiting timeline data from linked tickets</p>}
+          </div>
+        </div>
+
+        <div className="mb-4 rounded-xl bg-zinc-50 dark:bg-[#202024] p-3">
+          <p className="text-xs text-muted dark:text-muted-dark mb-1">Recommended Owner / Team</p>
+          <p className="text-sm font-medium text-primary">{handoffData.recommendedTeam}</p>
+        </div>
+
+        {handoffData.ticketIds.length > 0 && (
           <div className="mb-4 rounded-xl bg-zinc-50 dark:bg-[#202024] p-3">
-            <p className="text-xs text-muted dark:text-muted-dark">Timeline</p>
-            <p className="mt-1 text-sm text-body">Detected: {new Date(handoffData.timeline).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}</p>
+            <p className="text-xs text-muted dark:text-muted-dark mb-1">Affected Ticket IDs</p>
+            <div className="max-h-24 overflow-y-auto space-y-0.5">
+              {handoffData.ticketIds.map((id, i) => (
+                <p key={id} className="text-xs font-mono text-body">{i + 1}. {id} — {handoffData.ticketTitles[i] || id}</p>
+              ))}
+            </div>
           </div>
         )}
 
@@ -308,7 +664,7 @@ Generated by SignalDesk · Engineering Handoff Package`, [handoffData]);
             <button onClick={handleCreateIncident} disabled={creating}
               className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-zinc-900 py-3 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 transition-all">
               {creating ? <Loader2 size={15} className="animate-spin" /> : <ShieldAlert size={15} />}
-              {creating ? "Creating..." : "Create Incident"}
+              {creating ? "Creating Incident..." : "Create Incident"}
             </button>
           )}
           <button onClick={onClose} className="flex-1 rounded-xl border border-border py-3 text-sm font-medium text-secondary-body hover:bg-zinc-50 dark:hover:bg-[#202024] transition-all">Cancel</button>
@@ -332,7 +688,24 @@ function CreateSignalForm({ onClose, onCreated }) {
       if (signalId && workspace.id && workspace.id !== "signaldesk") {
         await client.records.update("signals", signalId, { workspaceId: workspace.id, workspaceName: workspace.name });
       }
-      onCreated(); onClose();
+      if (signalId) {
+        onCreated({
+          id: signalId,
+          name: form.name,
+          summary: form.summary,
+          category: form.category || "general",
+          status: "pending",
+          workflowStage: "new",
+          proposed_priority: "normal",
+          workspaceId: workspace.id,
+          workspaceName: workspace.name,
+          detected_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+        });
+      } else {
+        onCreated();
+      }
+      onClose();
     } catch (err) { console.error(err); }
     finally { setSubmitting(false); }
   };
@@ -363,11 +736,13 @@ export default function Signals() {
   const { workspace } = useWorkspace();
   const { isManager } = useRole();
   const signalFilters = workspaceFilter(workspace.id);
-  const { data: signals, loading, refresh } = useLemmaRecords("signals", { limit: 100, filters: signalFilters });
-  useRefreshListener(refresh);
+  const { data: signals, loading, refresh } = useLemmaRecords("signals", { limit: 100, filters: signalFilters, sort: [{ field: "created_at", direction: "desc" }] });
+  const refreshRef = useCallback(() => { refresh(); emitRefresh(); }, [refresh]);
+  useRefreshListener(refreshRef);
   const [creatingIn, setCreatingIn] = useState(null);
   const [handoffSignal, setHandoffSignal] = useState(null);
   const [view, setView] = useState("kanban");
+  const [optimisticSignals, setOptimisticSignals] = useState([]);
 
   const [dragId, setDragId] = useState(null);
   const [selectedKnowledge, setSelectedKnowledge] = useState(null);
@@ -392,10 +767,33 @@ export default function Signals() {
     return map;
   }, [allKnowledge, signals]);
 
+  const allSignals = useMemo(() => {
+    if (optimisticSignals.length === 0) return signals;
+    const existingIds = new Set(signals.map((s) => s.id));
+    const newOnes = optimisticSignals.filter((o) => !existingIds.has(o.id));
+    if (newOnes.length === 0) return signals;
+    return [...newOnes, ...signals];
+  }, [signals, optimisticSignals]);
+
   const columns = useMemo(() => COLUMNS.map((col) => ({
     ...col,
-    cards: signals.filter((s) => s.status !== "rejected" && s.status !== "memory" && deriveWorkflowStage(s) === col.workflowStage),
-  })), [signals]);
+    cards: allSignals.filter((s) => s.status !== "rejected" && s.status !== "memory" && deriveWorkflowStage(s) === col.workflowStage),
+  })), [allSignals]);
+
+  const navigate = useNavigate();
+
+  const handleSignalClick = useCallback((signal) => {
+    if (signal.incident_id) {
+      navigate("/incidents");
+    } else {
+      setHandoffSignal(signal);
+    }
+  }, [navigate]);
+
+  const handleCreated = useCallback((optimisticSignal) => {
+    if (optimisticSignal) setOptimisticSignals((prev) => [...prev, optimisticSignal]);
+    refreshRef();
+  }, [refreshRef]);
 
   const handleDragStart = useCallback((e, signal) => {
     setDragId(signal.id);
@@ -431,17 +829,20 @@ export default function Signals() {
         ];
         let raw;
         if (signal.workspaceId) {
-          raw = await client.functions.run("link_incident", {
-            input: {
-              signal_id: signalId,
-              title: `Incident: ${signal.name || signal.summary}`,
-              summary: signal.summary,
-              severity: signal.proposed_priority || "normal",
-              description: sections.join("\n"),
-              workspace_id: signal.workspaceId,
-              workspace_name: signal.workspaceName,
-            },
-          });
+          const incPayload = {
+            signal_id: signalId,
+            title: `Incident: ${signal.name || signal.summary}`,
+            summary: signal.summary,
+            severity: signal.proposed_priority || "normal",
+            description: sections.join("\n"),
+            workspace_id: signal.workspaceId,
+            workspace_name: signal.workspaceName,
+            affected_customer_count: signal.affected_customer_count || 0,
+            root_cause: signal.root_cause || signal.summary,
+            category: signal.category || "general",
+          };
+
+          raw = await client.functions.run("link_incident", { input: incPayload });
         } else {
           raw = await client.records.create("incidents", {
             title: `Incident: ${signal.name || signal.summary}`,
@@ -449,6 +850,9 @@ export default function Signals() {
             status: "open",
             severity: signal.proposed_priority || "normal",
             description: sections.join("\n"),
+            affected_customer_count: signal.affected_customer_count || 0,
+            root_cause: signal.root_cause || signal.summary,
+            category: signal.category || "general",
           });
         }
         const output = raw.output_data || raw || {};
@@ -517,19 +921,19 @@ export default function Signals() {
           toast.success(`Signal moved to ${label}`);
         }
       }
-      refresh();
+      refreshRef();
     } catch (err) {
       toast.error(err?.message || "Failed to update signal");
     }
     setDragId(null);
-  }, [signals, refresh, workspace]);
+  }, [signals, refreshRef, workspace]);
 
   return (
     <motion.div className="flex flex-col min-h-full" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-[36px] font-bold tracking-tight text-primary">Signals</h1>
-          <p className="mt-1 text-sm text-muted dark:text-muted-dark">{signals.length} signal{signals.length !== 1 ? "s" : ""} detected</p>
+          <p className="mt-1 text-sm text-muted dark:text-muted-dark">{allSignals.length} signal{allSignals.length !== 1 ? "s" : ""} detected</p>
         </div>
         <div className="flex items-center rounded-xl border border-border overflow-hidden shadow-sm">
           <button onClick={() => setView("kanban")} className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium transition-all duration-150 ${view === "kanban" ? "bg-zinc-900 text-white" : "text-muted-base hover:bg-zinc-50 dark:hover:bg-[#202024]"}`}>
@@ -550,7 +954,7 @@ export default function Signals() {
         </div>
       ) : view === "list" ? (
         <div className="space-y-2">
-          {signals.map((s, i) => (
+          {allSignals.map((s, i) => (
             <div key={s.id} className="flex items-center justify-between rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:border-zinc-300 hover:shadow-card">
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-primary truncate">{s.name || s.summary || s.id}</p>
@@ -584,14 +988,14 @@ export default function Signals() {
                 {col.cards.length === 0 ? (
                   <div className="flex items-center justify-center h-32 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 dark:bg-[#202024]/50"><p className="text-xs text-muted dark:text-muted-dark">No signals</p></div>
                 ) : (
-                  col.cards.map((s, i) => <KanbanCard key={s.id} signal={s} index={i} isManager={isManager} onOpenHandoff={setHandoffSignal} onDragStart={handleDragStart} knownKnowledge={knownKnowledgeMap[s.id]} onViewKnowledge={setSelectedKnowledge} />)
+                  col.cards.map((s, i) => <KanbanCard key={s.id} signal={s} index={i} isManager={isManager} onOpenHandoff={handleSignalClick} onDragStart={handleDragStart} knownKnowledge={knownKnowledgeMap[s.id]} onViewKnowledge={setSelectedKnowledge} />)
                 )}
               </div>
               <button onClick={() => setCreatingIn(creatingIn === col.id ? null : col.id)}
                 className="flex items-center gap-1.5 mt-3 px-3 py-2 rounded-xl text-xs font-medium text-muted dark:text-muted-dark hover:text-body hover:bg-zinc-50 dark:hover:bg-[#202024] border border-transparent hover:border-border transition-all">
                 <Plus size={13} /> Create Signal
               </button>
-              {creatingIn === col.id && <CreateSignalForm onClose={() => setCreatingIn(null)} onCreated={refresh} />}
+              {creatingIn === col.id && <CreateSignalForm onClose={() => setCreatingIn(null)} onCreated={handleCreated} />}
             </div>
           ))}
         </div>

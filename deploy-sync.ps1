@@ -88,7 +88,7 @@ function Invoke-Import {
   if ($Yes) { $importArgs += "-y" }
 
   Write-Host "Running: lemma pods import ..." -ForegroundColor $gray
-  lemma pods import "`"$bundleDir`"" --pod $PodId --upsert 2>&1
+  lemma pods import "$bundleDir" --pod $PodId --upsert 2>&1
   if ($LASTEXITCODE -eq 0) { Write-Ok "Bundle import successful" }
   else { Write-Err "Bundle import failed (exit $LASTEXITCODE)" }
 }

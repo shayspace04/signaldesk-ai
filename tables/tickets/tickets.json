@@ -339,6 +339,22 @@
       "type": "TEXT",
       "type_params": null,
       "unique": false
+    },
+    {
+      "auto": false,
+      "computed": false,
+      "default": null,
+      "description": "Optional grouping key for deterministic clustering (e.g. outage_id, demo_run_id)",
+      "expression": null,
+      "foreign_key": null,
+      "max_length": 80,
+      "name": "outage_id",
+      "options": null,
+      "required": false,
+      "system": false,
+      "type": "TEXT",
+      "type_params": null,
+      "unique": false
     }
   ],
   "config": {},

@@ -41,9 +41,7 @@ const KANBAN_COLUMNS = [
   { id: "closed", label: "Closed", color: "bg-zinc-400" },
 ];
 
-const AVATARS = ["AL", "JR", "MK", "SP", "TC"];
-const COMMENT_COUNTS = [0, 1, 2, 0, 3, 1, 0, 2, 4, 1];
-const ATTACHMENT_COUNTS = [0, 2, 0, 1, 3, 0, 1, 2, 0, 1];
+
 
 function ListCard({ ticket, onClick }) {
   return (
@@ -61,7 +59,7 @@ function ListCard({ ticket, onClick }) {
         <p className="text-sm font-medium text-primary truncate">{ticket.title || ticket.customer_name || ticket.id}</p>
         <p className="text-xs text-muted dark:text-muted-dark mt-0.5">{ticket.customer_name || ticket.customer_email || ""}</p>
       </div>
-      <div className="flex items-center gap-3 flex-shrink-0">
+        <div className="flex items-center gap-3 flex-shrink-0">
         {ticket.category && (
           <span className="text-xs text-muted dark:text-muted-dark hidden sm:inline">{ticket.category}</span>
         )}
@@ -69,9 +67,6 @@ function ListCard({ ticket, onClick }) {
           <span className="text-xs text-muted dark:text-muted-dark hidden md:inline">{format(new Date(ticket.created_at), "MMM d")}</span>
         )}
         <div className="flex items-center gap-1.5">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-200 text-[9px] font-semibold text-secondary-body dark:bg-[#27272A] dark:text-muted-dark">
-            {AVATARS[Math.abs(ticket.id?.length || 0) % AVATARS.length]}
-          </span>
         </div>
         <button className="opacity-0 group-hover:opacity-100 p-1 rounded text-muted dark:text-muted-dark hover:text-body dark:hover:text-primary hover:bg-muted-surface dark:hover:bg-[#27272A] transition-all">
           <Eye size={14} />
@@ -82,16 +77,6 @@ function ListCard({ ticket, onClick }) {
 }
 
 function KanbanCard({ ticket, columnId, onMove }) {
-  const progress = useMemo(() => {
-    if (columnId === "closed" || columnId === "resolved") return 100;
-    if (columnId === "in_review") return 60;
-    if (columnId === "waiting") return 40;
-    return 20;
-  }, [columnId]);
-
-  const commentCount = COMMENT_COUNTS[Math.abs(ticket.id?.length || 0) % COMMENT_COUNTS.length];
-  const attachmentCount = ATTACHMENT_COUNTS[Math.abs(ticket.id?.length || 0) % ATTACHMENT_COUNTS.length];
-
   return (
     <motion.div
       layout
@@ -108,36 +93,11 @@ function KanbanCard({ ticket, columnId, onMove }) {
             </span>
           )}
         </div>
-        <button className="flex-shrink-0 rounded p-1 text-muted dark:text-muted-dark opacity-0 group-hover:opacity-100 hover:bg-muted-surface dark:hover:bg-[#27272A] transition-all">
-          <MoreHorizontal size={14} />
-        </button>
       </div>
       <p className="text-sm font-semibold text-primary leading-snug line-clamp-2 mb-2">
         {ticket.title || ticket.customer_name || ticket.id}
       </p>
       <p className="text-xs text-muted dark:text-muted-dark mb-3">{ticket.customer_name || ticket.customer_email || ""}</p>
-      <div className="mb-3">
-        <div className="h-1.5 rounded-full bg-muted-surface">
-          <div className="h-1.5 rounded-full bg-zinc-900 transition-all" style={{ width: `${progress}%` }} />
-        </div>
-      </div>
-      <div className="flex items-center justify-between">
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-200 text-[8px] font-semibold text-secondary-body dark:bg-[#27272A] dark:text-muted-dark">
-          {AVATARS[Math.abs(ticket.id?.length || 0) % AVATARS.length]}
-        </span>
-        <div className="flex items-center gap-3">
-          {attachmentCount > 0 && (
-            <span className="flex items-center gap-1 text-[11px] text-muted dark:text-muted-dark">
-              <Paperclip size={11} />{attachmentCount}
-            </span>
-          )}
-          {commentCount > 0 && (
-            <span className="flex items-center gap-1 text-[11px] text-muted dark:text-muted-dark">
-              <MessageSquare size={11} />{commentCount}
-            </span>
-          )}
-        </div>
-      </div>
     </motion.div>
   );
 }
@@ -301,7 +261,7 @@ export default function Tickets() {
           toast.success(`Incident auto-created: ${res.cluster?.ticket_count || 0} related tickets`, { icon: <ShieldAlert size={18} /> });
         }
         if (res.logs?.length > 0) {
-          console.log("[AI Detection Logs]", res.logs.join(" → "));
+
         }
       });
     } catch (err) {
@@ -546,7 +506,7 @@ export default function Tickets() {
                           <input type="checkbox" className="rounded border-border dark:border-border-dark" />
                         </td>
                         <td className="px-4 py-3 text-sm font-mono text-muted dark:text-muted-dark">
-                          SD-{String(Math.abs(t.id?.hashCode?.() || 0) % 999).padStart(3, "0")}
+                          SD-{t.number || String(Math.abs(t.id.split('').reduce((acc,c)=>acc+((acc<<5)-acc)+c.charCodeAt(0),0)) % 9999).padStart(4,"0")}
                         </td>
                         <td className="px-4 py-3 text-sm text-primary">{t.customer_name || t.customer_email || "-"}</td>
                         <td className="px-4 py-3 text-sm font-medium text-primary max-w-[250px] truncate">

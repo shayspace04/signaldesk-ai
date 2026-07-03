@@ -998,11 +998,11 @@ export default function Settings() {
 
             {/* Integration Test */}
             <div className="rounded-xl border border-border dark:border-border-dark bg-card p-4 flex flex-col gap-3">
-              <div><p className="text-sm font-medium text-primary">Integration Test</p><p className="text-xs text-muted dark:text-muted-dark">Create 3 similar tickets and verify full pipeline</p></div>
+              <div><p className="text-sm font-medium text-primary">Integration Test</p><p className="text-xs text-muted dark:text-muted-dark">End-to-end production simulation: 5 tickets → detection → signal → incident → notifications → knowledge</p></div>
               <button disabled={devRunning === "aiTest"} onClick={async () => {
                 setDevRunning("aiTest"); setAiTestReport(null);
                 try {
-                  const r = await runIntegrationTest((d, t, m) => setMigrateProgress({ done: d, total: t, msg: m }));
+                  const r = await runIntegrationTest((msg) => setMigrateProgress({ done: 0, total: 0, msg }));
                   setAiTestReport(r);
                 } catch (err) { console.error(err); }
                 finally { setDevRunning(null); emitRefresh(); }
@@ -1072,92 +1072,7 @@ export default function Settings() {
               )}
             </div>
 
-            {/* AI Detection Developer Settings */}
-            <div className="rounded-xl border border-border dark:border-border-dark bg-card p-4 flex flex-col gap-3">
-              <div>
-                <p className="text-sm font-medium text-primary">AI Detection</p>
-                <p className="text-xs text-muted dark:text-muted-dark">Configure detection thresholds and automation</p>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted dark:text-muted-dark">Similarity Threshold</span>
-                  <div className="flex items-center gap-2">
-                    <input type="range" min={50} max={100} value={devConfig.aiSimilarityThreshold ?? 75}
-                      onChange={(e) => updateDevConfig({ aiSimilarityThreshold: parseInt(e.target.value) })}
-                      className="w-20" />
-                    <span className="text-xs font-mono text-primary w-8 text-right">{devConfig.aiSimilarityThreshold ?? 75}%</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted dark:text-muted-dark">Auto Signal</span>
-                  <button onClick={() => updateDevConfig({ aiAutoSignal: !(devConfig.aiAutoSignal ?? true) })}
-                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors ${(devConfig.aiAutoSignal ?? true) ? "bg-zinc-900 dark:bg-zinc-700" : "bg-zinc-200 dark:bg-zinc-700"}`}>
-                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform ${(devConfig.aiAutoSignal ?? true) ? "translate-x-[18px]" : "translate-x-[3px]"}`} />
-                  </button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted dark:text-muted-dark">Min Similar Tickets</span>
-                  <div className="flex items-center gap-1">
-                    <input type="number" min={1} max={20} value={devConfig.aiMinSimilarTickets ?? 3}
-                      onChange={(e) => updateDevConfig({ aiMinSimilarTickets: parseInt(e.target.value) || 3 })}
-                      className="w-14 rounded border border-border dark:border-border-dark bg-card px-2 py-1 text-xs font-mono text-primary text-center outline-none" />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted dark:text-muted-dark">Incident Threshold</span>
-                  <div className="flex items-center gap-1">
-                    <input type="number" min={1} max={50} value={devConfig.aiIncidentThreshold ?? 5}
-                      onChange={(e) => updateDevConfig({ aiIncidentThreshold: parseInt(e.target.value) || 5 })}
-                      className="w-14 rounded border border-border dark:border-border-dark bg-card px-2 py-1 text-xs font-mono text-primary text-center outline-none" />
-                    <span className="text-[10px] text-muted-dark">linked tickets</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted dark:text-muted-dark">Auto Gmail</span>
-                  <button onClick={() => updateDevConfig({ aiAutoGmail: !(devConfig.aiAutoGmail ?? true) })}
-                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors ${(devConfig.aiAutoGmail ?? true) ? "bg-zinc-900 dark:bg-zinc-700" : "bg-zinc-200 dark:bg-zinc-700"}`}>
-                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform ${(devConfig.aiAutoGmail ?? true) ? "translate-x-[18px]" : "translate-x-[3px]"}`} />
-                  </button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted dark:text-muted-dark">Auto Linear</span>
-                  <button onClick={() => updateDevConfig({ aiAutoLinear: !(devConfig.aiAutoLinear ?? true) })}
-                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors ${(devConfig.aiAutoLinear ?? true) ? "bg-zinc-900 dark:bg-zinc-700" : "bg-zinc-200 dark:bg-zinc-700"}`}>
-                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform ${(devConfig.aiAutoLinear ?? true) ? "translate-x-[18px]" : "translate-x-[3px]"}`} />
-                  </button>
-                </div>
-              </div>
-                <button disabled={devRunning === "runDetectionNow"} onClick={async () => {
-                  setDevRunning("runDetectionNow"); setAiDetectionResult(null);
-                  try {
-                    const { runDetection } = await import("@/lib/aiDetectionEngine");
-                    const filters = workspaceId && workspaceId !== "signaldesk"
-                      ? [{ field: "workspaceId", op: "eq", value: workspaceId }] : undefined;
-                    const res = await client.records.list("tickets", { limit: 50, sort: [{ field: "created_at", direction: "desc" }], filters });
-                    const tickets = res.items || res.records || res.data || [];
-                    let signalsCreated = 0; let incidentsCreated = 0; let errors = 0;
-                    for (const t of tickets.slice(0, 10)) {
-                      try {
-                        const r = await runDetection(t.id, workspaceId, workspace.name);
-                        if (r.signal_created) signalsCreated++;
-                        if (r.incident_created) incidentsCreated++;
-                      } catch { errors++; }
-                    }
-                    setAiDetectionResult({ signals: signalsCreated, incidents: incidentsCreated, errors, total: Math.min(tickets.length, 10) });
-                  } catch (err) { console.error(err); }
-                  finally { setDevRunning(null); emitRefresh(); }
-                }} className="flex items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50">
-                  {devRunning === "runDetectionNow" ? <><Loader2 size={14} className="animate-spin" /> Running...</> : <><Play size={14} /> Run Detection Now</>}
-                </button>
-              {aiDetectionResult && (
-                <div className="text-xs space-y-0.5">
-                  <p className="text-emerald-600 dark:text-emerald-400"><Check size={10} className="inline mr-1" />Tickets analyzed: {aiDetectionResult.total}</p>
-                  <p className="text-emerald-600 dark:text-emerald-400"><Check size={10} className="inline mr-1" />Signals created: {aiDetectionResult.signals}</p>
-                  <p className="text-emerald-600 dark:text-emerald-400"><Check size={10} className="inline mr-1" />Incidents created: {aiDetectionResult.incidents}</p>
-                  {aiDetectionResult.errors > 0 && <p className="text-amber-600 dark:text-amber-400"><AlertTriangle size={10} className="inline mr-1" />Errors: {aiDetectionResult.errors}</p>}
-                </div>
-              )}
-            </div>
+
           </div>
         </CollapsibleSection>
       )}

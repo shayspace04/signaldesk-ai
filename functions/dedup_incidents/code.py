@@ -43,7 +43,10 @@ async def dedup_incidents(ctx: FunctionContext, data: DedupIncidentsInput) -> De
     pod = Pod.from_env()
     now = datetime.now(timezone.utc).isoformat()
 
-    raw = pod.records.list("incidents", limit=5000)
+    if data.signal_id_filter:
+        raw = pod.records.list("incidents", filter=[{"field": "signal_id", "op": "eq", "value": data.signal_id_filter}], limit=100)
+    else:
+        raw = pod.records.list("incidents", limit=5000)
     all_incidents = _items(raw)
     total_checked = len(all_incidents)
 

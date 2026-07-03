@@ -14,8 +14,13 @@ import Settings from "../../pages/Settings";
 import Notifications from "../../pages/Notifications";
 import CommandPalette from "../common/CommandPalette";
 import AtAGlance from "../common/AtAGlance";
+import ErrorBoundary from "../common/ErrorBoundary";
 import useAtAGlance from "@/hooks/useAtAGlance";
 import { WorkspaceProvider, useWorkspace } from "@/context/WorkspaceContext";
+
+function Page({ children }) {
+  return <ErrorBoundary>{children}</ErrorBoundary>;
+}
 
 function LayoutContent() {
   const location = useLocation();
@@ -33,16 +38,16 @@ function LayoutContent() {
             <AnimatePresence mode="wait">
               <Routes location={location} key={location.pathname}>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/notifications" element={<Notifications />} />
-                <Route path="/tickets" element={<Tickets />} />
-                <Route path="/approval" element={<ApprovalDesk />} />
-                <Route path="/incidents" element={<Incidents />} />
-                <Route path="/signals" element={<Signals />} />
-                <Route path="/knowledge" element={<Knowledge />} />
-                <Route path="/analytics" element={<Analytics />} />
-                <Route path="/audit" element={<Audit />} />
-                <Route path="/settings" element={<Settings />} />
+                <Route path="/dashboard" element={<Page><Dashboard /></Page>} />
+                <Route path="/notifications" element={<Page><Notifications /></Page>} />
+                <Route path="/tickets" element={<Page><Tickets /></Page>} />
+                <Route path="/approval" element={<Page><ApprovalDesk /></Page>} />
+                <Route path="/incidents" element={<Page><Incidents /></Page>} />
+                <Route path="/signals" element={<Page><Signals /></Page>} />
+                <Route path="/knowledge" element={<Page><Knowledge /></Page>} />
+                <Route path="/analytics" element={<Page><Analytics /></Page>} />
+                <Route path="/audit" element={<Page><Audit /></Page>} />
+                <Route path="/settings" element={<Page><Settings /></Page>} />
               </Routes>
             </AnimatePresence>
           </div>

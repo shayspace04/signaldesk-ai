@@ -15,8 +15,8 @@ def _require_manager(ctx, action):
         raise RuntimeError("Insufficient permissions: must be authenticated")
     pod = Pod.from_env()
     try:
-        rows = pod.records.list("user_roles", {"filters": {"user_id": user_id}, "limit": 1})
-        items = rows.get("items") or rows.get("data") or []
+        rows = pod.records.list("user_roles", filter=[{"field": "user_id", "op": "eq", "value": user_id}], limit=1)
+        items = _items(rows)
         if items and items[0].get("role") == "support_manager":
             return
     except Exception:

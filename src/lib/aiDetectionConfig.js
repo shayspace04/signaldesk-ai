@@ -9,8 +9,9 @@ const DEFAULTS = {
 
   /* Thresholds */
   minSimilarTickets: 3,
-  similarityThreshold: 75,
+  similarityThreshold: 55,
   edgeSimilarityThreshold: 35,
+  minTicketSimilarity: 55,
   timeWindow: 48,
   minCustomersAffected: 2,
   signalRiskThreshold: 60,
@@ -83,6 +84,7 @@ export function getThresholds(workspaceId) {
     minTickets: c.minSimilarTickets,
     minSimilarity: c.similarityThreshold / 100,
     edgeThreshold: c.edgeSimilarityThreshold / 100,
+    minTicketSimilarity: c.minTicketSimilarity / 100,
     maxAgeMs: c.timeWindow * 3600000,
     riskThreshold: c.signalRiskThreshold,
     escalationThreshold: c.incidentEscalationThreshold,

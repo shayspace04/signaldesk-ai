@@ -199,8 +199,14 @@ async def detect_and_link_signal(ctx: FunctionContext, data: DetectAndLinkSignal
             "input": {
                 "signal_id": existing_signal_id,
                 "title": f"Incident: {sig.get('name', 'Unknown Signal')[:200]}",
-                "severity": "normal",
+                "severity": sig.get("proposed_priority") or ticket.get("priority") or "normal",
                 "status": "open",
+                "summary": sig.get("summary") or "",
+                "blast_radius": f"{ticket_count} tickets, {sig.get('affected_customer_count', 0)} customers",
+                "root_cause": sig.get("root_cause") or "",
+                "category": sig.get("category") or ticket.get("category") or "",
+                "affected_customer_count": sig.get("affected_customer_count", 0),
+                "tags": sig.get("recurring_terms") or [],
                 "description": f"Auto-created by SignalDesk when signal reached {ticket_count} related tickets.",
             }
         })

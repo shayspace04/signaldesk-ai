@@ -1,10 +1,12 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect, useMemo } from "react";
-import { ChevronDown, Search, Activity, Bell, Ticket, Radio, ShieldAlert, BookOpen, BarChart3, ScrollText, Settings, UserCheck, UserCog } from "lucide-react";
+import { ChevronDown, Search, Activity, Bell, Ticket, Radio, ShieldAlert, BookOpen, BarChart3, ScrollText, Settings, UserCheck, UserCog, ClipboardCheck } from "lucide-react";
 import Logo from "@/components/common/Logo";
 import { useWorkspace, workspaces } from "@/context/WorkspaceContext";
 import useRole from "@/hooks/useRole";
-import { useMetrics } from "@/hooks/useMetrics";
+import { useLemmaRecords } from "@/hooks/useLemmaRecords";
+import { workspaceFilter } from "@/lib/workspaceConfig";
+import { useRefreshListener } from "@/lib/refreshEvents";
 import ThemeToggle from "@/components/common/ThemeToggle";
 
 const navItems = [
@@ -13,6 +15,7 @@ const navItems = [
   { name: "Tickets", icon: Ticket, path: "/tickets", badge: "tickets" },
   { name: "Signals", icon: Radio, path: "/signals", badge: "signals" },
   { name: "Incidents", icon: ShieldAlert, path: "/incidents", badge: "incidents" },
+  { name: "Approval Desk", icon: ClipboardCheck, path: "/approval", badge: "drafts", role: "support_manager" },
   { name: "Knowledge", icon: BookOpen, path: "/knowledge", badge: null },
   { name: "Analytics", icon: BarChart3, path: "/analytics", badge: null },
   { name: "Audit Log", icon: ScrollText, path: "/audit", badge: null },
@@ -37,12 +40,22 @@ export default function Sidebar() {
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
-  const m = useMetrics(workspace.id);
-  const tickets = m.all.tickets;
-  const signals = m.all.signals;
-  const knowledge = m.all.knowledge;
+  const sf = useMemo(() => workspaceFilter(workspace.id), [workspace.id]);
+  const tHook = useLemmaRecords("tickets", { limit: 10000, filters: sf });
+  const sHook = useLemmaRecords("signals", { limit: 1000, filters: sf });
+  const kHook = useLemmaRecords("memory_entries", { limit: 500, filters: sf });
 
-  const badgeMap = m.sidebar;
+  useRefreshListener(() => { tHook.refresh(); sHook.refresh(); kHook.refresh(); });
+
+  const tickets = tHook.data || [];
+  const signals = sHook.data || [];
+  const knowledge = kHook.data || [];
+
+  const openTickets = tickets.filter((t) => t.status !== "resolved" && t.status !== "closed").length;
+  const pendingSignals = signals.filter((s) => (s.status === "pending" || s.status === "new") && s.status !== "rejected").length;
+  const activeIncidents = 0;
+  const pendingDrafts = 0;
+  const badgeMap = { tickets: openTickets, signals: pendingSignals, incidents: activeIncidents, drafts: pendingDrafts, unread: 0 };
 
   const [searchResults, setSearchResults] = useState([]);
   useEffect(() => {
@@ -120,7 +133,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-0.5 px-3 overflow-y-auto">
-        {navItems.map((item) => {
+        {navItems.filter((item) => !item.role || item.role === role).map((item) => {
           const Icon = item.icon;
           const badgeValue = item.badge ? badgeMap[item.badge] : null;
 
@@ -208,7 +221,7 @@ export default function Sidebar() {
 
         <div className="flex rounded-xl border border-border dark:border-border-dark overflow-hidden">
           <button
-            onClick={() => setRole("agent")}
+            onClick={() => setRole("support_agent")}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-all duration-150 ${
               role === "support_agent"
                 ? "bg-zinc-900 text-white"
@@ -220,7 +233,7 @@ export default function Sidebar() {
           </button>
           <div className="w-px bg-border" />
           <button
-            onClick={() => setRole("manager")}
+            onClick={() => setRole("support_manager")}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-all duration-150 ${
               role === "support_manager"
                 ? "bg-zinc-900 text-white"

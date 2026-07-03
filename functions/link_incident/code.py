@@ -2,7 +2,6 @@
 #output_type_name: LinkIncidentOutput
 #function_name: link_incident
 """Create or update an incident linked to a signal. Idempotent: one active incident per signal. Sends Slack alert for high/critical and Gmail alert to manager."""
-import uuid
 from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel
@@ -69,6 +68,10 @@ class LinkIncidentInput(BaseModel):
     workspace_name: Optional[str] = None
     recommended_action: Optional[str] = None
     dashboard_link: Optional[str] = None
+    affected_customer_count: Optional[int] = None
+    root_cause: Optional[str] = None
+    category: Optional[str] = None
+    tags: Optional[list] = None
 
 class LinkIncidentOutput(BaseModel):
     incident_id: str
@@ -115,6 +118,15 @@ async def link_incident(ctx: FunctionContext, data: LinkIncidentInput) -> LinkIn
         if affected_count > old_count:
             upd["affected_ticket_count"] = affected_count
             upd["blast_radius"] = data.blast_radius or f"{affected_count} tickets, {sig.get('affected_customer_count', 0)} customers"
+        if data.affected_customer_count is not None:
+            upd["affected_customer_count"] = data.affected_customer_count
+        if data.root_cause:
+            upd["root_cause"] = data.root_cause
+        if data.category:
+            upd["category"] = data.category
+        if data.tags is not None:
+            upd["tags"] = data.tags
+        print("[link_incident] UPDATE incident", inc["id"], "with:", upd)
         pod.records.update("incidents", inc["id"], upd)
         _audit(pod, "incident.updated", actor_type="user",
                actor_user_id=str(ctx.user_id) if ctx.user_id else None,
@@ -123,8 +135,8 @@ async def link_incident(ctx: FunctionContext, data: LinkIncidentInput) -> LinkIn
                         "affected_tickets": affected_count,
                         "note": "Existing incident updated with new occurrences."})
     else:
-        inc = pod.records.create("incidents", {
-            "id": str(uuid.uuid4()), "title": title, "signal_id": data.signal_id, "status": data.status or "open",
+        inc_record = {
+            "title": title, "signal_id": data.signal_id, "status": data.status or "open",
             "severity": data.severity or "normal",
             "summary": data.summary or sig.get("summary"),
             "blast_radius": data.blast_radius or f"{affected_count} tickets, {sig.get('affected_customer_count', 0)} customers",
@@ -132,8 +144,39 @@ async def link_incident(ctx: FunctionContext, data: LinkIncidentInput) -> LinkIn
             "affected_ticket_count": affected_count,
             "description": data.description or f"Incident linked to signal: {sig.get('name')}",
             "workspaceId": data.workspace_id or sig.get("workspaceId"),
-            "workspaceName": data.workspace_name or sig.get("workspaceName"),
-        })
+
+        }
+        if data.affected_customer_count is not None:
+            inc_record["affected_customer_count"] = data.affected_customer_count
+        elif sig.get("affected_customer_count"):
+            inc_record["affected_customer_count"] = sig["affected_customer_count"]
+        if data.root_cause:
+            inc_record["root_cause"] = data.root_cause
+        elif sig.get("root_cause"):
+            inc_record["root_cause"] = sig["root_cause"]
+        if data.category:
+            inc_record["category"] = data.category
+        elif sig.get("category"):
+            inc_record["category"] = sig["category"]
+        if data.tags is not None:
+            inc_record["tags"] = data.tags
+        elif sig.get("tags"):
+            inc_record["tags"] = sig["tags"]
+        print("[link_incident] CREATE payload:", inc_record)
+        inc = pod.records.create("incidents", inc_record)
+        # Resolve real server-assigned ID (SDK may return phantom UUID)
+        try:
+            fresh = _items(pod.records.list("incidents", filter=[
+                {"field": "signal_id", "op": "eq", "value": data.signal_id},
+            ], sort=[{"field": "created_at", "direction": "desc"}], limit=1))
+            if fresh:
+                real = fresh[0]
+                real_id = real.get("id") if isinstance(real, dict) else str(real)
+                if real_id:
+                    inc = real
+        except Exception:
+            pass
+        print("[link_incident] CREATE result — id:", inc.get("id") if isinstance(inc, dict) else inc)
         inc_updated = False
         _audit(pod, "incident.created", actor_type="user",
                actor_user_id=str(ctx.user_id) if ctx.user_id else None,
@@ -238,6 +281,7 @@ async def link_incident(ctx: FunctionContext, data: LinkIncidentInput) -> LinkIn
     except Exception:
         pass
 
+    print("[link_incident] RETURN — incident_id:", inc["id"], "updated:", inc_updated)
     return LinkIncidentOutput(
         incident_id=inc["id"], incident_updated=inc_updated,
         slack_alert_sent=slack_sent,

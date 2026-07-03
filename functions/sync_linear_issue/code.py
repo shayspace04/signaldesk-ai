@@ -61,7 +61,6 @@ class SyncLinearIssueOutput(BaseModel):
     updated: bool = False
     status: Optional[str] = None
     priority: Optional[str] = None
-    simulated: bool = False
     message: Optional[str] = None
 
 async def sync_linear_issue(ctx: FunctionContext, data: SyncLinearIssueInput) -> SyncLinearIssueOutput:
@@ -138,7 +137,6 @@ async def sync_linear_issue(ctx: FunctionContext, data: SyncLinearIssueInput) ->
     linear_sev = LINEAR_SEVERITY.get(sev, "medium")
     linear_status = STATUS_MAP.get(inc_status, "Todo")
 
-    simulated = False
     updated = False
 
     try:
@@ -149,8 +147,11 @@ async def sync_linear_issue(ctx: FunctionContext, data: SyncLinearIssueInput) ->
             "priority": linear_sev,
         })
         updated = True
-    except Exception:
-        simulated = True
+    except Exception as e:
+        return SyncLinearIssueOutput(
+            success=False,
+            message=f"Linear connector error: {e}",
+        )
 
     now = datetime.now(timezone.utc).isoformat()
     try:
@@ -158,6 +159,7 @@ async def sync_linear_issue(ctx: FunctionContext, data: SyncLinearIssueInput) ->
             "linearStatus": linear_status,
             "linearPriority": LINEAR_PRIORITY_LABEL.get(linear_sev, "Normal"),
             "linearSyncedAt": now,
+            "lastSyncResult": "synced",
         })
     except Exception:
         pass
@@ -166,12 +168,11 @@ async def sync_linear_issue(ctx: FunctionContext, data: SyncLinearIssueInput) ->
            actor_user_id=str(ctx.user_id) if ctx.user_id else None,
            resource_type="incident", resource_id=data.incident_id,
            details={"linearIssueId": linear_id, "status": linear_status,
-                    "priority": linear_sev, "simulated": simulated,
+                    "priority": linear_sev, "simulated": False,
                     "updated": updated})
 
     return SyncLinearIssueOutput(
         success=True, updated=updated,
         status=linear_status, priority=str(linear_sev),
-        simulated=simulated,
         message=f"Synced to Linear: {linear_status}",
     )

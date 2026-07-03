@@ -1,8 +1,9 @@
 import { motion } from "framer-motion";
-import { useState, useEffect, useMemo } from "react";
-import { ShieldAlert, CheckCircle2, Loader2, ArrowUp, ExternalLink, RefreshCw, MessageSquare, ArrowRight, Clock, AlertTriangle, Link2 } from "lucide-react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { ShieldAlert, CheckCircle2, Loader2, ArrowUp, ExternalLink, RefreshCw, MessageSquare, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { useLemmaRecords } from "@/hooks/useLemmaRecords";
+import { useLinearSync, SYNC_STATUS } from "@/hooks/useLinearSync";
 import { useRefreshListener, emitRefresh } from "@/lib/refreshEvents";
 import useRole from "@/hooks/useRole";
 import StatusBadge from "@/components/common/StatusBadge";
@@ -27,23 +28,23 @@ function timeAgo(dateStr) {
 
 const severityOrder = ["low", "normal", "high", "urgent"];
 
-const LINEAR_STATUSES = ["Todo", "In Progress", "In Review", "Done"];
-
 export default function Incidents() {
   const { workspace } = useWorkspace();
   const recordFilters = workspaceFilter(workspace.id);
-  const { data: incidents, loading, refresh: refreshIncidents } = useLemmaRecords("incidents", { limit: 50, filters: recordFilters });
+  const { data: incidents, loading, refresh: refreshIncidents } = useLemmaRecords("incidents", { limit: 50, sort: [{ field: "created_at", direction: "desc" }], filters: recordFilters });
   const { data: signals, refresh: refreshSignals } = useLemmaRecords("signals", { limit: 100, filters: recordFilters });
   const { data: tickets, refresh: refreshTickets } = useLemmaRecords("tickets", { limit: 200, filters: recordFilters });
-  useRefreshListener(() => { refreshIncidents(); refreshSignals(); refreshTickets(); });
+  const refreshAll = useCallback(() => { refreshIncidents(); refreshSignals(); refreshTickets(); }, [refreshIncidents, refreshSignals, refreshTickets]);
+  useRefreshListener(refreshAll);
+
+
   const { canCompleteApproval, canCreateLinearIssue, canResolveIncident } = useRole();
   const [selected, setSelected] = useState(null);
   const [resolving, setResolving] = useState(false);
   const [escalating, setEscalating] = useState(false);
   const [showEscalate, setShowEscalate] = useState(false);
   const [linearFilter, setLinearFilter] = useState("all");
-  const [creatingLinear, setCreatingLinear] = useState(false);
-  const [syncingLinear, setSyncingLinear] = useState(false);
+  const { syncStatus, syncLoading, syncResult, syncError, syncLinearIssue, resetSync } = useLinearSync();
   const [commentText, setCommentText] = useState("");
   const [sendingComment, setSendingComment] = useState(false);
 
@@ -80,66 +81,21 @@ export default function Incidents() {
     }
   };
 
-  const handleCreateLinearIssue = async () => {
-    if (!current || creatingLinear) return;
-    if (current.linearIssueId) {
-      if (current.linearIssueUrl) window.open(current.linearIssueUrl, "_blank");
-      return;
-    }
-    setCreatingLinear(true);
-    const toastId = toast.loading("Creating Linear issue...");
-    try {
-      const raw = await client.functions.run("create_linear_issue", {
-        input: { incident_id: current.id },
-      });
-      const result = raw.output_data || raw.output || raw;
-      toast.dismiss(toastId);
-      if (result.success) {
-        toast.success(
-          <div className="flex flex-col gap-1">
-            <span>Engineering issue created successfully.</span>
-            <a href={result.linearIssueUrl} target="_blank" rel="noopener noreferrer"
-              className="text-indigo-600 dark:text-indigo-400 underline font-medium">{result.linearIssueIdentifier} ↗</a>
-          </div>,
-          { duration: 5000 }
-        );
-        await createNotification({ action: "linear.issue_created", actor: "Support Manager", resourceType: "incident", resourceId: current.id, details: { name: current.title, linearIssue: result.linearIssueIdentifier }, workspaceId: workspace.id, workspaceName: workspace.name });
-        refreshIncidents();
-        emitRefresh();
-      } else {
-        toast.error(result.message || "Failed to create Linear issue");
-      }
-    } catch (err) {
-      toast.dismiss(toastId);
-      toast.error(err?.message || "Unable to create Linear issue. Please retry.");
-    } finally {
-      setCreatingLinear(false);
-    }
-  };
-
-  const handleSyncLinear = async () => {
-    if (!current || !current.linearIssueId || syncingLinear) return;
-    setSyncingLinear(true);
+  const handleSync = async () => {
+    if (!current) return;
     const toastId = toast.loading("Syncing with Linear...");
-    try {
-      const raw = await client.functions.run("sync_linear_issue", {
-        input: { incident_id: current.id },
-      });
-      const result = raw.output_data || raw.output || raw;
-      toast.dismiss(toastId);
-      if (result.success) {
-        toast.success("Engineering issue synchronized");
-        await createNotification({ action: "linear.synced", actor: "System", resourceType: "incident", resourceId: current.id, details: { name: current.title, status: result.status }, workspaceId: workspace.id, workspaceName: workspace.name });
-        refreshIncidents();
-        emitRefresh();
-      } else {
-        toast.error(result.message || "Sync failed");
-      }
-    } catch (err) {
-      toast.dismiss(toastId);
-      toast.error(err?.message || "Unable to sync with Linear");
-    } finally {
-      setSyncingLinear(false);
+    resetSync();
+    const result = await syncLinearIssue(current.id);
+    toast.dismiss(toastId);
+    if (result.status === SYNC_STATUS.SYNCED) {
+      toast.success("Linear issue synced");
+      await createNotification({ action: "linear.issue_created", actor: "Support Manager", resourceType: "incident", resourceId: current.id, details: { name: current.title, linearIssue: result.result?.linearIssueIdentifier }, workspaceId: workspace.id, workspaceName: workspace.name }).catch(() => {});
+      refreshIncidents();
+      emitRefresh();
+    } else if (result.status === SYNC_STATUS.CONNECTOR_UNAVAILABLE) {
+      toast.error("Linear connector is not configured");
+    } else {
+      toast.error(result.error || "Failed to create Linear issue");
     }
   };
 
@@ -148,7 +104,7 @@ export default function Incidents() {
     setResolving(true);
     const toastId = toast.loading("Resolving incident...");
     try {
-      await client.records.update("incidents", current.id, { status: "resolved", resolved_at: new Date().toISOString() });
+      await client.records.update("incidents", current.id, { status: "closed", closed_at: new Date().toISOString() });
       if (current.signal_id) {
         const relatedSignals = signals.filter((s) => s.id === current.signal_id);
         for (const sig of relatedSignals) {
@@ -171,7 +127,6 @@ export default function Incidents() {
         return 0;
       })();
       const ticketIds = relatedTickets.map((t) => t.id);
-      const signalIds = current.signal_id ? [current.signal_id] : [];
       const cat = current.category || relatedSignal?.category || "";
       const tags = [...new Set([...(current.tags || []), ...(relatedSignal?.tags || []), "auto-generated", "incident-resolution"])];
 
@@ -179,27 +134,17 @@ export default function Incidents() {
         title: current.title || `Resolved Incident — ${current.id}`,
         summary: current.summary || (current.description ? current.description.slice(0, 200) : ""),
         root_cause: current.root_cause || relatedSignal?.summary || current.description || "",
-        resolution: current.resolution_notes || current.description || "",
-        symptoms: relatedSignal?.summary || "",
-        preventive_actions: "",
-        timeline: `Incident created: ${current.created_at ? format(new Date(current.created_at), "MMM d, yyyy HH:mm") : "N/A"}\nSeverity: ${current.severity || "N/A"}\nSignal detected: ${relatedSignal?.detected_at ? format(new Date(relatedSignal.detected_at), "MMM d, yyyy HH:mm") : "N/A"}\nResolved: ${format(new Date(), "MMM d, yyyy HH:mm")}\nResolution time: ${resolvedDuration} hours`,
-        incident_id: current.id,
-        signal_id: current.signal_id,
-        linear_issue_id: current.linearIssueId || "",
-        ticket_ids: ticketIds,
-        signal_ids: signalIds,
-        category: cat,
+        body: current.description || "",
+        recommended_action: "",
+        source_signal_id: current.signal_id,
+        related_incident_id: current.id,
         tags: tags,
-        status: "published",
+        category: cat,
         confidence: 85,
-        verified_by: "Support Manager",
-        verified_at: new Date().toISOString(),
-        reference_count: relatedTickets.length + (relatedSignal ? 1 : 0) + 1,
+        captured_at: new Date().toISOString(),
+        created_by: "Support Manager",
         workspaceId: workspace.id,
         workspaceName: workspace.name,
-        customers_affected: custNames.length || custEmails.length || 0,
-        resolution_time_hours: resolvedDuration,
-        severity: current.severity || "medium",
       });
       await createNotification({ action: "knowledge.created", actor: "Support Manager", resourceType: "knowledge", resourceId: current.id, details: { name: current.title || "Knowledge Article" }, workspaceId: workspace.id, workspaceName: workspace.name });
       await createNotification({ action: "incident.resolved", actor: "Support Manager", resourceType: "incident", resourceId: current.id, details: { name: current.title }, workspaceId: workspace.id, workspaceName: workspace.name });
@@ -211,28 +156,6 @@ export default function Incidents() {
       toast.error(err?.message || "Failed to resolve incident");
     } finally {
       setResolving(false);
-    }
-  };
-
-  const handleFetchLinear = async () => {
-    if (!current || !current.linearIssueId) return;
-    const toastId = toast.loading("Fetching Linear issue...");
-    try {
-      const raw = await client.functions.run("fetch_linear_issue", {
-        input: { incident_id: current.id },
-      });
-      const result = raw.output_data || raw.output || raw;
-      toast.dismiss(toastId);
-      if (result.success) {
-        await createNotification({ action: "linear.fetched", actor: "System", resourceType: "incident", resourceId: current.id, details: { name: current.title, status: result.status }, workspaceId: workspace.id, workspaceName: workspace.name });
-        toast.success("Engineering issue refreshed");
-        refreshIncidents();
-      } else {
-        toast.error(result.message || "Failed to fetch Linear issue");
-      }
-    } catch (err) {
-      toast.dismiss(toastId);
-      toast.error(err?.message || "Unable to fetch Linear issue");
     }
   };
 
@@ -266,6 +189,12 @@ export default function Incidents() {
     : incidents.filter((i) => !i.linearIssueId);
 
   const current = selected || filtered[0] || null;
+
+  useEffect(() => {
+    if (current) {
+
+    }
+  }, [current]);
 
   const linearIsDone = current?.linearStatus === "Done" || current?.linearStatus === "completed";
 
@@ -318,7 +247,7 @@ export default function Incidents() {
                   <PriorityBadge priority={inc.severity} />
                 </div>
                 <p className="mt-1.5 text-xs text-muted dark:text-muted-dark">
-                  {inc.affected_ticket_count ? `${inc.affected_ticket_count} affected tickets` : ""}{inc.status ? ` · ${inc.status}` : ""}
+                  {inc.affected_ticket_count ? `${inc.affected_ticket_count} tickets` : ""}{inc.affected_customer_count != null ? ` · ${inc.affected_customer_count} customers` : ""}{inc.status ? ` · ${inc.status}` : ""}
                 </p>
                 <div className="mt-1.5 flex items-center gap-2">
                   {inc.linearIssueIdentifier ? (
@@ -353,6 +282,9 @@ export default function Incidents() {
                       )}
                     </div>
                     <p className="mt-1 text-sm text-muted dark:text-muted-dark">{current.summary || ""}</p>
+                    {current.root_cause && current.root_cause !== current.summary && (
+                      <p className="mt-1 text-xs text-muted dark:text-muted-dark italic">{current.root_cause.slice(0, 200)}</p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0 ml-4">
                     <StatusBadge status={current.status} />
@@ -371,6 +303,7 @@ export default function Incidents() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
+                  {current.category && <div className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024]"><p className="text-xs text-muted dark:text-muted-dark">Category</p><p className="mt-1 text-sm font-medium text-primary">{current.category}</p></div>}
                   <div className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024] relative">
                     <p className="text-xs text-muted dark:text-muted-dark">Severity</p>
                     <div className="flex items-center gap-2 mt-1">
@@ -395,7 +328,11 @@ export default function Incidents() {
                       )}
                     </div>
                   </div>
-                  <div className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024]"><p className="text-xs text-muted dark:text-muted-dark">Affected</p><p className="mt-1 text-sm font-medium text-primary">{current.affected_ticket_count || "N/A"} tickets</p></div>
+                  <div className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024]">
+                    <p className="text-xs text-muted dark:text-muted-dark">Affected</p>
+                    <p className="mt-1 text-sm font-medium text-primary">{current.affected_ticket_count || "N/A"} tickets</p>
+                    {current.affected_customer_count != null && <p className="text-xs text-muted dark:text-muted-dark mt-0.5">{current.affected_customer_count} customers</p>}
+                  </div>
                   {current.owner_user_id && <div className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024]"><p className="text-xs text-muted dark:text-muted-dark">Owner</p><p className="mt-1 text-sm font-medium text-primary">{current.owner_user_id}</p></div>}
                   {current.opened_at && <div className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024]"><p className="text-xs text-muted dark:text-muted-dark">Opened</p><p className="mt-1 text-sm font-medium text-primary">{format(new Date(current.opened_at), "MMM d, HH:mm")}</p></div>}
                   {current.resolved_at && <div className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024]"><p className="text-xs text-muted dark:text-muted-dark">Resolved</p><p className="mt-1 text-sm font-medium text-emerald-700 dark:text-emerald-300">{format(new Date(current.resolved_at), "MMM d, HH:mm")}</p></div>}
@@ -422,13 +359,13 @@ export default function Incidents() {
                       <ExternalLink size={12} /> Engineering
                     </h3>
                     <div className="flex items-center gap-2">
-                      {current.linearIssueId && (
-                        <button onClick={handleFetchLinear} disabled={syncingLinear}
-                          className="flex items-center gap-1 rounded-lg bg-white dark:bg-[#202024] px-2.5 py-1 text-[10px] font-medium text-secondary-body dark:hover:bg-[#2A2A2E] transition-all border border-border dark:border-border-dark disabled:opacity-50">
-                          {syncingLinear ? <Loader2 size={10} className="animate-spin" /> : <RefreshCw size={10} />} Sync
-                        </button>
+                      {syncResult?.issueUrl && (
+                        <a href={syncResult.issueUrl} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 rounded-lg bg-white dark:bg-[#202024] px-2.5 py-1 text-[10px] font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all border border-border dark:border-border-dark">
+                          <ExternalLink size={10} /> Open Linear
+                        </a>
                       )}
-                      {current.linearIssueUrl && (
+                      {!syncResult?.issueUrl && current.linearIssueUrl && (
                         <a href={current.linearIssueUrl} target="_blank" rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 rounded-lg bg-white dark:bg-[#202024] px-2.5 py-1 text-[10px] font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all border border-border dark:border-border-dark">
                           <ExternalLink size={10} /> Open Linear
@@ -437,11 +374,77 @@ export default function Incidents() {
                     </div>
                   </div>
 
-                  {current.linearIssueId ? (
+                  {syncStatus === SYNC_STATUS.SYNCED && syncResult ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400" />
+                        <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">Synced</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
+                          <p className="text-[10px] text-muted dark:text-muted-dark">Issue Key</p>
+                          <p className="text-xs font-medium text-primary">{syncResult.identifier || current.linearIssueIdentifier || "—"}</p>
+                        </div>
+                        <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
+                          <p className="text-[10px] text-muted dark:text-muted-dark">Status</p>
+                          <p className={`text-xs font-medium ${current.linearStatus === "Done" ? "text-emerald-600 dark:text-emerald-400" : "text-primary"}`}>
+                            {current.linearStatus || "Todo"}
+                          </p>
+                        </div>
+                        <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
+                          <p className="text-[10px] text-muted dark:text-muted-dark">Issue URL</p>
+                          <p className="text-xs font-medium text-primary truncate max-w-[160px]">{syncResult.issueUrl || current.linearIssueUrl || "—"}</p>
+                        </div>
+                        <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
+                          <p className="text-[10px] text-muted dark:text-muted-dark">Last Synced</p>
+                          <p className="text-xs font-medium text-primary">{timeAgo(syncResult.syncedAt || current.linearSyncedAt) || "just now"}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={handleSync} disabled={syncLoading}
+                          className="flex items-center gap-1.5 rounded-lg bg-indigo-600 dark:bg-indigo-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 dark:hover:bg-indigo-400 transition-all disabled:opacity-50">
+                          {syncLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Sync Now
+                        </button>
+                        {(syncResult.issueUrl || current.linearIssueUrl) && (
+                          <a href={syncResult.issueUrl || current.linearIssueUrl} target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 rounded-lg bg-white dark:bg-[#202024] border border-border dark:border-border-dark px-3 py-1.5 text-xs font-medium text-body dark:hover:bg-[#2A2A2E] transition-all">
+                            <ExternalLink size={12} /> Open in Linear
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ) : syncStatus === SYNC_STATUS.CONNECTING ? (
+                    <div className="flex items-center gap-2 py-3">
+                      <Loader2 size={14} className="animate-spin text-indigo-600 dark:text-indigo-400" />
+                      <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400">Connecting to Linear...</span>
+                    </div>
+                  ) : syncStatus === SYNC_STATUS.CONNECTOR_UNAVAILABLE ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">Ready to Sync</span>
+                      </div>
+                      <p className="text-xs text-amber-600 dark:text-amber-400">Linear connector is not configured.</p>
+                      <button onClick={handleSync} disabled={syncLoading}
+                        className="flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-500 transition-all disabled:opacity-50">
+                        {syncLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Retry Sync
+                      </button>
+                    </div>
+                  ) : syncStatus === SYNC_STATUS.ERROR ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-red-700 dark:text-red-300">Sync Failed</span>
+                      </div>
+                      <p className="text-xs text-red-600 dark:text-red-400">{syncError || "Unknown error"}</p>
+                      <button onClick={handleSync} disabled={syncLoading}
+                        className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500 transition-all disabled:opacity-50">
+                        {syncLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Retry
+                      </button>
+                    </div>
+                  ) : current.linearIssueId ? (
                     <div className="space-y-2">
                       <div className="grid grid-cols-2 gap-2">
                         <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
-                          <p className="text-[10px] text-muted dark:text-muted-dark">Issue</p>
+                          <p className="text-[10px] text-muted dark:text-muted-dark">Issue Key</p>
                           <p className="text-xs font-medium text-primary">{current.linearIssueIdentifier || "—"}</p>
                         </div>
                         <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
@@ -451,47 +454,33 @@ export default function Incidents() {
                           </p>
                         </div>
                         <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
-                          <p className="text-[10px] text-muted dark:text-muted-dark">Priority</p>
-                          <p className="text-xs font-medium text-primary">{current.linearPriority || "—"}</p>
-                        </div>
-                        <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
-                          <p className="text-[10px] text-muted dark:text-muted-dark">Last Sync</p>
+                          <p className="text-[10px] text-muted dark:text-muted-dark">Last Synced</p>
                           <p className="text-xs font-medium text-primary">{timeAgo(current.linearSyncedAt) || "—"}</p>
                         </div>
-                      </div>
-                      {current.linearAssignee && (
                         <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
-                          <p className="text-[10px] text-muted dark:text-muted-dark">Assignee</p>
-                          <p className="text-xs font-medium text-primary">{current.linearAssignee}</p>
+                          <p className="text-[10px] text-muted dark:text-muted-dark">Last Result</p>
+                          <p className="text-xs font-medium text-primary">{current.lastSyncResult || "—"}</p>
                         </div>
-                      )}
-                      {linearIsDone && current.status !== "resolved" && current.status !== "closed" && (
-                        <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800 p-2.5 flex items-center gap-2">
-                          <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400" />
-                          <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">Linear issue is Done. Ready to resolve.</span>
-                        </div>
-                      )}
+                      </div>
                       <div className="flex items-center gap-2">
-                        <button onClick={handleSyncLinear} disabled={syncingLinear || !current.linearIssueId}
+                        <button onClick={handleSync} disabled={syncLoading}
                           className="flex items-center gap-1.5 rounded-lg bg-indigo-600 dark:bg-indigo-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 dark:hover:bg-indigo-400 transition-all disabled:opacity-50">
-                          {syncingLinear ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Sync Now
+                          {syncLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Sync Now
                         </button>
-                        <a href={current.linearIssueUrl} target="_blank" rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 rounded-lg bg-white dark:bg-[#202024] border border-border dark:border-border-dark px-3 py-1.5 text-xs font-medium text-body dark:hover:bg-[#2A2A2E] transition-all">
-                          <ExternalLink size={12} /> View in Linear
-                        </a>
+                        {current.linearIssueUrl && (
+                          <a href={current.linearIssueUrl} target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 rounded-lg bg-white dark:bg-[#202024] border border-border dark:border-border-dark px-3 py-1.5 text-xs font-medium text-body dark:hover:bg-[#2A2A2E] transition-all">
+                            <ExternalLink size={12} /> Open in Linear
+                          </a>
+                        )}
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <p className="text-xs text-muted-base">This incident has not been escalated to engineering.</p>
-                      <button onClick={handleCreateLinearIssue} disabled={creatingLinear || (current.linearIssueId && !current.linearIssueUrl)}
-                        className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all disabled:opacity-50 ${canCreateLinearIssue
-                          ? "bg-indigo-600 text-white hover:bg-indigo-500"
-                          : "bg-zinc-200 dark:bg-[#2A2A2E] text-muted-base cursor-not-allowed"}`}
-                        title={!canCreateLinearIssue ? "Only Support Managers can escalate incidents to Engineering." : undefined}>
-                        {creatingLinear ? <Loader2 size={12} className="animate-spin" /> : <ArrowRight size={12} />}
-                        {current.linearIssueId ? "Open Linear" : creatingLinear ? "Creating..." : "Create Linear Issue"}
+                      <button onClick={handleSync} disabled={syncLoading}
+                        className="w-full rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-700 py-2.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all disabled:opacity-50">
+                        {syncLoading ? <Loader2 size={12} className="inline animate-spin mr-1" /> : null}
+                        Ready to Sync
                       </button>
                       {!canCreateLinearIssue && (
                         <p className="text-[10px] text-muted dark:text-muted-dark">Only Support Managers can escalate incidents to Engineering.</p>

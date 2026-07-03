@@ -42,9 +42,11 @@ export default function ApprovalDesk() {
     setActionLoading(action);
     try {
       if (action === "approve") {
+        if (editMode) {
+          await client.records.update("drafts", current.id, { body: editBody });
+        }
         await client.functions.run("resolve_ticket", { input: { draft_id: current.id, ticket_id: current.ticket_id } });
         try {
-          if (editMode) { await client.records.update("drafts", current.id, { body: editBody }); }
           await client.functions.run("send_approved_reply", { input: { draft_id: current.id, ticket_id: current.ticket_id, channel: "email" } });
         } catch (sendErr) { console.warn("Send reply skipped:", sendErr); }
       } else if (action === "reject") {

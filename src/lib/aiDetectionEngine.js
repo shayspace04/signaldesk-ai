@@ -7,8 +7,38 @@ const SIGNAL_FUNC = "create_signal";
 const INCIDENT_FUNC = "link_incident";
 
 /* ── Logger ─────────────────────────────────────────────────────── */
-function log(...args) { console.log("[AI Detection]", ...args); }
-function warn(...args) { console.warn("[AI Detection]", ...args); }
+const LOG_LEVELS = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
+const CURRENT_LOG_LEVEL = LOG_LEVELS.INFO;
+
+function debug(...args) { if (CURRENT_LOG_LEVEL <= LOG_LEVELS.DEBUG) console.log("[AI DEBUG]", ...args); }
+function log(...args) { if (CURRENT_LOG_LEVEL <= LOG_LEVELS.INFO) console.log("[AI Detection]", ...args); }
+function warn(...args) { if (CURRENT_LOG_LEVEL <= LOG_LEVELS.WARN) console.warn("[AI Detection]", ...args); }
+function error(...args) { if (CURRENT_LOG_LEVEL <= LOG_LEVELS.ERROR) console.error("[AI Detection]", ...args); }
+
+/** Log a structured pipeline event for observability */
+function pipelineLog(stage, payload) {
+  const entry = { timestamp: new Date().toISOString(), stage, ...payload };
+  const formatted = `[PIPELINE:${stage}] ${JSON.stringify(payload, null, 2)}`;
+  if (payload.level === "error" || payload.success === false) {
+    console.error(formatted);
+  } else if (payload.level === "warn") {
+    console.warn(formatted);
+  } else {
+    console.log(formatted);
+  }
+  return entry;
+}
+
+/** Collect all pipeline events for the current run */
+const pipelineEvents = [];
+function track(stage, payload) {
+  const entry = pipelineLog(stage, { ...payload, level: payload.level || "info" });
+  pipelineEvents.push(entry);
+  return entry;
+}
+
+export function getPipelineEvents() { return [...pipelineEvents]; }
+export function clearPipelineEvents() { pipelineEvents.length = 0; }
 
 /* ── Simple stemmer (suffix stripping) ──────────────────────────── */
 function stem(word) {
@@ -382,8 +412,21 @@ function isWithinWindow(tickets, maxAgeMs) {
   });
 }
 
-function averageSimilarity(tickets) {
+function averageSimilarity(tickets, anchorIndex) {
   if (tickets.length < 2) return 1;
+  if (anchorIndex !== undefined && anchorIndex >= 0 && anchorIndex < tickets.length) {
+    /* Anchor-based: only compute similarity to the anchor ticket */
+    let total = 0;
+    let count = 0;
+    const anchor = tickets[anchorIndex];
+    for (let i = 0; i < tickets.length; i++) {
+      if (i === anchorIndex) continue;
+      total += computeTicketSimilarity(anchor, tickets[i]).total;
+      count++;
+    }
+    return count === 0 ? 0 : total / count;
+  }
+  /* Fall back to all-pairs */
   let total = 0;
   let count = 0;
   for (let i = 0; i < tickets.length; i++) {
@@ -486,11 +529,12 @@ async function findExistingIncidentBySignalId(signalId) {
 }
 
 /* ── Build cluster object ───────────────────────────────────────── */
-function buildCluster(tickets) {
+function buildCluster(tickets, anchorId) {
   const ids = tickets.map((t) => t.id);
   const customers = [...new Set(tickets.map((t) => t.customer_email || t.customer_name || "").filter(Boolean))];
   const timestamps = tickets.map((t) => new Date(t.created_at || t.createdAt || 0).getTime()).filter((t) => !isNaN(t));
-  const avgSim = averageSimilarity(tickets);
+  const anchorIdx = anchorId ? tickets.findIndex((t) => t.id === anchorId) : -1;
+  const avgSim = averageSimilarity(tickets, anchorIdx >= 0 ? anchorIdx : undefined);
   const risk = computeRiskScore(tickets);
   const conf = computeConfidence(tickets, avgSim);
 
@@ -627,12 +671,14 @@ async function createSignalFromCluster(cluster, workspaceId, workspaceName) {
 /* ── Link ticket to existing signal ─────────────────────────────── */
 async function attachTicketToSignal(signal, cluster, ticketId) {
   const existingIds = signal.example_ticket_ids || signal.linked_ticket_ids || signal.ticket_ids || [];
-  if (existingIds.includes(ticketId)) {
-    log("Ticket already in signal, skipping");
+  const allClusterIds = [ticketId, ...cluster.ticket_ids];
+  const allAlreadyPresent = allClusterIds.every((id) => existingIds.includes(id));
+  if (allAlreadyPresent) {
+    log("All cluster tickets already in signal, skipping");
     return false;
   }
 
-  const allIds = [...new Set([...existingIds, ticketId, ...cluster.ticket_ids])];
+  const allIds = [...new Set([...existingIds, ...allClusterIds])];
   const existingCustomerCount = signal.affected_customer_count || 0;
   const newCustomers = cluster.affected_customers.length;
   const totalCustomerCount = Math.max(existingCustomerCount, newCustomers);
@@ -649,35 +695,41 @@ async function attachTicketToSignal(signal, cluster, ticketId) {
   return true;
 }
 
-/* ── Escalate to incident ───────────────────────────────────────── */
+/* ── Escalate to incident (create or update — link_incident handles dedup) ─── */
 async function escalateToIncident(cluster, signalForEscalation, workspaceId, workspaceName) {
   log("Escalating to incident, risk score:", cluster.risk_score);
-
-  const existing = await findExistingIncidentBySignalId(signalForEscalation.id);
-  if (existing) {
-    log("Incident already exists for signal, skipping");
-    return null;
-  }
 
   const title = `Auto-escalated: ${cluster.name}`;
   const severity = cluster.risk_score >= 9 ? "critical" : cluster.risk_score >= 7 ? "high" : "normal";
   const desc = buildClusterDescription(cluster);
 
-  const result = await client.functions.run(INCIDENT_FUNC, {
-    input: {
-      signal_id: signalForEscalation.id,
-      title,
-      summary: cluster.root_cause_summary,
-      severity,
-      description: desc,
-      workspace_id: workspaceId,
-      workspace_name: workspaceName,
-    },
-  });
+  const incidentInput = {
+    signal_id: signalForEscalation.id,
+    title,
+    summary: cluster.root_cause_summary,
+    severity,
+    description: desc,
+    workspace_id: workspaceId,
+    workspace_name: workspaceName,
+    affected_customer_count: cluster.affected_customer_count || 0,
+    root_cause: cluster.root_cause_summary,
+    category: cluster.category || "general",
+  };
+  log("[escalateToIncident] Payload:", incidentInput);
+
+  const result = await client.functions.run(INCIDENT_FUNC, { input: incidentInput });
 
   const incId = result.output_data?.incident_id || result.incident_id || result.id;
-  if (incId) {
-    try { await client.records.update("signals", signalForEscalation.id, { incident_id: incId, workflowStage: "incident_created", status: "approved" }); } catch { /* skip */ }
+  log("[escalateToIncident] Result — incId:", incId, "output_data:", JSON.stringify(result.output_data).slice(0, 200));
+  if (!incId) {
+    warn("link_incident raw result has no incident_id — keys:", Object.keys(result),
+      "output_data:", result.output_data ? JSON.stringify(result.output_data).slice(0, 300) : "undefined",
+      "incident_id field:", result.incident_id, "id field:", result.id);
+  } else {
+    try {
+      await client.records.update("signals", signalForEscalation.id, { incident_id: incId, workflowStage: "incident_created", status: "approved" });
+      log("[escalateToIncident] Signal updated with incident_id:", incId);
+    } catch { /* skip */ }
   }
   log("Incident created:", incId);
   return incId;
@@ -699,9 +751,10 @@ async function postIncidentActions(cluster, signalId, incidentId, workspaceId, w
   if (config.autoSendGmailAlerts && incidentId) {
     try {
       await writeAuditLog("email.alert_sent", "Signal Detection Agent",
-        { incident_id: incidentId, severity: cluster.risk_score >= 7 ? "high" : "normal" },
+        { incident_id: incidentId, severity: cluster.risk_score >= 7 ? "high" : "normal",
+          note: "Handled by link_incident server-side via Gmail connector" },
         workspaceId, workspaceName);
-      log("Gmail alert audit logged");
+      log("Gmail alert: handled by link_incident function");
     } catch { /* skip */ }
   }
 
@@ -716,10 +769,11 @@ async function postIncidentActions(cluster, signalId, incidentId, workspaceId, w
 
 /* ── Main: run detection for a single ticket ────────────────────── */
 export async function runDetection(ticketId, workspaceId, workspaceName) {
-  const results = { signal_created: false, ticket_linked: false, incident_created: false, signal_id: null, incident_id: null, cluster: null, logs: [] };
+  clearPipelineEvents();
+  const results = { signal_created: false, ticket_linked: false, incident_created: false, signal_id: null, incident_id: null, cluster: null, logs: [], pipeline: [] };
 
-  log("========== AI DETECTION STARTED ==========");
-  log("Ticket:", ticketId, "Workspace:", workspaceId);
+
+  track("detection_start", { ticketId, workspaceId, workspaceName });
 
   const config = getAIDetectionConfig(workspaceId);
   const thresholds = getThresholds(workspaceId);
@@ -727,9 +781,13 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
   const signalAuto = getSignalAutomation(workspaceId);
   const incidentAuto = getIncidentAutomation(workspaceId);
 
+  track("config_loaded", { signalEnabled, edgeThreshold: thresholds.edgeThreshold, minTickets: thresholds.minTickets, minSimilarity: thresholds.minSimilarity, maxAgeMs: thresholds.maxAgeMs, escalationThreshold: thresholds.escalationThreshold });
+
   if (!signalEnabled) {
     warn("Signal automation disabled for workspace", workspaceId);
+    track("signal_disabled", { workspaceId });
     results.logs.push("Signal automation disabled");
+    results.pipeline = getPipelineEvents();
     return results;
   }
 
@@ -741,10 +799,13 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
     try {
       triggerTicket = await client.records.get("tickets", ticketId);
       log("Loaded trigger ticket:", triggerTicket.title);
+      track("load_ticket", { success: true, ticketId, title: triggerTicket.title, category: triggerTicket.category, priority: triggerTicket.priority });
       results.logs.push("Loaded trigger ticket");
-    } catch {
+    } catch (err) {
       warn("Failed to load ticket", ticketId);
+      track("load_ticket", { success: false, ticketId, error: err.message });
       results.logs.push("Failed to load ticket");
+      results.pipeline = getPipelineEvents();
       return results;
     }
 
@@ -760,20 +821,39 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
     });
     const allTickets = res.items || res.records || res.data || [];
     log("Loaded", allTickets.length, "recent tickets");
+    track("load_candidates", { success: true, totalAvailable: allTickets.length });
     results.logs.push(`Found ${allTickets.length} recent tickets`);
 
-    /* 3. Build candidate pool — all tickets, no filtering */
+    /* 3. Build candidate pool — filter by time window (and optional grouping) */
     const candidates = [triggerTicket];
+    const now = Date.now();
+    const maxAge = thresholds.maxAgeMs;
+    const groupingId = triggerTicket.outage_id || triggerTicket.grouping_id || triggerTicket.simulation_id || triggerTicket.demo_run_id || null;
+    if (groupingId) {
+      log("Restricting candidates to grouping:", groupingId);
+      track("candidate_grouping", { groupingId, triggerTicketId: ticketId });
+    }
     for (const t of allTickets) {
       if (t.id === ticketId) continue;
+      if (groupingId) {
+        const tGroup = t.outage_id || t.grouping_id || t.simulation_id || t.demo_run_id || null;
+        if (tGroup !== groupingId) continue;
+      } else {
+        const age = now - new Date(t.created_at || t.createdAt || 0).getTime();
+        if (age > maxAge) continue;
+      }
       candidates.push(t);
       if (candidates.length >= 20) break;
     }
 
     log("Candidate pool size:", candidates.length);
+    const candidateSource = groupingId ? "grouping_id" : "time_window";
+    track("candidate_pool", { poolSize: candidates.length, groupingId, source: candidateSource });
     if (candidates.length < 2) {
       warn("Not enough candidates");
+      track("insufficient_candidates", { poolSize: candidates.length });
       results.logs.push("Not enough candidates for clustering");
+      results.pipeline = getPipelineEvents();
       return results;
     }
 
@@ -782,9 +862,10 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
     for (let i = 0; i < candidates.length; i++) {
       for (let j = i + 1; j < candidates.length; j++) {
         const sim = computeTicketSimilarity(candidates[i], candidates[j]);
-        pairs.push({ i, j, score: sim.total, factors: sim.factors });
+        pairs.push({ i, j, i_id: candidates[i].id, j_id: candidates[j].id, score: sim.total, factors: sim.factors });
       }
     }
+    track("similarity_matrix", { pairs: pairs.map(p => ({ i_id: p.i_id, j_id: p.j_id, score: Math.round(p.score * 100) / 100 })) });
     results.logs.push("Similarity Matrix Built");
 
     /* 5. Graph-based clustering (edge threshold from config) */
@@ -798,7 +879,7 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
       }
     });
     log("Edges formed:", edgesFormed, "out of", pairs.length, "pairs");
-    results.logs.push(`Similarity Matrix Built (${edgesFormed} edges)`);
+    track("edges_formed", { edgeThreshold: thresholds.edgeThreshold, totalPairs: pairs.length, edgesFormed });
 
     const visited = new Set();
     const clusters = [];
@@ -821,59 +902,84 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
       clusters.push(cluster);
     }
 
-    log("Found", clusters.length, "clusters");
+    const clusterSizes = clusters.map((c, idx) => ({ clusterIndex: idx, size: c.length, ticketIds: c.map(t => t.id) }));
+    log("Found", clusters.length, "clusters:", clusterSizes.map(c => `cluster_${c.clusterIndex}=${c.size}`).join(", "));
+    track("clusters_found", { clusterCount: clusters.length, clusters: clusterSizes });
 
     /* 6. Find matching cluster */
     const matchCluster = clusters.find((c) => c.some((t) => t.id === ticketId));
 
     if (!matchCluster) {
       warn("No cluster found for ticket");
+      track("cluster_match", { found: false, ticketId });
       results.logs.push("No cluster found");
+      results.pipeline = getPipelineEvents();
       return results;
     }
 
     log("Matching cluster size:", matchCluster.length);
+    track("cluster_match", { found: true, ticketId, clusterSize: matchCluster.length, memberIds: matchCluster.map(t => t.id) });
     results.logs.push(`Cluster Found (size: ${matchCluster.length})`);
 
     if (matchCluster.length < thresholds.minTickets) {
       warn("Cluster too small:", matchCluster.length, "/", thresholds.minTickets);
+      track("cluster_too_small", { size: matchCluster.length, minRequired: thresholds.minTickets });
       results.logs.push(`Cluster too small (${matchCluster.length}/${thresholds.minTickets})`);
+      results.pipeline = getPipelineEvents();
       return results;
     }
 
-    if (!isWithinWindow(matchCluster, thresholds.maxAgeMs)) {
+    const windowOk = isWithinWindow(matchCluster, thresholds.maxAgeMs);
+    track("cluster_time_window", { passed: windowOk, maxAgeMs: thresholds.maxAgeMs, ticketAgesMs: matchCluster.map(t => Date.now() - new Date(t.created_at || t.createdAt || 0).getTime()) });
+    if (!windowOk) {
       warn("Cluster outside time window");
       results.logs.push("Cluster outside time window");
+      results.pipeline = getPipelineEvents();
       return results;
     }
 
-    const avgSim = averageSimilarity(matchCluster);
+    const anchorIdx = matchCluster.findIndex((t) => t.id === ticketId);
+    /* Filter out chain-connected members with low similarity to the trigger */
+    const filteredCluster = anchorIdx >= 0 && thresholds.minTicketSimilarity
+      ? matchCluster.filter((t, i) => i === anchorIdx || computeTicketSimilarity(matchCluster[anchorIdx], t).total >= thresholds.minTicketSimilarity)
+      : matchCluster;
+    if (filteredCluster.length < matchCluster.length) {
+      log(`Filtered ${matchCluster.length - filteredCluster.length} low-similarity chained tickets`);
+    }
+    const avgSim = averageSimilarity(filteredCluster, anchorIdx >= 0 ? Math.min(anchorIdx, filteredCluster.length - 1) : undefined);
     log("Average similarity:", (avgSim * 100).toFixed(1), "%");
 
+    track("similarity_check", { avgSimilarity: Math.round(avgSim * 10000) / 10000, minSimilarity: thresholds.minSimilarity, passed: avgSim >= thresholds.minSimilarity });
     if (avgSim < thresholds.minSimilarity) {
       warn("Similarity below threshold:", (avgSim * 100).toFixed(1), "% <", (thresholds.minSimilarity * 100), "%");
       results.logs.push(`Insufficient similarity (${(avgSim * 100).toFixed(1)}%)`);
+      results.pipeline = getPipelineEvents();
       return results;
     }
 
     results.logs.push(`Cluster meets thresholds (${matchCluster.length} tickets, ${(avgSim * 100).toFixed(1)}% similar)`);
 
     /* 7. Build cluster data */
-    const cluster = buildCluster(matchCluster);
+    const cluster = buildCluster(matchCluster, ticketId);
     log("Risk score:", cluster.risk_score, "Confidence:", cluster.confidence, "%");
+    track("cluster_accepted", { clusterId: cluster.cluster_id, ticketCount: cluster.ticket_count, avgSimilarity: cluster.similarity_score, riskScore: cluster.risk_score, confidence: cluster.confidence });
     results.logs.push(`Risk Score: ${cluster.risk_score}, Confidence: ${cluster.confidence}%`);
 
     /* 7b. Historical root cause check — boost risk by matching existing signals/incidents */
     try {
       const { signals: existingSignals, incidents: existingIncidents } = await loadExistingSignalsAndIncidents();
+      track("historical_check_start", { existingSignalCount: existingSignals.length, existingIncidentCount: existingIncidents.length });
       const historicalBoost = checkHistoricalRootCause(triggerTicket, existingSignals, existingIncidents);
       if (historicalBoost > 0) {
         cluster.risk_score = Math.min(cluster.risk_score + historicalBoost * 3, 10);
         cluster.affected_customer_count = Math.max(cluster.affected_customer_count, Math.round(historicalBoost * 5));
         log("Historical boost applied:", historicalBoost);
+        track("historical_boost_applied", { boost: historicalBoost, newRiskScore: cluster.risk_score });
         results.logs.push(`Historical root cause match (boost: ${(historicalBoost * 100).toFixed(0)}%)`);
+      } else {
+        track("historical_boost_none", {});
       }
-    } catch { /* skip historical check on failure */ }
+    } catch { track("historical_check_error", {}); /* skip historical check on failure */ }
 
     /* 8. Find or create signal — check if any cluster ticket already belongs to a signal */
     let existingSignal = null;
@@ -884,22 +990,37 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
       if (sig) { existingSignal = sig; break; }
     }
 
+    track("existing_signal_search", { signalFound: !!existingSignal, existingSignalId: existingSignal?.id, searchedTicketIds: matchCluster.map(t => t.id).filter(id => id !== ticketId) });
+
     if (existingSignal) {
       results.ticket_linked = await attachTicketToSignal(existingSignal, cluster, ticketId);
       results.cluster = { ...cluster, id: existingSignal.id };
       results.signal_id = existingSignal.id;
+      track("ticket_linked", { signalId: existingSignal.id, ticketId, linked: results.ticket_linked });
       if (results.ticket_linked) results.logs.push("Ticket linked to existing signal");
       else results.logs.push("Ticket already in signal");
     } else {
       try {
+        const signalInput = {
+          name: cluster.name,
+          summary: cluster.summary,
+          category: cluster.category,
+          evidence_count: cluster.ticket_count,
+          example_ticket_ids: cluster.ticket_ids,
+          proposed_priority: cluster.proposed_priority,
+        };
+        track("create_signal_invoked", { input: signalInput });
         createdSignalId = await createSignalFromCluster(cluster, workspaceId, workspaceName);
+        track("create_signal_response", { success: true, signalId: createdSignalId });
         results.signal_created = true;
         results.signal_id = createdSignalId;
         results.cluster = { ...cluster, id: createdSignalId };
         results.logs.push("Signal Created");
       } catch (err) {
         warn("Failed to create signal:", err);
+        track("create_signal_response", { success: false, error: err.message, stack: err.stack });
         results.logs.push("Signal creation failed: " + (err.message || "unknown"));
+        results.pipeline = getPipelineEvents();
         return results;
       }
     }
@@ -909,12 +1030,19 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
     const logDetails = results.ticket_linked
       ? { signal_id: existingSignal?.id, ticket_id: ticketId, cluster_id: cluster.cluster_id, ticket_count: cluster.ticket_count }
       : { cluster_id: cluster.cluster_id, ticket_count: cluster.ticket_count, similarity: cluster.similarity_score, confidence: cluster.confidence };
-    await writeAuditLog(logAction, "Signal Detection Agent", logDetails, workspaceId, workspaceName);
-    results.logs.push("Audit log written");
+    try {
+      await writeAuditLog(logAction, "Signal Detection Agent", logDetails, workspaceId, workspaceName);
+      track("audit_log", { action: logAction, written: true, details: logDetails });
+      results.logs.push("Audit log written");
+    } catch (err) {
+      track("audit_log", { action: logAction, written: false, error: err.message });
+      warn("Audit log write failed:", err);
+    }
 
     /* 10. Escalate to incident */
     if (config.autoCreateIncident && cluster.risk_score > 0) {
       const escThreshold = thresholds.escalationThreshold / 10;
+      track("escalation_check", { riskScore: cluster.risk_score, threshold: escThreshold, autoCreateIncident: config.autoCreateIncident });
       log("Incident escalation check: risk", cluster.risk_score, ">= threshold", escThreshold, "?");
       if (cluster.risk_score >= escThreshold) {
         const signalForEscalation = existingSignal || results.cluster;
@@ -924,34 +1052,43 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
             if (incId) {
               results.incident_created = true;
               results.incident_id = incId;
-              results.logs.push("Incident Created");
+              track("incident_created", { incidentId: incId, signalId: signalForEscalation.id });
+              results.logs.push("Incident created / updated");
               await postIncidentActions(cluster, signalForEscalation.id, incId, workspaceId, workspaceName, config);
+              track("post_incident_actions", { completed: true });
               results.logs.push("Post-incident automation complete");
-            } else {
-              results.logs.push("Incident already exists, skipped");
             }
           } catch (err) {
             warn("Escalation failed:", err);
+            track("incident_error", { error: err.message });
             results.logs.push("Incident creation failed: " + (err.message || "unknown"));
           }
         }
       } else {
+        track("escalation_skipped", { reason: "below_threshold", riskScore: cluster.risk_score, threshold: escThreshold });
         results.logs.push(`Risk below escalation threshold (${cluster.risk_score} < ${escThreshold})`);
       }
+    } else {
+      track("escalation_check", { autoCreateIncident: config.autoCreateIncident, riskScore: cluster.risk_score });
     }
 
     /* 11. Refresh */
     emitRefresh();
     results.logs.push("UI refresh triggered");
 
+    track("detection_complete", { signalCreated: results.signal_created, ticketLinked: results.ticket_linked, incidentCreated: results.incident_created, signalId: results.signal_id, incidentId: results.incident_id });
+
     log("========== AI DETECTION COMPLETED ==========");
     log("Signal created:", results.signal_created, "| Ticket linked:", results.ticket_linked, "| Incident created:", results.incident_created);
     results.logs.push("Detection Completed");
 
+    results.pipeline = getPipelineEvents();
     return results;
   } catch (err) {
     warn("Fatal error:", err);
+    track("detection_fatal_error", { error: err.message, stack: err.stack });
     results.logs.push("Error: " + (err.message || "unknown"));
+    results.pipeline = getPipelineEvents();
     return results;
   }
 }

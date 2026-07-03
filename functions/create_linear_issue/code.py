@@ -3,7 +3,7 @@
 #function_name: create_linear_issue
 """Create a Linear issue from an incident. Idempotent: skips if linearIssueId already set."""
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import Optional
 from pydantic import BaseModel
 from lemma_sdk import FunctionContext, Pod
 
@@ -63,7 +63,6 @@ class CreateLinearIssueOutput(BaseModel):
     linearIssueId: Optional[str] = None
     linearIssueIdentifier: Optional[str] = None
     linearIssueUrl: Optional[str] = None
-    simulated: bool = False
     message: Optional[str] = None
 
 async def create_linear_issue(ctx: FunctionContext, data: CreateLinearIssueInput) -> CreateLinearIssueOutput:
@@ -145,11 +144,6 @@ async def create_linear_issue(ctx: FunctionContext, data: CreateLinearIssueInput
 
     linear_pri = LINEAR_SEVERITY.get(sev, "medium")
 
-    simulated = False
-    issue_id = None
-    issue_id_str = None
-    issue_url = None
-
     try:
         result = pod.connectors.execute("linear", "LINEAR_CREATE_LINEAR_ISSUE", {
             "title": f"[{SEVERITY_MAP.get(sev, 'Medium')}] {title}",
@@ -157,20 +151,19 @@ async def create_linear_issue(ctx: FunctionContext, data: CreateLinearIssueInput
             "priority": linear_pri,
             "team_id": LINEAR_TEAM_ID,
         })
-        d = _unwrap(result)
-        issue_id = d.get("id") or d.get("issue_id")
-        issue_url = d.get("url") or d.get("issue_url") or d.get("Ticket Url") or d.get("ticket_url") or ""
-        issue_id_str = d.get("identifier") or d.get("issue_identifier") or ""
-        # Extract identifier from URL if not in response (e.g. SIG-17 from /issue/SIG-17/title)
-        if not issue_id_str and issue_url and "/issue/" in issue_url:
-            parts = issue_url.split("/issue/")[1].split("/")
-            if parts: issue_id_str = parts[0]
     except Exception as e:
-        sim_id = f"sim_{data.incident_id[:8]}"
-        issue_id = sim_id
-        issue_id_str = f"ENG-{hash(data.incident_id) % 9000 + 1000}"
-        issue_url = f"https://linear.app/team/issue/{issue_id_str}"
-        simulated = True
+        return CreateLinearIssueOutput(
+            success=False,
+            message=f"Linear connector error: {e}",
+        )
+
+    d = _unwrap(result)
+    issue_id = d.get("id") or d.get("issue_id")
+    issue_url = d.get("url") or d.get("issue_url") or d.get("Ticket Url") or d.get("ticket_url") or ""
+    issue_id_str = d.get("identifier") or d.get("issue_identifier") or ""
+    if not issue_id_str and issue_url and "/issue/" in issue_url:
+        frags = issue_url.split("/issue/")[1].split("/")
+        if frags: issue_id_str = frags[0]
 
     now = datetime.now(timezone.utc).isoformat()
     upd = {
@@ -180,6 +173,7 @@ async def create_linear_issue(ctx: FunctionContext, data: CreateLinearIssueInput
         "linearStatus": "Todo",
         "linearSyncedAt": now,
         "linearPriority": LINEAR_PRIORITY_LABEL.get(linear_pri, "Normal"),
+        "lastSyncResult": "created",
     }
     try:
         pod.records.update("incidents", data.incident_id, upd)
@@ -190,7 +184,7 @@ async def create_linear_issue(ctx: FunctionContext, data: CreateLinearIssueInput
            actor_user_id=str(ctx.user_id) if ctx.user_id else data.user_id,
            resource_type="incident", resource_id=data.incident_id,
            details={"linearIssueId": issue_id, "linearIssueIdentifier": issue_id_str,
-                    "linearIssueUrl": issue_url, "simulated": simulated,
+                    "linearIssueUrl": issue_url, "simulated": False,
                     "severity": sev, "title": title})
 
     return CreateLinearIssueOutput(
@@ -198,6 +192,5 @@ async def create_linear_issue(ctx: FunctionContext, data: CreateLinearIssueInput
         linearIssueId=issue_id,
         linearIssueIdentifier=issue_id_str,
         linearIssueUrl=issue_url,
-        simulated=simulated,
         message=f"Linear issue {issue_id_str} created",
     )

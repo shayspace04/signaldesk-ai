@@ -76,6 +76,7 @@ export async function getResourceSummary() {
       ...(!functions.some((f) => f.name === "create_signal" && f.status === "READY") ? ["create_signal function not ready"] : []),
       ...(!functions.some((f) => f.name === "link_incident" && f.status === "READY") ? ["link_incident function not ready"] : []),
       ...(!functions.some((f) => f.name === "create_ticket" && f.status === "READY") ? ["create_ticket function not ready"] : []),
+
     ],
   };
 }

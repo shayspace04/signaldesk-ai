@@ -58,7 +58,6 @@ class FetchLinearIssueOutput(BaseModel):
     title: Optional[str] = None
     url: Optional[str] = None
     identifier: Optional[str] = None
-    simulated: bool = False
 
 async def fetch_linear_issue(ctx: FunctionContext, data: FetchLinearIssueInput) -> FetchLinearIssueOutput:
     pod = Pod.from_env()
@@ -68,7 +67,6 @@ async def fetch_linear_issue(ctx: FunctionContext, data: FetchLinearIssueInput) 
     linear_id = inc.get("linearIssueId")
     if not linear_id: raise RuntimeError("No Linear issue linked to this incident")
 
-    simulated = False
     status = inc.get("linearStatus") or "Todo"
     priority = inc.get("linearPriority") or "medium"
     assignee = inc.get("linearAssignee")
@@ -90,8 +88,11 @@ async def fetch_linear_issue(ctx: FunctionContext, data: FetchLinearIssueInput) 
             title = d.get("title") or title
             url = d.get("url") or url
             identifier = d.get("identifier") or identifier
-    except Exception:
-        simulated = True
+    except Exception as e:
+        return FetchLinearIssueOutput(
+            success=False,
+            message=f"Linear connector error: {e}",
+        )
 
     now = datetime.now(timezone.utc).isoformat()
     try:
@@ -100,6 +101,7 @@ async def fetch_linear_issue(ctx: FunctionContext, data: FetchLinearIssueInput) 
             "linearPriority": priority,
             "linearAssignee": assignee,
             "linearSyncedAt": now,
+            "lastSyncResult": "fetched",
         })
     except Exception:
         pass
@@ -112,5 +114,5 @@ async def fetch_linear_issue(ctx: FunctionContext, data: FetchLinearIssueInput) 
     return FetchLinearIssueOutput(
         success=True, status=status, priority=priority,
         assignee=assignee, title=title, url=url,
-        identifier=identifier, simulated=simulated,
+        identifier=identifier,
     )
