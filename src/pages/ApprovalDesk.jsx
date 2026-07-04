@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { Check, X, Pencil, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useLemmaRecords } from "@/hooks/useLemmaRecords";
@@ -20,8 +20,21 @@ export default function ApprovalDesk() {
   const [editMode, setEditMode] = useState(false);
   const [editBody, setEditBody] = useState("");
 
-  const pending = drafts.filter((d) => d.status === "pending");
-  const current = pending.find((d) => d.id === selectedId) || pending[0] || null;
+  const localRemoved = useRef(new Set());
+
+  const pending = useMemo(() => {
+    return (drafts || []).filter((d) => d.status === "pending" && !localRemoved.current.has(d.id));
+  }, [drafts]);
+
+  const current = useMemo(() => {
+    return pending.find((d) => d.id === selectedId) || pending[0] || null;
+  }, [pending, selectedId]);
+
+  useEffect(() => {
+    if (!loading && pending.length > 0 && !pending.find((d) => d.id === selectedId)) {
+      setSelectedId(pending[0]?.id || null);
+    }
+  }, [loading]);
 
   if (!isManager) {
     return (
@@ -35,29 +48,53 @@ export default function ApprovalDesk() {
     );
   }
 
-  const handleAction = async (action) => {
-    if (!current) return;
+  const createNotification = useCallback(async (draft, action) => {
+    try {
+      await client.records.create("audit_logs", {
+        action: `draft.${action}`,
+        actor_type: "user",
+        resource_type: "draft",
+        resource_id: draft.id,
+        ticket_id: draft.ticket_id,
+        message: `Draft #${draft.ticket_number || draft.id.slice(0, 8)} was ${action}d`,
+      });
+    } catch {}
+  }, []);
+
+  const handleAction = useCallback(async (action) => {
+    if (!current || actionLoading) return;
     if ((action === "approve" && !canApproveDrafts) || (action === "reject" && !canRejectDrafts)) return;
+    const draftId = current.id;
     const toastId = toast.loading(action === "approve" ? "Approving draft..." : "Rejecting draft...");
     setActionLoading(action);
     try {
       if (action === "approve") {
         if (editMode) {
-          await client.records.update("drafts", current.id, { body: editBody });
+          await client.records.update("drafts", draftId, { body: editBody });
         }
-        await client.functions.run("resolve_ticket", { input: { draft_id: current.id, ticket_id: current.ticket_id } });
+        await client.functions.run("resolve_ticket", { input: { draft_id: draftId, ticket_id: current.ticket_id } });
         try {
-          await client.functions.run("send_approved_reply", { input: { draft_id: current.id, ticket_id: current.ticket_id, channel: "email" } });
-        } catch (sendErr) { console.warn("Send reply skipped:", sendErr); }
-      } else if (action === "reject") {
-        await client.functions.run("reject_draft", { input: { draft_id: current.id, ticket_id: current.ticket_id } });
+          await client.functions.run("send_approved_reply", { input: { draft_id: draftId, ticket_id: current.ticket_id, channel: "email" } });
+        } catch {}
+      } else {
+        await client.functions.run("reject_draft", { input: { draft_id: draftId, ticket_id: current.ticket_id } });
       }
       toast.dismiss(toastId);
       toast.success(action === "approve" ? "Draft approved, reply sent, ticket resolved" : "Draft rejected");
-      refresh(); emitRefresh(); setSelectedId(null);
-    } catch (err) { toast.dismiss(toastId); toast.error(err?.message || "Action failed"); }
-    finally { setActionLoading(null); setEditMode(false); }
-  };
+      localRemoved.current.add(draftId);
+      await createNotification(current, action);
+      setEditMode(false);
+      setActionLoading(null);
+      const next = pending.find((d) => d.id !== draftId);
+      setSelectedId(next?.id || null);
+      refresh();
+      emitRefresh();
+    } catch (err) {
+      toast.dismiss(toastId);
+      toast.error(err?.message || err?.toString() || "Action failed");
+      setActionLoading(null);
+    }
+  }, [current, actionLoading, canApproveDrafts, canRejectDrafts, editMode, editBody, pending, refresh, createNotification]);
 
   return (
     <motion.div className="flex flex-col min-h-full" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>

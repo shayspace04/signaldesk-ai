@@ -7,14 +7,30 @@ from typing import Optional
 from pydantic import BaseModel
 from lemma_sdk import FunctionContext, Pod
 
+def _items(rows):
+    if rows is None:
+        return []
+    if hasattr(rows, "items"):
+        items = rows.items
+        if not items:
+            return []
+        if hasattr(items[0], "to_dict"):
+            return [item.to_dict() for item in items]
+        return list(items)
+    if isinstance(rows, dict) and "data" in rows:
+        return rows["data"]
+    if isinstance(rows, list):
+        return rows
+    return []
+
 def _require_manager(ctx, action):
     user_id = str(ctx.user_id) if ctx.user_id else None
     if not user_id:
         raise RuntimeError("Insufficient permissions: must be authenticated")
     pod = Pod.from_env()
     try:
-        rows = pod.records.list("user_roles", {"filters": {"user_id": user_id}, "limit": 1})
-        items = rows.get("items") or rows.get("data") or []
+        rows = pod.records.list("user_roles", filter=[{"field": "user_id", "op": "eq", "value": user_id}], limit=1)
+        items = _items(rows)
         if items and items[0].get("role") == "support_manager":
             return
     except Exception:
@@ -56,12 +72,11 @@ async def resolve_ticket(ctx: FunctionContext, data: ResolveTicketInput) -> Reso
 
     draft_id = data.draft_id
     if not draft_id:
-        drafts = pod.records.list("drafts", {
-            "filters": {"ticket_id": data.ticket_id, "status": "pending"},
-            "sort": [{"field": "created_at", "direction": "desc"}],
-            "limit": 1,
-        })
-        items = drafts.get("items") or drafts.get("data") or []
+        drafts = pod.records.list("drafts", filter=[
+            {"field": "ticket_id", "op": "eq", "value": data.ticket_id},
+            {"field": "status", "op": "eq", "value": "pending"},
+        ], sort=[{"field": "created_at", "direction": "desc"}], limit=1)
+        items = _items(drafts)
         if not items:
             raise RuntimeError(f"no pending draft for ticket {data.ticket_id}")
         draft_id = items[0]["id"]
