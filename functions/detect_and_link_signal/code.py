@@ -104,7 +104,14 @@ async def detect_and_link_signal(ctx: FunctionContext, data: DetectAndLinkSignal
             all_rows = _items(pod.records.list("tickets", limit=200))
         candidates = [t for t in all_rows if t.get("id") != data.ticket_id and t.get("status") != "resolved"]
 
-        related = [c for c in candidates if _similarity(ticket, c) >= SIMILARITY_MIN_SCORE]
+        related_with_score = []
+        for c in candidates:
+            s = _similarity(ticket, c)
+            if s >= SIMILARITY_MIN_SCORE:
+                related_with_score.append((c, s))
+        related = [r for r, _ in related_with_score]
+        max_similarity = max((s for _, s in related_with_score), default=0.0)
+        signal_confidence = int(max_similarity * 100)
         all_ticket_ids = [data.ticket_id] + [t.get("id") for t in related]
 
         # Check if any related ticket is already in a signal
@@ -157,6 +164,7 @@ async def detect_and_link_signal(ctx: FunctionContext, data: DetectAndLinkSignal
                     "example_ticket_ids": all_ticket_ids,
                     "recurring_terms": recurring,
                     "proposed_priority": priority,
+                    "analysis_confidence": signal_confidence,
                 }
             })
             od = sig_result.get("output_data") or {}
