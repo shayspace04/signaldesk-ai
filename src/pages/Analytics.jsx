@@ -272,19 +272,26 @@ export default function Analytics() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 mb-8">
+        <ChartSection title="Actions by Type" data={Object.fromEntries((m.analytics.actionsByType || []).slice(0, 10))} color="bg-cyan-500" />
         <div className="rounded-xl border border-border dark:border-border-dark bg-card p-5 shadow-sm">
           <h2 className="text-base font-semibold text-primary mb-4">SLA Compliance</h2>
-          <div className="flex items-center gap-4">
-            <span className="text-[36px] font-bold tracking-tight text-primary">
-              <CountUp end={m.analytics.slaCompliance} duration={1.5} suffix="%" />
-            </span>
-            <p className="text-sm text-muted dark:text-muted-dark">Tickets resolved within 24 hours</p>
+            {m.analytics.slaCompliance != null ? (
+              <>
+                <div className="flex items-center gap-4">
+                  <span className="text-[36px] font-bold tracking-tight text-primary">
+                    <CountUp end={m.analytics.slaCompliance} duration={1.5} suffix="%" />
+                  </span>
+                  <p className="text-sm text-muted dark:text-muted-dark">Tickets resolved within 24 hours</p>
+                </div>
+                <div className="mt-4 h-3 rounded-full bg-muted-surface overflow-hidden">
+                  <div className={`h-full rounded-full transition-all duration-700 ${m.analytics.slaCompliance >= 90 ? "bg-emerald-500" : m.analytics.slaCompliance >= 70 ? "bg-amber-500" : "bg-red-500"}`}
+                    style={{ width: `${m.analytics.slaCompliance}%` }} />
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-muted dark:text-muted-dark py-4">No resolved tickets yet.</p>
+            )}
           </div>
-          <div className="mt-4 h-3 rounded-full bg-muted-surface overflow-hidden">
-            <div className={`h-full rounded-full transition-all duration-700 ${m.analytics.slaCompliance >= 90 ? "bg-emerald-500" : m.analytics.slaCompliance >= 70 ? "bg-amber-500" : "bg-red-500"}`}
-              style={{ width: `${m.analytics.slaCompliance}%` }} />
-          </div>
-        </div>
         <ChartSection title="Resolution Time Trend (hours)" data={Object.fromEntries(m.analytics.avgResTimeByDay)} color="bg-cyan-500" />
         <div className="rounded-xl border border-border dark:border-border-dark bg-card p-5 shadow-sm">
           <h2 className="text-base font-semibold text-primary mb-4">Engineering Response</h2>

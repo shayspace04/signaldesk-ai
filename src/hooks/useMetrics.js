@@ -46,7 +46,7 @@ export function useMetrics(workspaceId, options = {}) {
   const sHook = useLemmaRecords("signals", { limit: 1000, filters: metricsFilter });
   const iHook = useLemmaRecords("incidents", { limit: 500, filters: metricsFilter });
   const dHook = useLemmaRecords("drafts", { limit: 500, filters: metricsFilter });
-  const aHook = useLemmaRecords("audit_logs", { limit: 500, sort: [{ field: "created_at", direction: "desc" }], filters: metricsFilter });
+  const aHook = useLemmaRecords("audit_logs", { sort: [{ field: "created_at", direction: "desc" }], filters: metricsFilter });
   const kHook = useLemmaRecords("memory_entries", { limit: 500, filters: metricsFilter });
 
   useRefreshListener(() => {
@@ -355,6 +355,10 @@ export function useMetrics(workspaceId, options = {}) {
       knRefs[d] = (knRefs[d] || 0) + 1;
     });
 
+    const byAction = {};
+    allLogs.forEach((l) => { const a = l.action || "unknown"; byAction[a] = (byAction[a] || 0) + 1; });
+    const actionTypes = Object.entries(byAction).sort((a, b) => b[1] - a[1]);
+
     return {
       ticketsByCategory: byCat,
       ticketsByPriority: byPri,
@@ -374,15 +378,16 @@ export function useMetrics(workspaceId, options = {}) {
       topCategories: Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 5),
       topCustomers: Object.entries(custCount).sort((a, b) => b[1] - a[1]).slice(0, 5),
       avgResTimeByDay: Object.entries(resTrend).map(([d, v]) => [d, Math.round((v.total / v.count) * 10) / 10]).slice(-14),
-      slaCompliance: sla.length > 0 ? Math.round((slaOk.length / sla.length) * 100) : 100,
+      slaCompliance: sla.length > 0 ? Math.round((slaOk.length / sla.length) * 100) : null,
       resolvedCount: ticketMetrics.resolved,
       incidentCount: incidentMetrics.total,
       totalActions: auditMetrics.total,
+      actionsByType: actionTypes,
       engineeringResponseTime: avgEngResponseTime,
       incidentResolved: incidentMetrics.resolvedLinear,
       escalatedCount: incidentMetrics.escalated,
     };
-  }, [allTickets, allSignals, allIncidents, allKnowledge, ticketMetrics, incidentMetrics, auditMetrics]);
+  }, [allTickets, allSignals, allIncidents, allKnowledge, allLogs, ticketMetrics, incidentMetrics, auditMetrics]);
 
   const churnMetrics = useMemo(() => {
     const open = allTickets.filter((t) => t.status !== "resolved" && t.status !== "closed");
