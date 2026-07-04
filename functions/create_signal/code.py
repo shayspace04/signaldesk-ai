@@ -29,6 +29,7 @@ class CreateSignalInput(BaseModel):
     example_ticket_ids: Optional[List[str]] = None
     recurring_terms: Optional[List[str]] = None
     proposed_priority: Optional[str] = "normal"
+    analysis_confidence: Optional[int] = None
 
 class CreateSignalOutput(BaseModel):
     signal_id: str
@@ -43,6 +44,7 @@ async def create_signal(ctx: FunctionContext, data: CreateSignalInput) -> Create
         "example_ticket_ids": data.example_ticket_ids or [],
         "recurring_terms": data.recurring_terms or [],
         "proposed_priority": data.proposed_priority or "normal",
+        "analysis_confidence": data.analysis_confidence,
         "status": "pending", "workflowStage": "new", "detected_at": now,
     })
     linked = 0

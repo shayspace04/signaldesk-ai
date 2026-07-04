@@ -57,7 +57,7 @@ function KanbanCard({ signal, index: cardIndex, isManager, onOpenHandoff, onDrag
     if (stage === "incident_created") return 90;
     if (stage === "approved") return 80;
     if (stage === "review") return 50;
-    return Math.min(25 + (signal.analysis_confidence || 0) * 0.3, 45);
+    return Math.min(25 + ((signal.analysis_confidence ?? signal.confidence ?? 0) * 0.3), 45);
   }, [signal]);
 
   return (
@@ -177,7 +177,7 @@ function EngineeringHandoffModal({ signal, onClose }) {
       title: signal.name || signal.summary || "Signal",
       summary: signal.summary || tickets.map((t) => t.title || "").filter(Boolean).join("; ").slice(0, 500) || "",
       rootCause: signal.root_cause || (tickets.length > 0 ? `Systemic issue identified across ${tickets.length} ticket(s) in ${categories[0] || "multiple"} categories. Common keywords: ${keyTerms.slice(0, 4).join(", ")}.` : ""),
-      confidence: signal.analysis_confidence || 0,
+      confidence: signal.analysis_confidence ?? signal.confidence ?? signal.confidence_score ?? 0,
       priority: signal.proposed_priority || maxPriority || "normal",
       severity: signal.proposed_priority || maxPriority || "normal",
       affectedTicketCount: tickets.length || signal.ticket_count || signal.evidence_count || 0,
@@ -231,7 +231,7 @@ function EngineeringHandoffModal({ signal, onClose }) {
       reproductionSummary: tickets.length > 0
         ? `Reproduced across ${tickets.length} independent ticket(s).\nCommon symptoms: ${keyTerms.slice(0, 5).join(", ")}.\nFirst occurrence: ${firstSeen ? new Date(firstSeen).toISOString().split("T")[0] : "N/A"}\nDuration: ${duration > 0 ? `${durationHours} hours` : "Ongoing"}`
         : "Awaiting linked ticket data for reproduction analysis.",
-      clusterConfidence: signal.analysis_confidence || 0,
+      clusterConfidence: signal.analysis_confidence ?? signal.confidence ?? signal.confidence_score ?? 0,
     };
   }, [signal, linkedTickets]);
 
@@ -823,7 +823,7 @@ export default function Signals() {
           `**Summary**: ${signal.summary || "N/A"}`,
           `**Root Cause**: ${signal.root_cause || "N/A"}`,
           `**Priority**: ${signal.proposed_priority || "normal"}`,
-          `**Confidence**: ${signal.analysis_confidence || 0}%`,
+          `**Confidence**: ${signal.analysis_confidence ?? signal.confidence ?? 0}%`,
           `**Affected Customers**: ${signal.affected_customer_count || 0}`,
           `**Category**: ${signal.category || "N/A"}`,
         ];
@@ -902,7 +902,7 @@ export default function Signals() {
                 related_incident_id: signal.incident_id || null,
                 category: signal.category || "general",
                 tags: [signal.category].filter(Boolean),
-                confidence: signal.analysis_confidence || 80,
+                confidence: signal.analysis_confidence ?? signal.confidence ?? 80,
                 workspaceId: signal.workspaceId || workspace.id,
                 workspaceName: signal.workspaceName || workspace.name,
               },

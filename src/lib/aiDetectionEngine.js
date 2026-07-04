@@ -634,7 +634,6 @@ async function writeAuditLog(action, actor, details, workspaceId, workspaceName)
 async function createSignalFromCluster(cluster, workspaceId, workspaceName) {
   log("Calling create_signal function for:", cluster.name);
 
-  /* FIXED: Use 'name' not 'title' — the Python function expects 'name' */
   const signalResult = await client.functions.run(SIGNAL_FUNC, {
     input: {
       name: cluster.name,
@@ -643,6 +642,7 @@ async function createSignalFromCluster(cluster, workspaceId, workspaceName) {
       evidence_count: cluster.ticket_count,
       example_ticket_ids: cluster.ticket_ids,
       proposed_priority: cluster.proposed_priority,
+      analysis_confidence: cluster.confidence,
     },
   });
 
@@ -651,17 +651,13 @@ async function createSignalFromCluster(cluster, workspaceId, workspaceName) {
 
   log("Signal created with id:", signalId);
 
-  /* Only PATCH columns that exist in the signals table schema */
+  /* Patch remaining columns not in create_signal input */
   const signalUpdates = {};
   signalUpdates.affected_customer_count = cluster.affected_customer_count;
-  signalUpdates.analysis_confidence = cluster.confidence;
   signalUpdates.business_impact_score = Math.round(cluster.risk_score * 10);
   signalUpdates.root_cause = cluster.root_cause_summary;
-  signalUpdates.proposed_priority = cluster.proposed_priority;
   signalUpdates.workspaceId = workspaceId;
   signalUpdates.workspaceName = workspaceName;
-  signalUpdates.status = "pending";
-  signalUpdates.workflowStage = "new";
 
   await client.records.update("signals", signalId, signalUpdates);
 
@@ -688,6 +684,7 @@ async function attachTicketToSignal(signal, cluster, ticketId) {
   signalUpdates.evidence_count = allIds.length;
   signalUpdates.affected_customer_count = totalCustomerCount;
   signalUpdates.business_impact_score = Math.max(signal.business_impact_score || 0, Math.round(cluster.risk_score * 10));
+  signalUpdates.analysis_confidence = Math.max(signal.analysis_confidence ?? 0, cluster.confidence ?? 0);
 
   await client.records.update("signals", signal.id, signalUpdates);
 
