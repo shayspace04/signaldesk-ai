@@ -8,7 +8,9 @@ import {
   BarChart3,
 } from "lucide-react";
 import client from "@/lib/lemmaClient";
-import { seedWorkspace, destroySeeds } from "@/lib/seedLoader";
+import { destroySeeds } from "@/lib/seedLoader";
+import { loadDemoWorkspace, DEMO_PROGRESS_EVENT, DEMO_COMPLETE_EVENT } from "@/lib/demoWorkspaceLoader";
+import { WORKSPACE_DATASETS } from "@/data/workspaceDatasets";
 import { migrateWorkspaces, validateWorkspaces } from "@/lib/workspaceMigration";
 import { useWorkspace, workspaces } from "@/context/WorkspaceContext";
 import { emitRefresh } from "@/lib/refreshEvents";
@@ -557,9 +559,9 @@ export default function Settings() {
   const [linearTesting, setLinearTesting] = useState(false);
   const [lemmaTesting, setLemmaTesting] = useState(false);
   const [gmailTesting, setGmailTesting] = useState(false);
-  const [seeding, setSeeding] = useState(null);
-  const [seedProgress, setSeedProgress] = useState({ done: 0, total: 0, msg: "" });
-  const [seedDone, setSeedDone] = useState(null);
+  const [demoLoading, setDemoLoading] = useState(null);
+  const [demoProgress, setDemoProgress] = useState(null);
+  const [demoResult, setDemoResult] = useState(null);
   const [devRunning, setDevRunning] = useState(null);
   const [validateResult, setValidateResult] = useState(null);
   const [validateLoading, setValidateLoading] = useState(false);
@@ -573,6 +575,17 @@ export default function Settings() {
   const [deploySummary, setDeploySummary] = useState(null);
   const [aiWorkspaceTab, setAiWorkspaceTab] = useState(workspaceId || "signaldesk");
   const { config: devConfig, updateConfig: updateDevConfig } = useAIDetectionConfig(workspaceId);
+
+  useEffect(() => {
+    const onProgress = (e) => setDemoProgress(e.detail);
+    const onComplete = (e) => setDemoResult(e.detail);
+    window.addEventListener(DEMO_PROGRESS_EVENT, onProgress);
+    window.addEventListener(DEMO_COMPLETE_EVENT, onComplete);
+    return () => {
+      window.removeEventListener(DEMO_PROGRESS_EVENT, onProgress);
+      window.removeEventListener(DEMO_COMPLETE_EVENT, onComplete);
+    };
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -772,32 +785,58 @@ export default function Settings() {
       </CollapsibleSection>
 
       {/* ================================================================ */}
-      {/* DEMO DATA                                                        */}
+      {/* DEMO WORKSPACE TEMPLATES                                        */}
       {/* ================================================================ */}
-      <CollapsibleSection title="Demo Data" icon={Upload} defaultOpen={false}>
-        <p className="mb-4 text-sm text-muted dark:text-muted-dark">Load production-quality demo data for workspace: <span className="text-primary font-medium">{workspace.name}</span>.</p>
-        <div className="space-y-3">
-          {workspaces.filter((w) => w.id !== "signaldesk").map((w) => (
-            <div key={w.id} className="flex items-center justify-between rounded-xl border border-border dark:border-border-dark bg-card p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold text-white" style={{ backgroundColor: w.accent }}>{w.initials}</div>
-                <div><p className="text-sm font-medium text-primary">{w.name}</p><p className="text-xs text-muted dark:text-muted-dark">{w.ticketCategories.length} categories · {w.subtitle}</p></div>
+      <CollapsibleSection title="Demo Workspace Templates" icon={Upload} defaultOpen={false}>
+        <p className="mb-5 text-sm text-muted dark:text-muted-dark">Explore SignalDesk using realistic production-style datasets. Each workspace simulates real customer support activity and demonstrates the complete AI incident workflow.</p>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {workspaces.filter((w) => w.id !== "signaldesk").map((w) => {
+            const ds = WORKSPACE_DATASETS[w.id];
+            const cats = w.ticketCategories || [];
+            const expected = ds?.expected || { signals: 3, incidents: 1, knowledge: 0 };
+            const ticketCount = ds?.tickets?.length || 20;
+            return (
+              <div key={w.id} className="group relative rounded-xl border border-border dark:border-border-dark bg-card p-5 shadow-sm hover:shadow-card hover:border-zinc-300 dark:hover:border-border-dark transition-all duration-200">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl text-base font-bold text-white" style={{ backgroundColor: w.accent }}>{w.initials}</div>
+                  <div>
+                    <p className="text-sm font-semibold text-primary">{w.name}</p>
+                    <p className="text-xs text-muted dark:text-muted-dark">{w.subtitle}</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted dark:text-muted-dark mb-3 leading-relaxed">{w.description?.slice(0, 120)}</p>
+                <div className="text-xs text-muted dark:text-muted-dark mb-2">{ticketCount} realistic customer tickets</div>
+                <div className="mb-3">
+                  <p className="text-[11px] font-medium text-muted-base mb-1">Categories</p>
+                  <div className="flex flex-wrap gap-1">
+                    {cats.slice(0, 4).map((c) => (
+                      <span key={c} className="rounded-md bg-zinc-100 dark:bg-[#202024] px-2 py-0.5 text-[10px] font-medium text-muted-base">{c}</span>
+                    ))}
+                  </div>
+                </div>
+                <div className="mb-4">
+                  <p className="text-[11px] font-medium text-muted-base mb-1.5">Expected Output</p>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-[11px]"><CheckCircle2 size={12} className="text-emerald-500" /><span className="text-secondary-body">{expected.signals} Signals</span></div>
+                    <div className="flex items-center gap-2 text-[11px]"><CheckCircle2 size={12} className="text-emerald-500" /><span className="text-secondary-body">{expected.incidents} Incidents</span></div>
+                    <div className="flex items-center gap-2 text-[11px]"><CheckCircle2 size={12} className="text-emerald-500" /><span className="text-secondary-body">Knowledge Articles</span></div>
+                  </div>
+                </div>
+                <button disabled={demoLoading === w.id} onClick={async () => {
+                  setDemoLoading(w.id);
+                  try {
+                    await loadDemoWorkspace(w.id);
+                  } catch (err) {
+                    console.error(err);
+                  } finally {
+                    setDemoLoading(null);
+                  }
+                }} className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 transition-all duration-200 disabled:opacity-50">
+                  {demoLoading === w.id ? <><Loader2 size={14} className="animate-spin" /> Loading...</> : <><Upload size={14} /> Load Workspace</>}
+                </button>
               </div>
-              <button disabled={seeding === w.id} onClick={async () => {
-                setSeeding(w.id); setSeedProgress({ done: 0, total: 0, msg: "Starting..." }); setSeedDone(null);
-                try { await seedWorkspace(w.id, (done, total, msg) => setSeedProgress({ done, total, msg })); setSeedDone(w.id); }
-                catch (err) { console.error(err); } finally { setSeeding(null); }
-              }} className="flex items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 transition-all duration-200 disabled:opacity-50">
-                {seeding === w.id ? <><Loader2 size={14} className="animate-spin" /> Loading...</> : seedDone === w.id ? <><Check size={14} /> Loaded</> : <><Upload size={14} /> Load Data</>}
-              </button>
-            </div>
-          ))}
-          {seeding && (
-            <div className="rounded-xl border border-border dark:border-border-dark bg-card p-4">
-              <div className="flex items-center gap-3 mb-2"><Loader2 size={16} className="animate-spin text-muted-base" /><span className="text-sm text-secondary-body">{seedProgress.msg}</span></div>
-              {seedProgress.total > 0 && <div className="h-1.5 w-full rounded-full bg-muted-surface overflow-hidden"><div className="h-full rounded-full bg-zinc-900 transition-all duration-300" style={{ width: `${(seedProgress.done / seedProgress.total) * 100}%` }} /></div>}
-            </div>
-          )}
+            );
+          })}
         </div>
       </CollapsibleSection>
 
@@ -1075,6 +1114,103 @@ export default function Settings() {
 
           </div>
         </CollapsibleSection>
+      )}
+
+      {/* Demo Workspace Progress Dialog */}
+      {demoLoading && demoProgress && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-border dark:border-border-dark bg-card p-6 shadow-modal">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 dark:bg-[#202024]">
+                {demoProgress.step === "complete" ? (
+                  <CheckCircle2 size={20} className="text-emerald-500" />
+                ) : (
+                  <Loader2 size={20} className="animate-spin text-muted-base" />
+                )}
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-primary">Loading {demoProgress.workspaceName || "Workspace"}...</h3>
+                <p className="text-xs text-muted dark:text-muted-dark">{demoProgress.label}</p>
+              </div>
+            </div>
+            <div className="h-1.5 w-full rounded-full bg-muted-surface overflow-hidden mb-5">
+              <div className="h-full rounded-full bg-zinc-900 transition-all duration-500" style={{ width: `${(demoProgress.done / demoProgress.total) * 100}%` }} />
+            </div>
+            <div className="space-y-1.5">
+              {[
+                "Importing customer tickets",
+                "Running AI similarity detection",
+                "Building ticket clusters",
+                "Creating Signals",
+                "Performing root cause analysis",
+                "Calculating business impact",
+                "Escalating Incidents",
+                "Generating Engineering Handoffs",
+                "Creating AI Draft Replies",
+                "Updating Knowledge Base",
+                "Refreshing Analytics",
+                "Complete",
+              ].map((label, i) => {
+                const stepIndex = ["clearing", "importing_tickets", "running_detection", "building_clusters", "creating_signals", "analyzing_impact", "escalating_incidents", "generating_handoffs", "creating_drafts", "updating_knowledge", "refreshing", "complete"];
+                const step = stepIndex.indexOf(demoProgress.step);
+                const idx = stepIndex.indexOf(demoProgress.step);
+                const isDone = i < idx;
+                const isActive = i === idx;
+                return (
+                  <div key={label} className={`flex items-center gap-2 text-xs ${isDone ? "text-emerald-600 dark:text-emerald-400" : isActive ? "text-primary font-medium" : "text-zinc-400 dark:text-zinc-600"}`}>
+                    {isDone ? <CheckCircle2 size={12} /> : isActive ? <Loader2 size={12} className="animate-spin" /> : <div className="w-3 h-3 rounded-full border border-current" />}
+                    {label}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Demo Workspace Success Dialog */}
+      {demoResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setDemoResult(null)}>
+          <div className="w-full max-w-md rounded-2xl border border-border dark:border-border-dark bg-card p-6 shadow-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
+                <CheckCircle2 size={24} className="text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-primary">Workspace Loaded Successfully</h3>
+                <p className="text-sm text-muted dark:text-muted-dark">{demoResult.workspaceName}</p>
+              </div>
+            </div>
+            <div className="rounded-xl bg-zinc-50 dark:bg-[#202024] p-4 mb-5">
+              <p className="text-xs font-medium text-muted dark:text-muted-dark mb-3">Imported</p>
+              <div className="space-y-1.5 mb-3">
+                <div className="flex justify-between text-sm"><span className="text-secondary-body">Tickets</span><span className="text-primary font-semibold">{demoResult.ticketsCreated}</span></div>
+              </div>
+              <p className="text-xs font-medium text-muted dark:text-muted-dark mb-3">Generated</p>
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-sm"><span className="text-secondary-body">Signals</span><span className="text-primary font-semibold">{demoResult.signalsGenerated}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-secondary-body">Incidents</span><span className="text-primary font-semibold">{demoResult.incidentsGenerated}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-secondary-body">Knowledge Articles</span><span className="text-primary font-semibold">{demoResult.knowledgeGenerated}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-secondary-body">Draft Replies</span><span className="text-primary font-semibold">{demoResult.draftReplies}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-secondary-body">Notifications</span><span className="text-primary font-semibold">{demoResult.notifications}</span></div>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => { setDemoResult(null); window.location.href = "/"; }}
+                className="flex-1 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 transition-colors">
+                Open Dashboard
+              </button>
+              <button onClick={() => { setDemoResult(null); window.location.href = "/tickets"; }}
+                className="flex-1 rounded-xl border border-border dark:border-border-dark px-4 py-2.5 text-sm font-medium text-secondary-body hover:bg-zinc-50 dark:hover:bg-[#27272A] transition-colors">
+                View Tickets
+              </button>
+              <button onClick={() => { setDemoResult(null); window.location.href = "/signals"; }}
+                className="flex-1 rounded-xl border border-border dark:border-border-dark px-4 py-2.5 text-sm font-medium text-secondary-body hover:bg-zinc-50 dark:hover:bg-[#27272A] transition-colors">
+                View Signals
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </motion.div>
   );
