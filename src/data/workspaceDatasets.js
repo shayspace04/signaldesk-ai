@@ -68,6 +68,41 @@ function daysAgo(n) {
   return d.toISOString();
 }
 
+const bodyTemplates = {
+  "Financial Report": "Quarterly report generation is failing with error code ERR-8932. The aggregation pipeline times out when processing portfolio data for the requested period. This report is needed for the upcoming board meeting.",
+  "Document Review": "The AI document processing pipeline is not returning analysis results. Scanned documents remain in pending state for over 2 hours. The OCR service appears to be unresponsive. Manual review confirms the source documents are readable.",
+  "Portfolio": "Portfolio data processing is experiencing delays. Uploaded financial statements are not being reflected in the valuation models. The data pipeline status shows processing errors on multiple records.",
+  "Client": "Client portal access is degraded. Dashboard pages are taking over 30 seconds to load. Multiple clients have reported timeouts when trying to view their investment summaries and document vault.",
+  "Risk Assessment": "Risk assessment module is returning incomplete results. Portfolio concentration analysis shows zero values across all funds. The compliance team cannot generate the required regulatory reports.",
+  "Login": "Authentication service is experiencing intermittent failures. Users are unable to log in through the client portal. MFA verification is timing out during the enrollment flow for some accounts.",
+  "CRM Sync": "CRM synchronization is not completing successfully. Partner data changes are not propagating across integrated systems. The sync job status shows failures on multiple connection endpoints.",
+  "CRM": "Customer data synchronization is experiencing delays. Record changes made over 45 minutes ago are still not reflected in connected systems. The sync queue appears to be backed up.",
+  "API": "API endpoint is returning inconsistent results. Response times have degraded significantly. Integration reliability is below the required threshold for production workloads.",
+  "Webhook": "Webhook delivery reliability is degraded. Events are not reaching subscribed endpoints within the expected timeframe. The retry mechanism is not functioning as designed.",
+  "Data Import": "Data import pipeline is stalled. Jobs are remaining in queued state for extended periods. Previously completed imports of similar size finished within minutes.",
+  "Analytics": "Analytics dashboard is displaying stale data. Real-time metrics are not updating as expected. The data freshness indicator shows the last successful update was yesterday.",
+  "Integrations": "Third-party integration connectivity is intermittent. Service-to-service communication is failing on certain endpoints. Integration health checks are reporting degraded status.",
+  "Appointment": "Appointment booking system is failing at the confirmation step. Patients report being unable to complete their bookings even when slots appear available. Payment processing completes but booking confirmation fails.",
+  "Prescription": "E-prescription service is experiencing timeouts. Pharmacy systems cannot retrieve pending prescriptions. The prescription routing service is not delivering renewal requests to the correct provider inboxes.",
+  "Patient": "Patient record system is experiencing data integrity issues. Updates to patient demographics are not persisting across visits. The HL7 interface between systems is not synchronizing correctly.",
+  "Lab Reports": "Lab report processing pipeline is experiencing delays. Uploaded lab results are not being processed within the expected timeframe. Auto-import from reference labs has stalled.",
+  "Doctor": "Provider management system is experiencing synchronization issues. Doctor availability calendars are not reflecting correctly in the scheduling system. Provider credential verification is delayed.",
+  "Insurance": "Insurance verification service is unresponsive. Eligibility checks are timing out. Prior authorization requests are stuck in pending state without progressing through the workflow.",
+  "Booking": "Booking confirmation is failing after successful payment. The transaction completes on the payment gateway but the booking does not appear in the appointment schedule. Users receive no confirmation.",
+  "Beautician": "Service provider scheduling is experiencing issues. Assigned beauticians are not receiving appointment notifications. Provider availability is not accurately reflected in the booking interface.",
+  "Refund": "Refund processing is delayed beyond the stated SLA. Refund requests submitted multiple days ago remain in pending state. Customers are escalating due to lack of updates on their refund status.",
+  "Payment": "Payment gateway is experiencing transaction failures. Multiple payment methods are not completing successfully. Transaction logs show the gateway returning errors after OTP verification.",
+  "Wallet": "Wallet balance synchronization issue. Transactions are not being reflected accurately in customer wallet balances. Fund additions and deductions show incorrect running totals.",
+  "Cancellation": "Cancellation workflow is not completing correctly. Subscription cancellations submitted through the app are not being processed. Customers continue to receive service after cancellation requests.",
+  "User Access": "User access and authentication services are experiencing issues. Password resets and SSO logins are failing intermittently. Permission updates are not taking effect immediately.",
+  "Contract": "Contract management system is showing discrepancies. Billing amounts do not match agreed contract terms. Workflow approvals for renewals are not following the defined governance process.",
+  "Partner Onboarding": "Partner onboarding workflows are stalled. Invitation emails are not being delivered to prospective partners. The onboarding verification process is not completing as expected.",
+};
+
+function generateBody(title, category) {
+  return bodyTemplates[category] || `Issue reported with ${category.toLowerCase() || "service"} functionality. Investigation required to determine root cause and resolution path.`;
+}
+
 const WORKSPACES = {
   binocs: {
     id: "binocs",
@@ -230,41 +265,6 @@ const WORKSPACES = {
     ].map((t, i) => ({ ...t, body: generateBody(t.title, t.category), created_at: daysAgo(i + 1) })),
   },
 };
-
-const bodyTemplates = {
-  "Financial Report": "Quarterly report generation is failing with error code ERR-8932. The aggregation pipeline times out when processing portfolio data for the requested period. This report is needed for the upcoming board meeting.",
-  "Document Review": "The AI document processing pipeline is not returning analysis results. Scanned documents remain in pending state for over 2 hours. The OCR service appears to be unresponsive. Manual review confirms the source documents are readable.",
-  "Portfolio": "Portfolio data processing is experiencing delays. Uploaded financial statements are not being reflected in the valuation models. The data pipeline status shows processing errors on multiple records.",
-  "Client": "Client portal access is degraded. Dashboard pages are taking over 30 seconds to load. Multiple clients have reported timeouts when trying to view their investment summaries and document vault.",
-  "Risk Assessment": "Risk assessment module is returning incomplete results. Portfolio concentration analysis shows zero values across all funds. The compliance team cannot generate the required regulatory reports.",
-  "Login": "Authentication service is experiencing intermittent failures. Users are unable to log in through the client portal. MFA verification is timing out during the enrollment flow for some accounts.",
-  "CRM Sync": "CRM synchronization is not completing successfully. Partner data changes are not propagating across integrated systems. The sync job status shows failures on multiple connection endpoints.",
-  "CRM": "Customer data synchronization is experiencing delays. Record changes made over 45 minutes ago are still not reflected in connected systems. The sync queue appears to be backed up.",
-  "API": "API endpoint is returning inconsistent results. Response times have degraded significantly. Integration reliability is below the required threshold for production workloads.",
-  "Webhook": "Webhook delivery reliability is degraded. Events are not reaching subscribed endpoints within the expected timeframe. The retry mechanism is not functioning as designed.",
-  "Data Import": "Data import pipeline is stalled. Jobs are remaining in queued state for extended periods. Previously completed imports of similar size finished within minutes.",
-  "Analytics": "Analytics dashboard is displaying stale data. Real-time metrics are not updating as expected. The data freshness indicator shows the last successful update was yesterday.",
-  "Integrations": "Third-party integration connectivity is intermittent. Service-to-service communication is failing on certain endpoints. Integration health checks are reporting degraded status.",
-  "Appointment": "Appointment booking system is failing at the confirmation step. Patients report being unable to complete their bookings even when slots appear available. Payment processing completes but booking confirmation fails.",
-  "Prescription": "E-prescription service is experiencing timeouts. Pharmacy systems cannot retrieve pending prescriptions. The prescription routing service is not delivering renewal requests to the correct provider inboxes.",
-  "Patient": "Patient record system is experiencing data integrity issues. Updates to patient demographics are not persisting across visits. The HL7 interface between systems is not synchronizing correctly.",
-  "Lab Reports": "Lab report processing pipeline is experiencing delays. Uploaded lab results are not being processed within the expected timeframe. Auto-import from reference labs has stalled.",
-  "Doctor": "Provider management system is experiencing synchronization issues. Doctor availability calendars are not reflecting correctly in the scheduling system. Provider credential verification is delayed.",
-  "Insurance": "Insurance verification service is unresponsive. Eligibility checks are timing out. Prior authorization requests are stuck in pending state without progressing through the workflow.",
-  "Booking": "Booking confirmation is failing after successful payment. The transaction completes on the payment gateway but the booking does not appear in the appointment schedule. Users receive no confirmation.",
-  "Beautician": "Service provider scheduling is experiencing issues. Assigned beauticians are not receiving appointment notifications. Provider availability is not accurately reflected in the booking interface.",
-  "Refund": "Refund processing is delayed beyond the stated SLA. Refund requests submitted multiple days ago remain in pending state. Customers are escalating due to lack of updates on their refund status.",
-  "Payment": "Payment gateway is experiencing transaction failures. Multiple payment methods are not completing successfully. Transaction logs show the gateway returning errors after OTP verification.",
-  "Wallet": "Wallet balance synchronization issue. Transactions are not being reflected accurately in customer wallet balances. Fund additions and deductions show incorrect running totals.",
-  "Cancellation": "Cancellation workflow is not completing correctly. Subscription cancellations submitted through the app are not being processed. Customers continue to receive service after cancellation requests.",
-  "User Access": "User access and authentication services are experiencing issues. Password resets and SSO logins are failing intermittently. Permission updates are not taking effect immediately.",
-  "Contract": "Contract management system is showing discrepancies. Billing amounts do not match agreed contract terms. Workflow approvals for renewals are not following the defined governance process.",
-  "Partner Onboarding": "Partner onboarding workflows are stalled. Invitation emails are not being delivered to prospective partners. The onboarding verification process is not completing as expected.",
-};
-
-function generateBody(title, category) {
-  return bodyTemplates[category] || bodyTemplates.default || `Issue reported with ${category.toLowerCase() || "service"} functionality. Investigation required to determine root cause and resolution path.`;
-}
 
 export const WORKSPACE_DATASETS = WORKSPACES;
 export const WORKSPACE_NAMES = {

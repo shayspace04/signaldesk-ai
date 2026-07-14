@@ -810,7 +810,7 @@ export default function Settings() {
                   <p className="text-[11px] font-medium text-muted-base mb-1">Categories</p>
                   <div className="flex flex-wrap gap-1">
                     {cats.slice(0, 4).map((c) => (
-                      <span key={c} className="rounded-md bg-zinc-100 dark:bg-[#202024] px-2 py-0.5 text-[10px] font-medium text-muted-base">{c}</span>
+                      <span key={c.value || c} className="rounded-md bg-zinc-100 dark:bg-[#202024] px-2 py-0.5 text-[10px] font-medium text-muted-base">{c.label || c}</span>
                     ))}
                   </div>
                 </div>
