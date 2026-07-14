@@ -217,7 +217,11 @@ export default function Dashboard() {
   const m = useMetrics(workspace.id, { timeFilter, searchQuery });
   const k = workspace.kpi;
 
-  const isEmpty = !m.loading && m.raw.tickets.length === 0 && m.raw.signals.length === 0 && m.raw.incidents.length === 0;
+  const hasWorkspaceData = m.all.tickets.length > 0 || m.all.signals.length > 0 || m.all.incidents.length > 0;
+  const filterActive = timeFilter !== "all" || searchQuery.trim().length > 0;
+  const noFilterResults = !m.loading && m.raw.tickets.length === 0 && m.raw.signals.length === 0 && m.raw.incidents.length === 0;
+  const isEmptyWorkspace = !m.loading && !hasWorkspaceData;
+  const isEmptyFilter = !m.loading && hasWorkspaceData && noFilterResults && filterActive;
   const d = m.dashboard;
 
   const trendUp = (v) => !v?.startsWith("-");
@@ -274,17 +278,33 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {isEmpty && !searchQuery ? (
+      {isEmptyWorkspace && !searchQuery ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 dark:border-border-dark bg-zinc-50/50 dark:bg-[#202024]/50 py-24">
           <Radio size={40} className="mb-4 text-zinc-300 dark:text-zinc-500" />
-          <p className="text-lg font-medium text-secondary-body">No data yet</p>
+          <p className="text-lg font-medium text-secondary-body">This workspace has no data yet.</p>
           <p className="mt-1 text-sm text-muted dark:text-muted-dark">Load demo data from Settings to populate the dashboard.</p>
         </div>
-      ) : isEmpty && searchQuery ? (
+      ) : isEmptyWorkspace && searchQuery ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 dark:border-border-dark bg-zinc-50/50 dark:bg-[#202024]/50 py-24">
           <Search size={40} className="mb-4 text-zinc-300 dark:text-zinc-500" />
           <p className="text-lg font-medium text-secondary-body">No results for &quot;{searchQuery}&quot;</p>
           <p className="mt-1 text-sm text-muted dark:text-muted-dark">Try a different search term across tickets, signals, and incidents.</p>
+        </div>
+      ) : isEmptyFilter ? (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 dark:border-border-dark bg-zinc-50/50 dark:bg-[#202024]/50 py-24">
+          <Search size={40} className="mb-4 text-zinc-300 dark:text-zinc-500" />
+          <p className="text-lg font-medium text-secondary-body">No data matches the selected date range.</p>
+          <p className="mt-1 text-sm text-muted dark:text-muted-dark mb-6">Try a different filter or view all time.</p>
+          <div className="flex items-center gap-3">
+            <button onClick={() => { setTimeFilter("all"); setSearchQuery(""); }}
+              className="rounded-lg border border-border dark:border-border-dark bg-card px-4 py-2 text-sm font-medium text-secondary-body hover:bg-zinc-50 dark:hover:bg-[#27272A] transition-colors">
+              Reset Filters
+            </button>
+            <button onClick={() => setTimeFilter("all")}
+              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 transition-colors">
+              Show All Time
+            </button>
+          </div>
         </div>
       ) : (
         <>
