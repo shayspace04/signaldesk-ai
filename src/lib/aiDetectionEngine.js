@@ -632,34 +632,75 @@ async function writeAuditLog(action, actor, details, workspaceId, workspaceName)
 
 /* ── Create a signal record ─────────────────────────────────────── */
 async function createSignalFromCluster(cluster, workspaceId, workspaceName) {
-  log("Calling create_signal function for:", cluster.name);
+  /* STEP 6 */
+  const requestPayload = {
+    name: cluster.name,
+    summary: cluster.summary,
+    category: cluster.category,
+    evidence_count: cluster.ticket_count,
+    example_ticket_ids: cluster.ticket_ids,
+    proposed_priority: cluster.proposed_priority,
+    analysis_confidence: cluster.confidence,
+    affected_customer_count: cluster.affected_customer_count,
+    business_impact_score: Math.round(cluster.risk_score * 10),
+    root_cause: cluster.root_cause_summary,
+    workspaceId: workspaceId,
+    workspaceName: workspaceName,
+  };
+  console.log("Calling create_signal()");
+  console.log("Complete request payload:", JSON.stringify(requestPayload, null, 2));
 
   const signalResult = await client.functions.run(SIGNAL_FUNC, {
-    input: {
-      name: cluster.name,
-      summary: cluster.summary,
-      category: cluster.category,
-      evidence_count: cluster.ticket_count,
-      example_ticket_ids: cluster.ticket_ids,
-      proposed_priority: cluster.proposed_priority,
-      analysis_confidence: cluster.confidence,
-    },
+    input: requestPayload,
   });
 
+  /* STEP 7 */
+  console.log("FULL RAW RESPONSE");
+  console.log("success:", signalResult.status === "completed" ? true : false);
+  console.log("signal id:", signalResult.output_data?.signal_id || signalResult.signal_id || signalResult.id);
+  console.log("output_data:", JSON.stringify(signalResult.output_data, null, 2));
+  console.log("errors:", signalResult.errors || signalResult.error || "none");
+
   const signalId = signalResult.output_data?.signal_id || signalResult.signal_id || signalResult.id;
-  if (!signalId) throw new Error("create_signal returned no signal_id");
+  if (!signalId) {
+    console.error("create_signal returned no signal_id. Raw result keys:", Object.keys(signalResult));
+    throw new Error("create_signal returned no signal_id");
+  }
 
-  log("Signal created with id:", signalId);
+  /* 2. Verify the signal record actually exists before PATCHing */
+  let signalRecord = null;
+  try {
+    signalRecord = await client.records.get("signals", signalId);
+  } catch (err) {
+    console.warn("GET signals/" + signalId + " FAILED:", err.message);
+    console.warn("The returned signal_id is NOT a valid datastore record. Returning ID without PATCH.");
+    return signalId;
+  }
 
-  /* Patch remaining columns not in create_signal input */
-  const signalUpdates = {};
-  signalUpdates.affected_customer_count = cluster.affected_customer_count;
-  signalUpdates.business_impact_score = Math.round(cluster.risk_score * 10);
-  signalUpdates.root_cause = cluster.root_cause_summary;
-  signalUpdates.workspaceId = workspaceId;
-  signalUpdates.workspaceName = workspaceName;
+  /* 3. Check which PATCH fields are already written by create_signal */
+  const patchFields = {
+    affected_customer_count: cluster.affected_customer_count,
+    business_impact_score: Math.round(cluster.risk_score * 10),
+    root_cause: cluster.root_cause_summary,
+    workspaceId: workspaceId,
+    workspaceName: workspaceName,
+  };
 
-  await client.records.update("signals", signalId, signalUpdates);
+  const missing = {};
+  for (const [key, value] of Object.entries(patchFields)) {
+    if (signalRecord[key] === null || signalRecord[key] === undefined || signalRecord[key] === "") {
+      missing[key] = value;
+    }
+  }
+
+  /* 4. Only PATCH if fields are actually missing */
+  if (Object.keys(missing).length === 0) {
+    log("create_signal already wrote all fields — skipping PATCH");
+  } else {
+    log("Patching missing fields on signal:", Object.keys(missing).join(", "));
+    await client.records.update("signals", signalId, missing);
+    log("PATCH succeeded");
+  }
 
   return signalId;
 }
@@ -726,7 +767,10 @@ async function escalateToIncident(cluster, signalForEscalation, workspaceId, wor
     try {
       await client.records.update("signals", signalForEscalation.id, { incident_id: incId, workflowStage: "incident_created", status: "approved" });
       log("[escalateToIncident] Signal updated with incident_id:", incId);
-    } catch { /* skip */ }
+    } catch (err) {
+      console.error("FAILED at signal update after incident:", err.message);
+      throw err;
+    }
   }
   log("Incident created:", incId);
   return incId;
@@ -806,6 +850,10 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
       return results;
     }
 
+    console.log("");
+    console.log("--- Ticket ---");
+    console.log("Ticket title:", triggerTicket.title);
+
     /* 2. Load recent tickets from same workspace */
     const filters = workspaceId && workspaceId !== "signaldesk"
       ? [{ field: "workspaceId", op: "eq", value: workspaceId }]
@@ -865,6 +913,12 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
     track("similarity_matrix", { pairs: pairs.map(p => ({ i_id: p.i_id, j_id: p.j_id, score: Math.round(p.score * 100) / 100 })) });
     results.logs.push("Similarity Matrix Built");
 
+    const allScores = pairs.map(p => p.score);
+    const highestSim = allScores.length > 0 ? Math.max(...allScores) : 0;
+    const avgSimAll = allScores.length > 0 ? allScores.reduce((a, b) => a + b, 0) / allScores.length : 0;
+    console.log("Candidate count:", candidates.length);
+    console.log("Highest similarity:", (highestSim * 100).toFixed(1) + "%");
+
     /* 5. Graph-based clustering (edge threshold from config) */
     const adjacency = candidates.map(() => []);
     let edgesFormed = 0;
@@ -903,6 +957,35 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
     log("Found", clusters.length, "clusters:", clusterSizes.map(c => `cluster_${c.clusterIndex}=${c.size}`).join(", "));
     track("clusters_found", { clusterCount: clusters.length, clusters: clusterSizes });
 
+    console.log("Clusters formed:", clusters.length);
+    clusters.forEach((c, idx) => {
+      const cPairs = [];
+      for (let i = 0; i < c.length; i++) {
+        for (let j = i + 1; j < c.length; j++) {
+          cPairs.push(computeTicketSimilarity(c[i], c[j]).total);
+        }
+      }
+      const cAvgSim = cPairs.length > 0 ? cPairs.reduce((a, b) => a + b, 0) / cPairs.length : (c.length >= 2 ? 0 : 1);
+      const cMaxSim = cPairs.length > 0 ? Math.max(...cPairs) : (c.length >= 2 ? 0 : 1);
+      const timestamps = c.map(t => new Date(t.created_at || t.createdAt || 0).getTime()).filter(ts => !isNaN(ts));
+      const timeSpanHours = timestamps.length > 1 ? (Math.max(...timestamps) - Math.min(...timestamps)) / 3600000 : 0;
+      const category = c[0]?.category || "N/A";
+      const riskScore = computeRiskScore(c);
+      const meetsSize = c.length >= thresholds.minTickets;
+      const meetsSim = cAvgSim >= thresholds.minSimilarity;
+      const meetsWindow = isWithinWindow(c, thresholds.maxAgeMs);
+
+      console.log(`Cluster #${idx + 1} — ${c.length} tickets, avg sim ${(cAvgSim * 100).toFixed(1)}%, cat=${category}, risk=${riskScore}`);
+      console.log(`  Cluster passed minimum size? ${meetsSize ? "Yes" : "No"}`);
+      console.log(`  Cluster passed similarity threshold? ${meetsSim ? "Yes" : "No"}`);
+      console.log(`  Cluster passed time window? ${meetsWindow ? "Yes" : "No"}`);
+      console.log(`  Cluster size: ${c.length}`);
+      console.log(`  Cluster average similarity: ${(cAvgSim * 100).toFixed(1)}%`);
+
+      const isMatch = c.some(t => t.id === ticketId);
+      if (isMatch) console.log(`  --> Trigger's cluster`);
+    });
+
     /* 6. Find matching cluster */
     const matchCluster = clusters.find((c) => c.some((t) => t.id === ticketId));
 
@@ -920,6 +1003,7 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
 
     if (matchCluster.length < thresholds.minTickets) {
       warn("Cluster too small:", matchCluster.length, "/", thresholds.minTickets);
+      console.log(`  Rejected: Size = ${matchCluster.length} (minimum required = ${thresholds.minTickets})`);
       track("cluster_too_small", { size: matchCluster.length, minRequired: thresholds.minTickets });
       results.logs.push(`Cluster too small (${matchCluster.length}/${thresholds.minTickets})`);
       results.pipeline = getPipelineEvents();
@@ -930,6 +1014,7 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
     track("cluster_time_window", { passed: windowOk, maxAgeMs: thresholds.maxAgeMs, ticketAgesMs: matchCluster.map(t => Date.now() - new Date(t.created_at || t.createdAt || 0).getTime()) });
     if (!windowOk) {
       warn("Cluster outside time window");
+      console.log("  Rejected: Time window exceeded");
       results.logs.push("Cluster outside time window");
       results.pipeline = getPipelineEvents();
       return results;
@@ -949,6 +1034,7 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
     track("similarity_check", { avgSimilarity: Math.round(avgSim * 10000) / 10000, minSimilarity: thresholds.minSimilarity, passed: avgSim >= thresholds.minSimilarity });
     if (avgSim < thresholds.minSimilarity) {
       warn("Similarity below threshold:", (avgSim * 100).toFixed(1), "% <", (thresholds.minSimilarity * 100), "%");
+      console.log(`  Rejected: Average similarity = ${(avgSim * 100).toFixed(1)}% (minimum required = ${(thresholds.minSimilarity * 100).toFixed(0)}%)`);
       results.logs.push(`Insufficient similarity (${(avgSim * 100).toFixed(1)}%)`);
       results.pipeline = getPipelineEvents();
       return results;
@@ -998,6 +1084,20 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
       else results.logs.push("Ticket already in signal");
     } else {
       try {
+        /* STEP 5 */
+        console.log("CREATING SIGNAL");
+        console.log("cluster size:", cluster.ticket_count);
+        console.log("cluster score:", cluster.risk_score);
+        console.log("ticket ids:", JSON.stringify(cluster.ticket_ids));
+
+        /* STEP 8 — query signals before */
+        let signalsBefore = [];
+        try {
+          const sb = await client.records.list("signals", { limit: 200 });
+          signalsBefore = sb.items || sb.records || sb.data || [];
+        } catch (e) { console.warn("signals before query failed:", e.message); }
+        console.log("Signals before create:", signalsBefore.length);
+
         const signalInput = {
           name: cluster.name,
           summary: cluster.summary,
@@ -1009,16 +1109,37 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
         track("create_signal_invoked", { input: signalInput });
         createdSignalId = await createSignalFromCluster(cluster, workspaceId, workspaceName);
         track("create_signal_response", { success: true, signalId: createdSignalId });
+
+        /* STEP 8 — verify returned ID is a real datastore record */
+        console.log("returned ID:", createdSignalId);
+        let newestSignals = [];
+        try {
+          const sa = await client.records.list("signals", {
+            sort: [{ field: "created_at", direction: "desc" }],
+            limit: 5,
+          });
+          newestSignals = sa.items || sa.records || sa.data || [];
+        } catch (e) { console.warn("signals query failed:", e.message); }
+        const newestIds = newestSignals.map(s => s.id);
+        console.log("newest signal IDs:", JSON.stringify(newestIds));
+        if (newestIds.includes(createdSignalId)) {
+          console.log("returned ID IS in the newest signals list ✓");
+        } else {
+          console.error("returned ID IS NOT in the newest signals list — the function returned a fake/non-datastore ID");
+        }
+
+        /* STEP 9 */
+        console.log("Signal created successfully");
+
         results.signal_created = true;
         results.signal_id = createdSignalId;
         results.cluster = { ...cluster, id: createdSignalId };
         results.logs.push("Signal Created");
       } catch (err) {
-        warn("Failed to create signal:", err);
-        track("create_signal_response", { success: false, error: err.message, stack: err.stack });
-        results.logs.push("Signal creation failed: " + (err.message || "unknown"));
-        results.pipeline = getPipelineEvents();
-        return results;
+        console.error("FAILED at signal creation stage");
+        console.error("Error:", err.message);
+        console.error("Stack:", err.stack);
+        throw err;
       }
     }
 
@@ -1037,6 +1158,7 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
     }
 
     /* 10. Escalate to incident */
+    console.log("Incident creation started");
     if (config.autoCreateIncident && cluster.risk_score > 0) {
       const escThreshold = thresholds.escalationThreshold / 10;
       track("escalation_check", { riskScore: cluster.risk_score, threshold: escThreshold, autoCreateIncident: config.autoCreateIncident });
@@ -1049,6 +1171,8 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
             if (incId) {
               results.incident_created = true;
               results.incident_id = incId;
+              console.log("Incident created");
+              console.log("Incident ID:", incId);
               track("incident_created", { incidentId: incId, signalId: signalForEscalation.id });
               results.logs.push("Incident created / updated");
               await postIncidentActions(cluster, signalForEscalation.id, incId, workspaceId, workspaceName, config);
@@ -1056,9 +1180,10 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
               results.logs.push("Post-incident automation complete");
             }
           } catch (err) {
-            warn("Escalation failed:", err);
-            track("incident_error", { error: err.message });
-            results.logs.push("Incident creation failed: " + (err.message || "unknown"));
+            console.error("FAILED at incident creation stage");
+            console.error("Error:", err.message);
+            console.error("Stack:", err.stack);
+            throw err;
           }
         }
       } else {
@@ -1074,6 +1199,12 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
     results.logs.push("UI refresh triggered");
 
     track("detection_complete", { signalCreated: results.signal_created, ticketLinked: results.ticket_linked, incidentCreated: results.incident_created, signalId: results.signal_id, incidentId: results.incident_id });
+
+    console.log(`  Signal created? ${results.signal_created ? "Yes" : "No"}`);
+    if (results.signal_created) console.log(`  Signal ID: ${results.signal_id}`);
+    if (results.incident_created) console.log(`  Incident created? Yes (ID: ${results.incident_id})`);
+    if (results.ticket_linked) console.log(`  Ticket linked to existing signal? Yes (Signal ID: ${results.signal_id})`);
+    console.log("");
 
     log("========== AI DETECTION COMPLETED ==========");
     log("Signal created:", results.signal_created, "| Ticket linked:", results.ticket_linked, "| Incident created:", results.incident_created);
@@ -1107,18 +1238,43 @@ export async function runDetectionForWorkspace(workspaceId) {
   const tickets = res.items || res.records || res.data || [];
   log("Found", tickets.length, "tickets to analyze");
 
+  const thresholds = getThresholds(workspaceId);
+  const wsNameFinal = wsName;
+
+  console.log("Workspace ID:", workspaceId || "signaldesk");
+  console.log("Tickets loaded:", tickets.length);
+  console.log("Time window:", thresholds.maxAgeMs / 3600000, "hours");
+  console.log("Similarity threshold:", (thresholds.minSimilarity * 100).toFixed(0) + "%");
+  console.log("Minimum cluster size:", thresholds.minTickets);
+  console.log("Edge threshold:", (thresholds.edgeThreshold * 100).toFixed(0) + "%");
+
   const overall = { total: tickets.length, signals_created: 0, incidents_created: 0, errors: 0, logs: [] };
 
   for (const t of tickets) {
     try {
-      const r = await runDetection(t.id, workspaceId, wsName);
+      const r = await runDetection(t.id, workspaceId, wsNameFinal);
       if (r.signal_created) overall.signals_created++;
       if (r.incident_created) overall.incidents_created++;
       if (r.logs?.some((l) => l.startsWith("Error"))) overall.errors++;
-    } catch {
+    } catch (e) {
+      console.log("--- Ticket ---");
+      console.log("Ticket ID:", t.id);
+      console.log("Title:", t.title);
+      console.log("  Error:", e.message);
       overall.errors++;
     }
   }
+
+  console.log("");
+  console.log("=========================");
+  console.log("SUMMARY");
+  console.log("=========================");
+  console.log("Tickets processed:", tickets.length);
+  console.log("Signals created:", overall.signals_created);
+  console.log("Incidents created:", overall.incidents_created);
+  console.log("Errors:", overall.errors);
+  console.log("=========================");
+  console.log("");
 
   log("Done. Signals created:", overall.signals_created, "Incidents:", overall.incidents_created, "Errors:", overall.errors);
   return overall;

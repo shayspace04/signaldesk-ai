@@ -9,13 +9,13 @@ import {
 } from "lucide-react";
 import client from "@/lib/lemmaClient";
 import { destroySeeds } from "@/lib/seedLoader";
-import { loadDemoWorkspace, DEMO_PROGRESS_EVENT, DEMO_COMPLETE_EVENT } from "@/lib/demoWorkspaceLoader";
+import { loadDemoWorkspace, DEMO_PROGRESS_EVENT, DEMO_COMPLETE_EVENT, DEMO_ERROR_EVENT } from "@/lib/demoWorkspaceLoader";
 import { WORKSPACE_DATASETS } from "@/data/workspaceDatasets";
 import { migrateWorkspaces, validateWorkspaces } from "@/lib/workspaceMigration";
 import { useWorkspace, workspaces } from "@/context/WorkspaceContext";
 import { emitRefresh } from "@/lib/refreshEvents";
 import { useAIDetectionConfig } from "@/lib/aiDetectionConfig";
-import { computeTicketSimilarity, runDetectionForAll } from "@/lib/aiDetectionEngine";
+import { computeTicketSimilarity, runDetectionForAll, runDetectionForWorkspace } from "@/lib/aiDetectionEngine";
 import { runIntegrationTest } from "@/lib/aiDetectionTest";
 import ThemeToggle from "@/components/common/ThemeToggle";
 import useRole from "@/hooks/useRole";
@@ -562,6 +562,7 @@ export default function Settings() {
   const [demoLoading, setDemoLoading] = useState(null);
   const [demoProgress, setDemoProgress] = useState(null);
   const [demoResult, setDemoResult] = useState(null);
+  const [demoError, setDemoError] = useState(null);
   const [devRunning, setDevRunning] = useState(null);
   const [validateResult, setValidateResult] = useState(null);
   const [validateLoading, setValidateLoading] = useState(false);
@@ -571,6 +572,9 @@ export default function Settings() {
   const [migrateProgress, setMigrateProgress] = useState({ done: 0, total: 0, msg: "" });
   const [migrateSummary, setMigrateSummary] = useState(null);
   const [aiDetectionResult, setAiDetectionResult] = useState(null);
+  const [detectionDiagResult, setDetectionDiagResult] = useState(null);
+  const [detectionDiagRunning, setDetectionDiagRunning] = useState(false);
+  const [detectionDiagLog, setDetectionDiagLog] = useState("");
   const [aiTestReport, setAiTestReport] = useState(null);
   const [deploySummary, setDeploySummary] = useState(null);
   const [aiWorkspaceTab, setAiWorkspaceTab] = useState(workspaceId || "signaldesk");
@@ -579,11 +583,14 @@ export default function Settings() {
   useEffect(() => {
     const onProgress = (e) => setDemoProgress(e.detail);
     const onComplete = (e) => setDemoResult(e.detail);
+    const onError = (e) => { setDemoError(e.detail); setDemoLoading(null); };
     window.addEventListener(DEMO_PROGRESS_EVENT, onProgress);
     window.addEventListener(DEMO_COMPLETE_EVENT, onComplete);
+    window.addEventListener(DEMO_ERROR_EVENT, onError);
     return () => {
       window.removeEventListener(DEMO_PROGRESS_EVENT, onProgress);
       window.removeEventListener(DEMO_COMPLETE_EVENT, onComplete);
+      window.removeEventListener(DEMO_ERROR_EVENT, onError);
     };
   }, []);
 
@@ -638,6 +645,15 @@ export default function Settings() {
       finally { setLoading(false); }
     }
     load();
+  }, []);
+
+  /* Expose detection diagnostics on window in dev mode */
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      window.runDetectionForWorkspace = runDetectionForWorkspace;
+      console.log("[DevTools] runDetectionForWorkspace exposed on window");
+    }
+    return () => { if (import.meta.env.DEV) delete window.runDetectionForWorkspace; };
   }, []);
 
   const handleLinearTest = useCallback(async () => {
@@ -823,12 +839,12 @@ export default function Settings() {
                   </div>
                 </div>
                 <button disabled={demoLoading === w.id} onClick={async () => {
-                  setDemoLoading(w.id);
+                  setDemoLoading(w.id); setDemoError(null); setDemoResult(null);
                   try {
                     await loadDemoWorkspace(w.id);
                   } catch (err) {
-                    console.error(err);
-                  } finally {
+                    console.error("[demo] Fatal error:", err);
+                    setDemoError({ message: err.message || String(err), stage: "unknown" });
                     setDemoLoading(null);
                   }
                 }} className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 transition-all duration-200 disabled:opacity-50">
@@ -1035,6 +1051,40 @@ export default function Settings() {
               )}
             </div>
 
+            {/* Detection Diagnostics */}
+            <div className="rounded-xl border border-border dark:border-border-dark bg-card p-4 flex flex-col gap-3">
+              <div><p className="text-sm font-medium text-primary">Detection Diagnostics</p><p className="text-xs text-muted dark:text-muted-dark">Run detection for current workspace with detailed cluster diagnostics logged to console</p></div>
+              <button disabled={detectionDiagRunning} onClick={async () => {
+                setDetectionDiagRunning(true); setDetectionDiagResult(null); setDetectionDiagLog("");
+                const ws = workspaceId || "signaldesk";
+                try {
+                  console.clear();
+                  console.log("%c=== SIGNALDESK DETECTION DIAGNOSTICS ===", "font-size:18px;font-weight:bold");
+                  console.log("Workspace:", ws);
+                  const r = await runDetectionForWorkspace(ws);
+                  setDetectionDiagResult(r);
+                  setDetectionDiagLog("Complete. Check the console above for full cluster diagnostics.");
+                } catch (err) {
+                  console.error(err);
+                  setDetectionDiagLog("Error: " + err.message);
+                } finally { setDetectionDiagRunning(false); }
+              }} className="flex items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50">
+                {detectionDiagRunning ? <><Loader2 size={14} className="animate-spin" /> Running...</> : <><Activity size={14} /> Run Detection Diagnostics</>}
+              </button>
+              {detectionDiagLog && (
+                <div className="text-xs">
+                  <p className="text-emerald-600 dark:text-emerald-400"><Check size={10} className="inline mr-1" />{detectionDiagLog}</p>
+                  {detectionDiagResult && (
+                    <div className="mt-1 space-y-0.5">
+                      <p className="text-emerald-600 dark:text-emerald-400"><Check size={10} className="inline mr-1" />Signals created: {detectionDiagResult.signals_created}</p>
+                      <p className="text-emerald-600 dark:text-emerald-400"><Check size={10} className="inline mr-1" />Incidents created: {detectionDiagResult.incidents_created}</p>
+                      {detectionDiagResult.errors > 0 && <p className="text-amber-600 dark:text-amber-400"><AlertTriangle size={10} className="inline mr-1" />Errors: {detectionDiagResult.errors}</p>}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Integration Test */}
             <div className="rounded-xl border border-border dark:border-border-dark bg-card p-4 flex flex-col gap-3">
               <div><p className="text-sm font-medium text-primary">Integration Test</p><p className="text-xs text-muted dark:text-muted-dark">End-to-end production simulation: 5 tickets → detection → signal → incident → notifications → knowledge</p></div>
@@ -1117,53 +1167,48 @@ export default function Settings() {
       )}
 
       {/* Demo Workspace Progress Dialog */}
-      {demoLoading && demoProgress && (
+      {demoLoading && demoProgress && demoProgress.stages && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-border dark:border-border-dark bg-card p-6 shadow-modal">
+          <div className="w-full max-w-sm rounded-2xl border border-border dark:border-border-dark bg-card p-6 shadow-modal">
             <div className="flex items-center gap-3 mb-5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 dark:bg-[#202024]">
-                {demoProgress.step === "complete" ? (
-                  <CheckCircle2 size={20} className="text-emerald-500" />
-                ) : (
-                  <Loader2 size={20} className="animate-spin text-muted-base" />
-                )}
-              </div>
+              <Loader2 size={20} className="animate-spin text-muted-base flex-shrink-0" />
               <div>
                 <h3 className="text-base font-semibold text-primary">Loading {demoProgress.workspaceName || "Workspace"}...</h3>
-                <p className="text-xs text-muted dark:text-muted-dark">{demoProgress.label}</p>
               </div>
             </div>
-            <div className="h-1.5 w-full rounded-full bg-muted-surface overflow-hidden mb-5">
-              <div className="h-full rounded-full bg-zinc-900 transition-all duration-500" style={{ width: `${(demoProgress.done / demoProgress.total) * 100}%` }} />
+            <div className="space-y-2">
+              {demoProgress.stages.map((s) => (
+                <div key={s.id} className={`flex items-center gap-2 text-xs ${s.status === "done" ? "text-emerald-600 dark:text-emerald-400" : s.status === "active" ? "text-primary font-medium" : s.status === "error" ? "text-red-500" : "text-zinc-400 dark:text-zinc-600"}`}>
+                  {s.status === "done" ? <CheckCircle2 size={14} /> : s.status === "active" ? <Loader2 size={14} className="animate-spin" /> : s.status === "error" ? <XCircle size={14} /> : <div className="w-3.5 h-3.5 rounded-full border border-current flex-shrink-0" />}
+                  {s.label}
+                </div>
+              ))}
             </div>
-            <div className="space-y-1.5">
-              {[
-                "Importing customer tickets",
-                "Running AI similarity detection",
-                "Building ticket clusters",
-                "Creating Signals",
-                "Performing root cause analysis",
-                "Calculating business impact",
-                "Escalating Incidents",
-                "Generating Engineering Handoffs",
-                "Creating AI Draft Replies",
-                "Updating Knowledge Base",
-                "Refreshing Analytics",
-                "Complete",
-              ].map((label, i) => {
-                const stepIndex = ["clearing", "importing_tickets", "running_detection", "building_clusters", "creating_signals", "analyzing_impact", "escalating_incidents", "generating_handoffs", "creating_drafts", "updating_knowledge", "refreshing", "complete"];
-                const step = stepIndex.indexOf(demoProgress.step);
-                const idx = stepIndex.indexOf(demoProgress.step);
-                const isDone = i < idx;
-                const isActive = i === idx;
-                return (
-                  <div key={label} className={`flex items-center gap-2 text-xs ${isDone ? "text-emerald-600 dark:text-emerald-400" : isActive ? "text-primary font-medium" : "text-zinc-400 dark:text-zinc-600"}`}>
-                    {isDone ? <CheckCircle2 size={12} /> : isActive ? <Loader2 size={12} className="animate-spin" /> : <div className="w-3 h-3 rounded-full border border-current" />}
-                    {label}
-                  </div>
-                );
-              })}
+          </div>
+        </div>
+      )}
+
+      {/* Demo Workspace Error Dialog */}
+      {demoError && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setDemoError(null)}>
+          <div className="w-full max-w-md rounded-2xl border border-red-200 dark:border-red-800 bg-card p-6 shadow-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+                <XCircle size={24} className="text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-primary">Workspace Load Failed</h3>
+                <p className="text-sm text-muted dark:text-muted-dark">The demo workspace could not be loaded.</p>
+              </div>
             </div>
+            <div className="rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900 p-4 mb-5">
+              <p className="text-xs font-medium text-red-700 dark:text-red-400 mb-1">Stage: {demoError.stage || "unknown"}</p>
+              <p className="text-sm text-red-600 dark:text-red-300 font-mono break-words">{demoError.message}</p>
+            </div>
+            <button onClick={() => setDemoError(null)}
+              className="w-full rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 transition-colors">
+              Dismiss
+            </button>
           </div>
         </div>
       )}
