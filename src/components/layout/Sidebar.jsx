@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect, useMemo } from "react";
-import { ChevronDown, Search, Activity, Bell, Ticket, Radio, ShieldAlert, BookOpen, BarChart3, ScrollText, Settings, UserCheck, UserCog, ClipboardCheck } from "lucide-react";
+import { ChevronDown, Search, Activity, Bell, Ticket, Radio, ShieldAlert, BookOpen, BarChart3, ScrollText, Settings, UserCheck, UserCog, ClipboardCheck, FlaskConical } from "lucide-react";
 import Logo from "@/components/common/Logo";
 import { useWorkspace, workspaces } from "@/context/WorkspaceContext";
 import useRole from "@/hooks/useRole";
@@ -20,6 +20,7 @@ const navItems = [
   { name: "Analytics", icon: BarChart3, path: "/analytics", badge: null },
   { name: "Audit Log", icon: ScrollText, path: "/audit", badge: null },
   { name: "Settings", icon: Settings, path: "/settings", badge: null },
+  { name: "Enterprise Demo", icon: FlaskConical, path: "/enterprise-demo", badge: null },
 ];
 
 function Badge({ value }) {

@@ -5,7 +5,7 @@ import {
   XCircle, Upload, Loader2, Check, Shield, UserCheck, UserCog, Bug, RefreshCw,
   Download, Trash2, Wrench, ExternalLink, ChevronDown, ChevronRight, Settings2,
   Radio, Link2, BookOpen, Activity, Sliders, Users, Zap, Eye, Play, FileText, Tag,
-  BarChart3, Rocket,
+  BarChart3,
 } from "lucide-react";
 import client from "@/lib/lemmaClient";
 import { destroySeeds } from "@/lib/seedLoader";
@@ -988,22 +988,6 @@ export default function Settings() {
                   </table>
                 </div>
               )}
-            </div>
-
-            {/* Enterprise Demo */}
-            <div className="rounded-xl border border-violet-200 dark:border-violet-800 bg-violet-50/50 dark:bg-violet-950/20 p-4 flex flex-col gap-3">
-              <div><p className="text-sm font-medium text-violet-700 dark:text-violet-300">Launch Enterprise Demo</p><p className="text-xs text-violet-500 dark:text-violet-400">Populate all 5 workspaces with realistic enterprise data (tickets, signals, incidents, knowledge, handoffs, approvals)</p></div>
-              <button disabled={devRunning === "enterpriseDemo"} onClick={async () => {
-                setDevRunning("enterpriseDemo");
-                try {
-                  const { launchEnterpriseDemo } = await import("@/lib/enterpriseDemoLoader");
-                  await launchEnterpriseDemo();
-                  toast.success("Enterprise demo launched successfully");
-                } catch (err) { console.error(err); toast.error("Demo failed: " + (err.message || "unknown")); }
-                finally { setDevRunning(null); emitRefresh(); }
-              }} className="flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50 transition-all">
-                {devRunning === "enterpriseDemo" ? <><Loader2 size={14} className="animate-spin" /> Populating...</> : <><Rocket size={14} /> Launch Enterprise Demo</>}
-              </button>
             </div>
 
             {/* Seed All */}

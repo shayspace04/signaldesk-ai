@@ -12,6 +12,7 @@ import Analytics from "../../pages/Analytics";
 import Audit from "../../pages/Audit";
 import Settings from "../../pages/Settings";
 import Notifications from "../../pages/Notifications";
+import EnterpriseDemo from "../../pages/EnterpriseDemo";
 import CommandPalette from "../common/CommandPalette";
 import AtAGlance from "../common/AtAGlance";
 import ErrorBoundary from "../common/ErrorBoundary";
@@ -48,6 +49,7 @@ function LayoutContent() {
                 <Route path="/analytics" element={<Page><Analytics /></Page>} />
                 <Route path="/audit" element={<Page><Audit /></Page>} />
                 <Route path="/settings" element={<Page><Settings /></Page>} />
+                <Route path="/enterprise-demo" element={<Page><EnterpriseDemo /></Page>} />
               </Routes>
             </AnimatePresence>
           </div>
