@@ -194,8 +194,8 @@ function exportAsCSV(m) {
     ["Signals Under Review", m.dashboard.signalsUnderReview],
     ["Signals Resolved", m.dashboard.signalsResolved],
     ["Incidents Resolved (Engineering)", m.dashboard.incidentsResolved],
-    ["Knowledge Articles", m.dashboard.knowledgeArticles],
-    ["Knowledge References", m.dashboard.knowledgeReferences],
+    ["Knowledge Articles", m.knowledge.total],
+    ["Knowledge References", m.knowledge.totalReferences],
   ];
   const csv = rows.map((r) => r.join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -374,7 +374,9 @@ export default function Dashboard() {
             <div>
               <div className="rounded-xl border border-border dark:border-border-dark bg-card p-5 shadow-card">
                 <SectionHeader title="Recent Activity" />
-                {m.searched.logs.length === 0 ? (
+                {m.loading ? (
+                  <div className="space-y-2">{[1,2,3,4].map((i) => <div key={i} className="h-12 animate-pulse rounded-lg bg-zinc-100 dark:bg-[#202024]" />)}</div>
+                ) : m.searched.logs.length === 0 ? (
                   <p className="text-sm text-muted dark:text-muted-dark py-8 text-center">No activity recorded.</p>
                 ) : (
                   <div className="divide-y divide-border dark:divide-border-dark">

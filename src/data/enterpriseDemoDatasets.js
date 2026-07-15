@@ -447,7 +447,7 @@ function buildWorkspace(id, name, tagline, description, categories, customers, t
 }
 
 
-var DEMO = {};
+const DEMO = {};
 DEMO.binocs = buildWorkspace(
   "binocs", "Binocs", "Enterprise Portfolio Analytics", "Portfolio management and financial reporting platform for investment firms and asset managers.",
   ["Portfolio Reports","Financial Reports","NAV Calculations","Risk Assessment","Document Review","OCR Processing"],

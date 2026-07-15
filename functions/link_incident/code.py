@@ -80,6 +80,7 @@ class LinkIncidentOutput(BaseModel):
     email_sent: bool = False
     email_simulated: bool = True
     notification_created: bool = False
+    gmail_message_id: Optional[str] = None
 
 async def link_incident(ctx: FunctionContext, data: LinkIncidentInput) -> LinkIncidentOutput:
     pod = Pod.from_env()
@@ -210,11 +211,17 @@ async def link_incident(ctx: FunctionContext, data: LinkIncidentInput) -> LinkIn
     # Send email alert via Gmail connector (one per incident)
     email_sent = False
     email_simulated = True
-    existing = _items(pod.records.list("audit_logs", filter=[
-        {"field": "action", "op": "eq", "value": "manager.email_sent"},
-        {"field": "resource_id", "op": "eq", "value": inc["id"]},
-    ], limit=1))
-    if not existing:
+    gmail_message_id = None
+    # Dedup: skip if already sent (check incident field + audit_log)
+    already_sent = inc.get("email_sent") is True
+    if not already_sent:
+        existing_audit = _items(pod.records.list("audit_logs", filter=[
+            {"field": "action", "op": "eq", "value": "manager.email_sent"},
+            {"field": "resource_id", "op": "eq", "value": inc["id"]},
+        ], limit=1))
+        if existing_audit:
+            already_sent = True
+    if not already_sent:
         # Fetch linked ticket titles
         linked_ticket_titles = []
         try:
@@ -254,17 +261,37 @@ async def link_incident(ctx: FunctionContext, data: LinkIncidentInput) -> LinkIn
             f"Dashboard Link: {dash_link}\n"
         )
         try:
-            pod.connectors.execute("gmail", "GMAIL_SEND_EMAIL", {
+            gmail_resp = pod.connectors.execute("gmail", "GMAIL_SEND_EMAIL", {
                 "to": MANAGER_EMAIL,
                 "subject": f"[{sev_label}] Incident Alert – {title}",
                 "body": email_body,
             })
+            # Extract gmail_message_id from response
+            if gmail_resp:
+                raw = getattr(gmail_resp, "result", gmail_resp)
+                if isinstance(raw, dict):
+                    gmail_message_id = raw.get("id") or raw.get("message_id") or raw.get("thread_id") or raw.get("gmail_message_id")
+                elif hasattr(raw, "to_dict"):
+                    d = raw.to_dict()
+                    gmail_message_id = d.get("id") or d.get("message_id") or d.get("thread_id") or d.get("gmail_message_id")
             email_sent = True
             email_simulated = False
+            now_iso = datetime.now(timezone.utc).isoformat()
+            # Store notification metadata on incident
+            try:
+                pod.records.update("incidents", inc["id"], {
+                    "email_sent": True,
+                    "email_sent_at": now_iso,
+                    "recipient": MANAGER_EMAIL,
+                    "gmail_message_id": gmail_message_id,
+                })
+            except Exception:
+                pass
             _audit(pod, "manager.email_sent", actor_type="system",
                    resource_type="incident", resource_id=inc["id"], signal_id=data.signal_id,
                    details={"to": MANAGER_EMAIL, "severity": data.severity, "title": title,
-                            "simulated": False, "incident_title": title})
+                            "simulated": False, "incident_title": title,
+                            "gmail_message_id": gmail_message_id})
         except Exception as e:
             _audit(pod, "manager.email_error", actor_type="system",
                    resource_type="incident", resource_id=inc["id"], signal_id=data.signal_id,
@@ -287,4 +314,5 @@ async def link_incident(ctx: FunctionContext, data: LinkIncidentInput) -> LinkIn
         slack_alert_sent=slack_sent,
         email_sent=email_sent, email_simulated=email_simulated,
         notification_created=notification_created,
+        gmail_message_id=gmail_message_id,
     )

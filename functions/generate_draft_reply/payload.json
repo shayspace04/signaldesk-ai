@@ -1,0 +1,50 @@
+{
+    "code":  "#input_type_name: GenerateDraftReplyInput\n#output_type_name: GenerateDraftReplyOutput\n#function_name: generate_draft_reply\n\"\"\"Generate an AI draft reply for a ticket using the reply-agent, persist as a pending draft, and update ticket status.\"\"\"\nfrom datetime import datetime, timezone\nfrom typing import Optional, List\nfrom pydantic import BaseModel\nfrom lemma_sdk import FunctionContext, Pod\n\ndef _audit(pod, action, actor_type=\"agent\", actor_user_id=None, actor_agent_name=None,\n           resource_type=None, resource_id=None, ticket_id=None, details=None):\n    try:\n        row = {\"actor_type\": actor_type, \"action\": action}\n        if actor_user_id: row[\"actor_user_id\"] = actor_user_id\n        if actor_agent_name: row[\"actor_agent_name\"] = actor_agent_name\n        if resource_type: row[\"resource_type\"] = resource_type\n        if resource_id: row[\"resource_id\"] = str(resource_id)\n        if ticket_id: row[\"ticket_id\"] = str(ticket_id)\n        if details is not None: row[\"details\"] = details\n        pod.records.create(\"audit_logs\", row)\n    except Exception:\n        pass\n\nclass Grounding(BaseModel):\n    path: str\n    snippet: str\n    page: Optional[int] = None\n\nclass GenerateDraftReplyInput(BaseModel):\n    ticket_id: str\n\nclass GenerateDraftReplyOutput(BaseModel):\n    draft_id: str\n    ticket_id: str\n    body: str\n    confidence: int\n    ticket_number: Optional[int] = None\n\nasync def generate_draft_reply(ctx: FunctionContext, data: GenerateDraftReplyInput) -\u003e GenerateDraftReplyOutput:\n    pod = Pod.from_env()\n    ticket = pod.records.get(\"tickets\", data.ticket_id)\n    if not ticket:\n        raise RuntimeError(f\"ticket {data.ticket_id} not found\")\n\n    ticket_number = ticket.get(\"number\")\n    customer_name = ticket.get(\"customer_name\") or ticket.get(\"customer_email\", \"Valued Customer\")\n    title = ticket.get(\"title\", \"your inquiry\")\n\n    # Invoke reply-agent for a real AI-generated draft\n    agent_result = await pod.agents.execute(\n        agent_name=\"reply-agent\",\n        input={\n            \"ticket_id\": data.ticket_id,\n            \"customer_name\": customer_name,\n            \"title\": title,\n            \"body\": ticket.get(\"body\", \"\"),\n            \"category\": ticket.get(\"category\", \"general\"),\n            \"priority\": ticket.get(\"priority\", \"normal\"),\n        },\n    )\n\n    reply_body = agent_result.get(\"body\", \"\")\n    confidence = agent_result.get(\"confidence\", 85)\n    grounded_in = agent_result.get(\"grounded_in\", [{\"path\": f\"tickets/{data.ticket_id}\", \"snippet\": title}])\n\n    now = datetime.now(timezone.utc).isoformat()\n    draft = pod.records.create(\"drafts\", {\n        \"ticket_id\": data.ticket_id,\n        \"ticket_number\": ticket_number,\n        \"body\": reply_body,\n        \"grounded_in\": grounded_in,\n        \"confidence\": confidence,\n        \"status\": \"pending\",\n        \"generated_at\": now,\n    })\n\n    pod.records.update(\"tickets\", data.ticket_id, {\"status\": \"waiting_approval\"})\n\n    _audit(pod, \"draft.generated\", actor_type=\"agent\", actor_agent_name=\"reply-agent\",\n           actor_user_id=str(ctx.user_id) if ctx.user_id else None,\n           resource_type=\"draft\", resource_id=draft[\"id\"], ticket_id=data.ticket_id,\n           details={\"ticket_number\": ticket_number, \"confidence\": confidence, \"agent\": \"reply-agent\"})\n\n    return GenerateDraftReplyOutput(\n        draft_id=draft[\"id\"],\n        ticket_id=data.ticket_id,\n        body=reply_body,\n        confidence=confidence,\n        ticket_number=ticket_number,\n    )\n",
+    "code_hash":  "",
+    "config":  null,
+    "description":  "Generate an AI draft reply for a ticket, persist as a pending draft, and update ticket status to awaiting_approval.",
+    "icon_url":  null,
+    "name":  "generate_draft_reply",
+    "permissions":  {
+                        "grants":  [
+                                       {
+                                           "permission_ids":  [
+                                                                  "datastore.record.read",
+                                                                  "datastore.record.write",
+                                                                  "datastore.table.read"
+                                                              ],
+                                           "resource_name":  "tickets",
+                                           "resource_type":  "datastore_table"
+                                       },
+                                       {
+                                           "permission_ids":  [
+                                                                  "datastore.record.read",
+                                                                  "datastore.record.write",
+                                                                  "datastore.table.read"
+                                                              ],
+                                           "resource_name":  "drafts",
+                                           "resource_type":  "datastore_table"
+                                       },
+                                       {
+                                           "permission_ids":  [
+                                                                  "datastore.record.write",
+                                                                  "datastore.table.read"
+                                                              ],
+                                           "resource_name":  "audit_logs",
+                                           "resource_type":  "datastore_table"
+                                       },
+                                       {
+                                           "permission_ids":  [
+                                                                  "agent.execute"
+                                                              ],
+                                           "resource_name":  "reply-agent",
+                                           "resource_type":  "agent"
+                                       }
+                                   ]
+                    },
+    "python_packages":  [
+
+                        ],
+    "type":  "API",
+    "visibility":  "POD"
+}

@@ -49,6 +49,7 @@ if (!getStorageToken() && envToken && !isTokenExpired(envToken)) {
 const client = new LemmaClient({
   apiUrl: import.meta.env.DEV ? "" : undefined,
   podId: "019ef98f-eb70-71d8-a1e1-1aa54497dda0",
+  timeoutMs: 120000,
 });
 
 client.auth.subscribe((state) => {

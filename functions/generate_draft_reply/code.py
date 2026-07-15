@@ -1,7 +1,7 @@
 #input_type_name: GenerateDraftReplyInput
 #output_type_name: GenerateDraftReplyOutput
 #function_name: generate_draft_reply
-"""Generate an AI draft reply for a ticket, persist as a pending draft, and update ticket status."""
+"""Generate an AI draft reply for a ticket using the reply-agent, persist as a pending draft, and update ticket status."""
 from datetime import datetime, timezone
 from typing import Optional, List
 from pydantic import BaseModel
@@ -42,53 +42,34 @@ async def generate_draft_reply(ctx: FunctionContext, data: GenerateDraftReplyInp
     if not ticket:
         raise RuntimeError(f"ticket {data.ticket_id} not found")
 
-    title = ticket.get("title", "your inquiry")
-    body = ticket.get("body", "")
-    customer_name = ticket.get("customer_name") or ticket.get("customer_email", "Valued Customer")
-    category = ticket.get("category", "general")
     ticket_number = ticket.get("number")
+    customer_name = ticket.get("customer_name") or ticket.get("customer_email", "Valued Customer")
+    title = ticket.get("title", "your inquiry")
 
-    # Generate a context-aware reply body
-    greeting = f"Dear {customer_name},"
-    if category == "billing":
-        reply_body = (
-            f"{greeting}\n\n"
-            f"Thank you for reaching out regarding your billing concern: \"{title}\".\n\n"
-            f"We have reviewed your account and identified the issue. {body[:200]}\n\n"
-            f"To resolve this promptly, we have processed the necessary adjustments. "
-            f"You should see the changes reflected within 24-48 hours. "
-            f"If you have any further questions, please don't hesitate to reply.\n\n"
-            f"Best regards,\nSupport Team"
-        )
-    elif category == "technical":
-        reply_body = (
-            f"{greeting}\n\n"
-            f"Thank you for contacting us about the technical issue: \"{title}\".\n\n"
-            f"Based on our analysis of the information you provided, {body[:200]}\n\n"
-            f"We recommend the following steps:\n"
-            f"1. Clear your application cache and restart\n"
-            f"2. Ensure you are on the latest version\n"
-            f"3. If the problem persists, our engineering team has been notified\n\n"
-            f"We will continue monitoring this and follow up once a fix is deployed.\n\n"
-            f"Best regards,\nSupport Team"
-        )
-    else:
-        reply_body = (
-            f"{greeting}\n\n"
-            f"Thank you for your inquiry regarding \"{title}\".\n\n"
-            f"We have carefully reviewed the details you shared. {body[:200]}\n\n"
-            f"Our team is working on a resolution and we will provide an update shortly. "
-            f"In the meantime, please feel free to share any additional information that may help us assist you better.\n\n"
-            f"Best regards,\nSupport Team"
-        )
+    # Invoke reply-agent for a real AI-generated draft
+    agent_result = await pod.agents.execute(
+        agent_name="reply-agent",
+        input={
+            "ticket_id": data.ticket_id,
+            "customer_name": customer_name,
+            "title": title,
+            "body": ticket.get("body", ""),
+            "category": ticket.get("category", "general"),
+            "priority": ticket.get("priority", "normal"),
+        },
+    )
+
+    reply_body = agent_result.get("body", "")
+    confidence = agent_result.get("confidence", 85)
+    grounded_in = agent_result.get("grounded_in", [{"path": f"tickets/{data.ticket_id}", "snippet": title}])
 
     now = datetime.now(timezone.utc).isoformat()
     draft = pod.records.create("drafts", {
         "ticket_id": data.ticket_id,
         "ticket_number": ticket_number,
         "body": reply_body,
-        "grounded_in": [{"path": f"tickets/{data.ticket_id}", "snippet": title, "page": None}],
-        "confidence": 85,
+        "grounded_in": grounded_in,
+        "confidence": confidence,
         "status": "pending",
         "generated_at": now,
     })
@@ -98,12 +79,12 @@ async def generate_draft_reply(ctx: FunctionContext, data: GenerateDraftReplyInp
     _audit(pod, "draft.generated", actor_type="agent", actor_agent_name="reply-agent",
            actor_user_id=str(ctx.user_id) if ctx.user_id else None,
            resource_type="draft", resource_id=draft["id"], ticket_id=data.ticket_id,
-           details={"ticket_number": ticket_number, "confidence": 85, "category": category})
+           details={"ticket_number": ticket_number, "confidence": confidence, "agent": "reply-agent"})
 
     return GenerateDraftReplyOutput(
         draft_id=draft["id"],
         ticket_id=data.ticket_id,
         body=reply_body,
-        confidence=85,
+        confidence=confidence,
         ticket_number=ticket_number,
     )

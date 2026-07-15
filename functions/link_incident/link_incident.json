@@ -52,9 +52,7 @@
         "resource_type": "datastore_table"
       },
       {
-        "permission_ids": [
-          "connector.use"
-        ],
+        "permission_ids": ["connector.use"],
         "resource_name": "gmail",
         "resource_type": "connector"
       }

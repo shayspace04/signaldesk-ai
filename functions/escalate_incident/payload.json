@@ -1,0 +1,62 @@
+{
+    "code": "#input_type_name: EscalateIncidentInput\n#output_type_name: EscalateIncidentOutput\n#function_name: escalate_incident\n\"\"\"Escalate an incident to a higher severity and send Gmail alert if High/Critical.\"\"\"\nfrom datetime import datetime, timezone\nfrom typing import Optional\nfrom pydantic import BaseModel\nfrom lemma_sdk import FunctionContext, Pod\n\nMANAGER_EMAIL = \"shay24test@gmail.com\"\n\nSEVERITY_RANK = {\"low\": 0, \"normal\": 1, \"high\": 2, \"urgent\": 3}\nSEVERITY_LABEL = {\"low\": \"Low\", \"normal\": \"Medium\", \"high\": \"High\", \"urgent\": \"Critical\"}\n\ndef _items(rows):\n    if rows is None:\n        return []\n    if hasattr(rows, \"items\"):\n        items = rows.items\n        if not items:\n            return []\n        if hasattr(items[0], \"to_dict\"):\n            return [item.to_dict() for item in items]\n        return list(items)\n    if isinstance(rows, dict) and \"data\" in rows:\n        return rows[\"data\"]\n    if isinstance(rows, list):\n        return rows\n    return []\n\ndef _audit(pod, action, actor_type=\"user\", actor_user_id=None, actor_agent_name=None, resource_type=None, resource_id=None, ticket_id=None, signal_id=None, details=None):\n    try:\n        row = {\"actor_type\": actor_type, \"action\": action}\n        if actor_user_id: row[\"actor_user_id\"] = actor_user_id\n        if actor_agent_name: row[\"actor_agent_name\"] = actor_agent_name\n        if resource_type: row[\"resource_type\"] = resource_type\n        if resource_id: row[\"resource_id\"] = str(resource_id)\n        if ticket_id: row[\"ticket_id\"] = str(ticket_id)\n        if signal_id: row[\"signal_id\"] = str(signal_id)\n        if details is not None: row[\"details\"] = details\n        pod.records.create(\"audit_logs\", row)\n    except Exception:\n        pass\n\nclass EscalateIncidentInput(BaseModel):\n    incident_id: str\n    new_severity: str\n    workspace_name: Optional[str] = None\n    dashboard_link: Optional[str] = None\n\nclass EscalateIncidentOutput(BaseModel):\n    incident_id: str\n    old_severity: str\n    new_severity: str\n    email_sent: bool = False\n    slack_alert_sent: bool = False\n\nasync def escalate_incident(ctx: FunctionContext, data: EscalateIncidentInput) -> EscalateIncidentOutput:\n    pod = Pod.from_env()\n\n    inc = pod.records.get(\"incidents\", data.incident_id)\n    if not inc:\n        raise RuntimeError(f\"incident {data.incident_id} not found\")\n\n    old_sev = inc.get(\"severity\", \"normal\")\n    new_sev = data.new_severity\n    old_rank = SEVERITY_RANK.get(old_sev, 0)\n    new_rank = SEVERITY_RANK.get(new_sev, 0)\n\n    if new_rank <= old_rank:\n        raise RuntimeError(f\"new severity '{new_sev}' is not higher than current severity '{old_sev}'\")\n\n    pod.records.update(\"incidents\", data.incident_id, {\"severity\": new_sev})\n    _audit(pod, \"incident.escalated\", actor_type=\"user\",\n           actor_user_id=str(ctx.user_id) if ctx.user_id else None,\n           resource_type=\"incident\", resource_id=data.incident_id,\n           details={\"old_severity\": old_sev, \"new_severity\": new_sev,\n                    \"title\": inc.get(\"title\")})\n\n    email_sent = False\n    slack_sent = False\n\n    if new_sev in (\"high\", \"urgent\"):\n        sev_label = SEVERITY_LABEL.get(new_sev, \"High\")\n        ws_name = data.workspace_name or inc.get(\"workspaceName\") or \"SignalDesk\"\n        dash_link = data.dashboard_link or f\"https://incident-desk.apps.lemma.work/incidents/{data.incident_id}\"\n\n        # Send Slack alert\n        try:\n            alert_msg = (f\"🚨 Incident Escalated – SignalDesk\\n\\nIncident:\\n{inc.get('title', 'Unknown')}\\n\\n\"\n                         f\"Severity escalated from {SEVERITY_LABEL.get(old_sev, old_sev)} to {sev_label}\\n\\n\"\n                         f\"Workspace: {ws_name}\\n\\nDashboard: {dash_link}\")\n            pod.connectors.execute(\"slack\", \"send_message\", {\"channel\": \"#signaldesk-alerts\", \"text\": alert_msg})\n            slack_sent = True\n        except Exception:\n            pass\n\n        # Send email alert (dedup: skip if already sent)\n        if not inc.get(\"email_sent\"):\n            linked_ticket_titles = []\n            try:\n                ticket_links = _items(pod.records.list(\"ticket_incidents\", filter=[\n                    {\"field\": \"incident_id\", \"op\": \"eq\", \"value\": data.incident_id},\n                ], limit=50))\n                for link in ticket_links:\n                    t = pod.records.get(\"tickets\", link.get(\"ticket_id\"))\n                    if t:\n                        linked_ticket_titles.append(t.get(\"title\") or t.get(\"customer_name\") or t[\"id\"])\n            except Exception:\n                pass\n            if not linked_ticket_titles:\n                linked_ticket_titles = [f\"{inc.get('affected_ticket_count', 0)} ticket(s) affected\"]\n\n            signal_name = \"N/A\"\n            if inc.get(\"signal_id\"):\n                try:\n                    sig = pod.records.get(\"signals\", inc[\"signal_id\"])\n                    if sig:\n                        signal_name = sig.get(\"name\", \"Unknown\")\n                except Exception:\n                    pass\n\n            email_body = (\n                f\"🚨 Incident Escalated – SignalDesk\\n\\n\"\n                f\"Incident ID: {data.incident_id}\\n\"\n                f\"Incident Title: {inc.get('title', 'Unknown')}\\n\"\n                f\"Severity: {sev_label} (escalated from {SEVERITY_LABEL.get(old_sev, old_sev)})\\n\"\n                f\"Workspace: {ws_name}\\n\"\n                f\"Linked Signal: {signal_name}\\n\"\n                f\"Linked Tickets:\\n\"\n            )\n            for t in linked_ticket_titles:\n                email_body += f\"  • {t}\\n\"\n            email_body += (\n                f\"\\nNumber of Affected Customers: {inc.get('affected_ticket_count', 0)}\\n\"\n                f\"AI Root Cause: {inc.get('summary') or 'N/A'}\\n\"\n                f\"Recommended Action: Immediate investigation required\\n\"\n                f\"Time Escalated: {datetime.now(timezone.utc).isoformat()}\\n\"\n                f\"Dashboard Link: {dash_link}\\n\"\n            )\n\n            try:\n                gmail_resp = pod.connectors.execute(\"gmail\", \"GMAIL_SEND_EMAIL\", {\n                    \"to\": MANAGER_EMAIL,\n                    \"subject\": f\"[{sev_label}] Incident Escalated – {inc.get('title', 'Unknown')}\",\n                    \"body\": email_body,\n                })\n                gmail_msg_id = None\n                if gmail_resp:\n                    raw = getattr(gmail_resp, \"result\", gmail_resp)\n                    if isinstance(raw, dict):\n                        gmail_msg_id = raw.get(\"id\") or raw.get(\"message_id\") or raw.get(\"thread_id\") or raw.get(\"gmail_message_id\")\n                    elif hasattr(raw, \"to_dict\"):\n                        d = raw.to_dict()\n                        gmail_msg_id = d.get(\"id\") or d.get(\"message_id\") or d.get(\"thread_id\") or d.get(\"gmail_message_id\")\n                email_sent = True\n                now_iso = datetime.now(timezone.utc).isoformat()\n                try:\n                    pod.records.update(\"incidents\", data.incident_id, {\n                        \"email_sent\": True,\n                        \"email_sent_at\": now_iso,\n                        \"recipient\": MANAGER_EMAIL,\n                        \"gmail_message_id\": gmail_msg_id,\n                    })\n                except Exception:\n                    pass\n                _audit(pod, \"manager.email_sent\", actor_type=\"system\",\n                       resource_type=\"incident\", resource_id=data.incident_id,\n                       details={\"to\": MANAGER_EMAIL, \"severity\": new_sev,\n                                \"title\": inc.get(\"title\"), \"escalated_from\": old_sev,\n                                \"gmail_message_id\": gmail_msg_id})\n            except Exception as e:\n                _audit(pod, \"manager.email_error\", actor_type=\"system\",\n                       resource_type=\"incident\", resource_id=data.incident_id,\n                       details={\"error\": str(e), \"to\": MANAGER_EMAIL, \"severity\": new_sev})\n\n    return EscalateIncidentOutput(\n        incident_id=data.incident_id,\n        old_severity=old_sev,\n        new_severity=new_sev,\n        email_sent=email_sent,\n        slack_alert_sent=slack_sent,\n    )\n",
+    "config": null,
+    "description": "Escalate an incident to a higher severity and send Gmail alert if High/Critical with notification metadata stored on incident.",
+    "icon_url": null,
+    "name": "escalate_incident",
+    "permissions": {
+        "grants": [
+            {
+                "permission_ids": [
+                    "datastore.record.read",
+                    "datastore.record.write",
+                    "datastore.table.read"
+                ],
+                "resource_name": "incidents",
+                "resource_type": "datastore_table"
+            },
+            {
+                "permission_ids": [
+                    "datastore.record.read",
+                    "datastore.table.read"
+                ],
+                "resource_name": "tickets",
+                "resource_type": "datastore_table"
+            },
+            {
+                "permission_ids": [
+                    "datastore.record.read",
+                    "datastore.table.read"
+                ],
+                "resource_name": "ticket_incidents",
+                "resource_type": "datastore_table"
+            },
+            {
+                "permission_ids": [
+                    "datastore.record.read",
+                    "datastore.table.read"
+                ],
+                "resource_name": "signals",
+                "resource_type": "datastore_table"
+            },
+            {
+                "permission_ids": [
+                    "datastore.record.write",
+                    "datastore.table.read"
+                ],
+                "resource_name": "audit_logs",
+                "resource_type": "datastore_table"
+            },
+            {
+                "permission_ids": [
+                    "connector.use"
+                ],
+                "resource_name": "gmail",
+                "resource_type": "connector"
+            }
+        ]
+    },
+    "python_packages": [],
+    "type": "API",
+    "visibility": "POD"
+}

@@ -52,7 +52,7 @@ function ListCard({ ticket, onClick }) {
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs font-mono text-muted dark:text-muted-dark">SD-{ticket.id.slice(-4)}</span>
+          <span className="text-xs font-mono text-muted dark:text-muted-dark">SD-{ticket.id ? String(ticket.id).slice(-4).toUpperCase() : "—"}</span>
           <PriorityBadge priority={ticket.priority} />
           <StatusBadge status={ticket.status} />
         </div>
@@ -68,7 +68,7 @@ function ListCard({ ticket, onClick }) {
         )}
         <div className="flex items-center gap-1.5">
         </div>
-        <button className="opacity-0 group-hover:opacity-100 p-1 rounded text-muted dark:text-muted-dark hover:text-body dark:hover:text-primary hover:bg-muted-surface dark:hover:bg-[#27272A] transition-all">
+        <button onClick={(e) => { e.stopPropagation(); onClick(ticket); }} className="opacity-0 group-hover:opacity-100 p-1 rounded text-muted dark:text-muted-dark hover:text-body dark:hover:text-primary hover:bg-muted-surface dark:hover:bg-[#27272A] transition-all">
           <Eye size={14} />
         </button>
       </div>
@@ -170,6 +170,7 @@ export default function Tickets() {
     if (filters.assignee !== "All") result = result.filter((t) => (t.assignee || t.assigned_to || "") === filters.assignee);
     if (churnFilter === "at-risk") {
       result = result.filter((t) => {
+        if (t.sentiment === "churn_risk") return true;
         const r = calculateChurnRisk(t);
         return r && !r.resolved && (r.riskLevel === "High" || r.riskLevel === "Critical");
       });
@@ -506,7 +507,7 @@ export default function Tickets() {
                           <input type="checkbox" className="rounded border-border dark:border-border-dark" />
                         </td>
                         <td className="px-4 py-3 text-sm font-mono text-muted dark:text-muted-dark">
-                          SD-{t.number || String(Math.abs(t.id.split('').reduce((acc,c)=>acc+((acc<<5)-acc)+c.charCodeAt(0),0)) % 9999).padStart(4,"0")}
+                          SD-{t.number || (t.id ? String(Math.abs(t.id.split('').reduce((acc,c)=>acc+((acc<<5)-acc)+c.charCodeAt(0),0)) % 9999).padStart(4,"0") : "—")}
                         </td>
                         <td className="px-4 py-3 text-sm text-primary">{t.customer_name || t.customer_email || "-"}</td>
                         <td className="px-4 py-3 text-sm font-medium text-primary max-w-[250px] truncate">

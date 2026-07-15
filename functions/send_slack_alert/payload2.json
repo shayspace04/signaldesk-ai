@@ -1,0 +1,48 @@
+{
+    "code":  "#input_type_name: SendSlackAlertInput\r\n#output_type_name: SendSlackAlertOutput\r\n#function_name: send_slack_alert\r\n\"\"\"Send (or simulate) a Slack alert for high/critical incidents. Stores in audit log.\"\"\"\r\nfrom datetime import datetime, timezone\r\nfrom typing import Optional\r\nfrom pydantic import BaseModel\r\nfrom lemma_sdk import FunctionContext, Pod\r\n\r\nclass SendSlackAlertInput(BaseModel):\r\n    incident_id: str\r\n    actor_user_id: Optional[str] = None\r\n\r\nclass SendSlackAlertOutput(BaseModel):\r\n    incident_id: str\r\n    alert_sent: bool\r\n    message: str\r\n    simulated: bool = True\r\n\r\nSEVERITY_LABEL = {\"low\": \"Low\", \"normal\": \"Medium\", \"high\": \"High\", \"urgent\": \"Critical\"}\r\n\r\nasync def send_slack_alert(ctx: FunctionContext, data: SendSlackAlertInput) -\u003e SendSlackAlertOutput:\r\n    pod = Pod.from_env()\r\n    inc = pod.records.get(\"incidents\", data.incident_id)\r\n    if not inc:\r\n        raise RuntimeError(f\"incident {data.incident_id} not found\")\r\n\r\n    severity = inc.get(\"severity\", \"normal\")\r\n    if severity not in (\"high\", \"urgent\"):\r\n        return SendSlackAlertOutput(incident_id=data.incident_id, alert_sent=False, message=\"No alert needed — severity below threshold.\", simulated=True)\r\n\r\n    # Read linked signal for context\r\n    signal_name = \"Unknown\"\r\n    priority_score = 0\r\n    affected = inc.get(\"affected_ticket_count\", 0)\r\n    sig_id = inc.get(\"signal_id\")\r\n    if sig_id:\r\n        try:\r\n            sig = pod.records.get(\"signals\", str(sig_id))\r\n            if sig:\r\n                signal_name = sig.get(\"name\", \"Unknown\")\r\n                priority_score = sig.get(\"priority_score\", 0)\r\n        except Exception:\r\n            pass\r\n\r\n    sev_label = SEVERITY_LABEL.get(severity, severity.title())\r\n    message = (\r\n        f\"🚨 SignalDesk Alert\\n\\n\"\r\n        f\"Incident:\\n{inc.get(\u0027title\u0027, \u0027Untitled\u0027)}\\n\\n\"\r\n        f\"Severity:\\n{sev_label}\\n\\n\"\r\n        f\"Linked Signal:\\n{signal_name}\\n\\n\"\r\n        f\"Affected Customers:\\n{affected}\\n\\n\"\r\n        f\"Priority Score:\\n{priority_score}\\n\\n\"\r\n        f\"Manager Action Required\"\r\n    )\r\n\r\n    # Try real Slack connector; simulate if unavailable\r\n    simulated = True\r\n    try:\r\n        # Attempt connector operation (will fail if no Slack connector configured)\r\n        result = pod.connectors.operations.execute(\"slack\", \"send_message\", {\r\n            \"channel\": \"#signaldesk-alerts\",\r\n            \"text\": message,\r\n        })\r\n        simulated = False\r\n    except Exception:\r\n        pass  # Simulated delivery — no connector configured\r\n\r\n    # Store in audit log\r\n    try:\r\n        pod.records.create(\"audit_logs\", {\r\n            \"actor_type\": \"system\",\r\n            \"action\": \"slack.alert_sent\",\r\n            \"resource_type\": \"incident\",\r\n            \"resource_id\": data.incident_id,\r\n            \"signal_id\": str(sig_id) if sig_id else None,\r\n            \"details\": {\r\n                \"severity\": severity,\r\n                \"simulated\": simulated,\r\n                \"message\": message,\r\n                \"incident_title\": inc.get(\"title\"),\r\n            },\r\n        })\r\n    except Exception:\r\n        pass\r\n\r\n    return SendSlackAlertOutput(incident_id=data.incident_id, alert_sent=True, message=message, simulated=simulated)\r\n",
+    "code_hash":  "d76c556c4764bc90acda50f9f7e27a61a541dddc3bbf925f3997b591d0c49dec",
+    "config":  null,
+    "description":  "Send (or simulate) a Slack alert for high/critical incidents. Records in audit log.",
+    "icon_url":  null,
+    "name":  "send_slack_alert",
+    "permissions":  {
+                        "grants":  [
+                                       {
+                                           "permission_ids":  [
+                                                                  "datastore.record.read",
+                                                                  "datastore.table.read"
+                                                              ],
+                                           "resource_name":  "signals",
+                                           "resource_type":  "datastore_table"
+                                       },
+                                       {
+                                           "permission_ids":  [
+                                                                  "datastore.record.read",
+                                                                  "datastore.table.read"
+                                                              ],
+                                           "resource_name":  "incidents",
+                                           "resource_type":  "datastore_table"
+                                       },
+                                       {
+                                           "permission_ids":  [
+                                                                  "datastore.record.write",
+                                                                  "datastore.table.read"
+                                                              ],
+                                           "resource_name":  "audit_logs",
+                                           "resource_type":  "datastore_table"
+                                       },
+                                       {
+                                           "permission_ids":  [
+                                                                  "connector.use"
+                                                              ],
+                                           "resource_name":  "slack",
+                                           "resource_type":  "connector"
+                                       }
+                                   ]
+                    },
+    "python_packages":  [
+
+                        ],
+    "type":  "API",
+    "visibility":  "POD"
+}

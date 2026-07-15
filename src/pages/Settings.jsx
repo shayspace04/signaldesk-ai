@@ -8,7 +8,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import client from "@/lib/lemmaClient";
-import { destroySeeds } from "@/lib/seedLoader";
+import { seedWorkspace, destroySeeds } from "@/lib/seedLoader";
 import { loadDemoWorkspace, DEMO_PROGRESS_EVENT, DEMO_COMPLETE_EVENT, DEMO_ERROR_EVENT } from "@/lib/demoWorkspaceLoader";
 import { WORKSPACE_DATASETS } from "@/data/workspaceDatasets";
 import { migrateWorkspaces, validateWorkspaces } from "@/lib/workspaceMigration";
@@ -857,6 +857,53 @@ export default function Settings() {
       </CollapsibleSection>
 
       {/* ================================================================ */}
+      {/* SEED DATA MANAGEMENT                                             */}
+      {/* ================================================================ */}
+      <CollapsibleSection title="Seed Data Management" icon={Database} defaultOpen={false}>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+
+          {/* Seed All */}
+          <div className="rounded-xl border border-border dark:border-border-dark bg-card p-4 flex flex-col gap-3">
+            <div><p className="text-sm font-medium text-primary">Seed All Workspaces</p><p className="text-xs text-muted dark:text-muted-dark">Run seed for all workspaces (creates tickets via create_ticket, runs AI pipeline)</p></div>
+            <button disabled={devRunning === "seedAll"} onClick={async () => {
+              setDevRunning("seedAll");
+              try { for (const w of workspaces) { if (w.id === "signaldesk") continue; await seedWorkspace(w.id, (d, t, m) => setMigrateProgress({ done: d, total: t, msg: m })); } }
+              catch (err) { console.error(err); } finally { setDevRunning(null); emitRefresh(); }
+            }} className="flex items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50">
+              {devRunning === "seedAll" ? <><Loader2 size={14} className="animate-spin" /> Seeding...</> : <><Upload size={14} /> Seed All</>}
+            </button>
+            {devRunning === "seedAll" && migrateProgress.total > 0 && (
+              <div><p className="text-xs text-muted-base mb-1">{migrateProgress.msg}</p><div className="h-1.5 w-full rounded-full bg-zinc-100 overflow-hidden"><div className="h-full rounded-full bg-zinc-900 transition-all" style={{ width: `${(migrateProgress.done / migrateProgress.total) * 100}%` }} /></div></div>
+            )}
+          </div>
+
+          {/* Reset Seed Data */}
+          <div className="rounded-xl border border-border dark:border-border-dark bg-card p-4 flex flex-col gap-3">
+            <div><p className="text-sm font-medium text-primary">Reset Seed Data</p><p className="text-xs text-muted dark:text-muted-dark">Delete all __seed_v1__ tagged records</p></div>
+            {!destroyConfirm ? (
+              <button onClick={() => setDestroyConfirm(true)} className="flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500"> <Trash2 size={14} /> Delete Seed Data</button>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-red-600 dark:text-red-400 font-medium">Are you sure? This cannot be undone.</p>
+                <div className="flex gap-2">
+                  <button disabled={destroyRunning} onClick={async () => {
+                    setDestroyRunning(true); setDestroyProgress({ done: 0, total: 0, msg: "Starting..." });
+                    try { await destroySeeds((d, t, m) => setDestroyProgress({ done: d, total: t, msg: m })); }
+                    catch (err) { console.error(err); } finally { setDestroyRunning(false); setDestroyConfirm(false); emitRefresh(); }
+                  }} className="flex items-center gap-2 rounded-xl bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500 disabled:opacity-50">
+                    {destroyRunning ? <><Loader2 size={12} className="animate-spin" /> Deleting...</> : <>Confirm Delete</>}
+                  </button>
+                  <button onClick={() => setDestroyConfirm(false)} className="rounded-xl bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 text-xs font-medium text-secondary-body hover:bg-zinc-200 dark:hover:bg-zinc-700">Cancel</button>
+                </div>
+                {destroyRunning && <div><p className="text-xs text-muted-base mb-1">{destroyProgress.msg}</p>{destroyProgress.total > 0 && <div className="h-1.5 w-full rounded-full bg-zinc-100 overflow-hidden"><div className="h-full rounded-full bg-red-500 transition-all" style={{ width: `${(destroyProgress.done / destroyProgress.total) * 100}%` }} /></div>}</div>}
+              </div>
+            )}
+          </div>
+
+        </div>
+      </CollapsibleSection>
+
+      {/* ================================================================ */}
       {/* DEVELOPER TOOLS (dev only, at bottom)                            */}
       {/* ================================================================ */}
       {import.meta.env.DEV && (
@@ -986,41 +1033,6 @@ export default function Settings() {
                       </tr>
                     ))}</tbody>
                   </table>
-                </div>
-              )}
-            </div>
-
-            {/* Seed All */}
-            <div className="rounded-xl border border-border dark:border-border-dark bg-card p-4 flex flex-col gap-3">
-              <div><p className="text-sm font-medium text-primary">Seed Demo Data</p><p className="text-xs text-muted dark:text-muted-dark">Run seed for all workspaces</p></div>
-              <button disabled={devRunning === "seedAll"} onClick={async () => {
-                setDevRunning("seedAll");
-                try { for (const w of workspaces) { if (w.id === "signaldesk") continue; await seedWorkspace(w.id, (d, t, m) => setMigrateProgress({ done: d, total: t, msg: m })); } }
-                catch (err) { console.error(err); } finally { setDevRunning(null); emitRefresh(); }
-              }} className="flex items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50">
-                {devRunning === "seedAll" ? <><Loader2 size={14} className="animate-spin" /> Seeding...</> : <><Upload size={14} /> Seed All</>}
-              </button>
-            </div>
-
-            {/* Reset */}
-            <div className="rounded-xl border border-border dark:border-border-dark bg-card p-4 flex flex-col gap-3">
-              <div><p className="text-sm font-medium text-primary">Reset Demo Data</p><p className="text-xs text-muted dark:text-muted-dark">Delete all seed-tagged records</p></div>
-              {!destroyConfirm ? (
-                <button onClick={() => setDestroyConfirm(true)} className="flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500"> <Trash2 size={14} /> Delete Seed Data</button>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-xs text-red-600 dark:text-red-400 font-medium">Are you sure? This cannot be undone.</p>
-                  <div className="flex gap-2">
-                    <button disabled={destroyRunning} onClick={async () => {
-                      setDestroyRunning(true); setDestroyProgress({ done: 0, total: 0, msg: "Starting..." });
-                      try { await destroySeeds((d, t, m) => setDestroyProgress({ done: d, total: t, msg: m })); }
-                      catch (err) { console.error(err); } finally { setDestroyRunning(false); setDestroyConfirm(false); emitRefresh(); }
-                    }} className="flex items-center gap-2 rounded-xl bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500 disabled:opacity-50">
-                      {destroyRunning ? <><Loader2 size={12} className="animate-spin" /> Deleting...</> : <>Confirm Delete</>}
-                    </button>
-                    <button onClick={() => setDestroyConfirm(false)} className="rounded-xl bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 text-xs font-medium text-secondary-body hover:bg-zinc-200 dark:hover:bg-zinc-700">Cancel</button>
-                  </div>
-                  {destroyRunning && <div><p className="text-xs text-muted-base mb-1">{destroyProgress.msg}</p>{destroyProgress.total > 0 && <div className="h-1.5 w-full rounded-full bg-zinc-100 overflow-hidden"><div className="h-full rounded-full bg-red-500 transition-all" style={{ width: `${(destroyProgress.done / destroyProgress.total) * 100}%` }} /></div>}</div>}
                 </div>
               )}
             </div>

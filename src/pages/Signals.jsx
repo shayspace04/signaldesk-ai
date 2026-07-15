@@ -36,10 +36,6 @@ const COLUMNS = [
   { id: "incident_created", label: "Incident Created", workflowStage: "incident_created", color: "bg-red-500" },
 ];
 
-const AVATARS = ["JD", "AK", "SM", "RP", "TL"];
-const COMMENTS = [1, 2, 0, 3, 1, 0, 2, 4, 1, 0, 2, 1, 0, 3, 2];
-const ATTACHMENTS = [2, 0, 1, 3, 0, 1, 2, 0, 1, 2, 0, 1, 3, 0, 1];
-
 function getTagStyle(category) {
   return TAG_STYLES[(category || "").toLowerCase()] || "bg-zinc-100 text-zinc-600 dark:bg-[#202024] dark:text-muted-dark";
 }
@@ -49,9 +45,6 @@ function getPriorityStyle(priority) {
 }
 
 function KanbanCard({ signal, index: cardIndex, isManager, onOpenHandoff, onDragStart, knownKnowledge, onViewKnowledge }) {
-  const avatars = useMemo(() => AVATARS.slice(0, (cardIndex % 3) + 2), [cardIndex]);
-  const commentCount = COMMENTS[cardIndex % COMMENTS.length];
-  const attachmentCount = ATTACHMENTS[cardIndex % ATTACHMENTS.length];
   const progress = useMemo(() => {
     const stage = deriveWorkflowStage(signal);
     if (stage === "incident_created") return 90;
@@ -116,17 +109,7 @@ function KanbanCard({ signal, index: cardIndex, isManager, onOpenHandoff, onDrag
           <ShieldAlert size={13} /> Engineering Handoff
         </button>
       )}
-      <div className="flex items-center justify-between">
-        <div className="flex -space-x-1.5">
-          {avatars.map((a, i) => (
-            <div key={i} className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white dark:border-[#27272A] bg-zinc-200 dark:bg-[#202024] text-[8px] font-semibold text-secondary-body">{a}</div>
-          ))}
-        </div>
-        <div className="flex items-center gap-3">
-          {attachmentCount > 0 && <span className="flex items-center gap-1 text-[11px] text-muted dark:text-muted-dark"><Paperclip size={12} />{attachmentCount}</span>}
-          {commentCount > 0 && <span className="flex items-center gap-1 text-[11px] text-muted dark:text-muted-dark"><MessageSquare size={12} />{commentCount}</span>}
-        </div>
-      </div>
+
     </motion.div>
   );
 }

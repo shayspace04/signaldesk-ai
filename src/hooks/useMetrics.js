@@ -109,7 +109,8 @@ export function useMetrics(workspaceId, options = {}) {
       ? resDur.reduce((s, t) => s + (new Date(t.updated_at) - new Date(t.created_at)) / 3600000, 0) / resDur.length
       : 0;
 
-    const ticketsWithDrafts = curT.filter((t) => curD.some((d) => d.ticket_id === t.id));
+    const draftTicketIds = new Set(curD.map((d) => d.ticket_id));
+    const ticketsWithDrafts = curT.filter((t) => draftTicketIds.has(t.id));
     let avgRespTime = 0;
     if (ticketsWithDrafts.length > 0) {
       let total = 0, count = 0;
@@ -123,7 +124,6 @@ export function useMetrics(workspaceId, options = {}) {
       avgRespTime = count > 0 ? total / count : 0;
     }
 
-    const draftTicketIds = new Set(curD.map((d) => d.ticket_id));
     const waitingReply = open.filter((t) => !draftTicketIds.has(t.id));
 
     const curOpen = curT.filter((t) => t.status !== "resolved" && t.status !== "closed").length;
@@ -133,7 +133,7 @@ export function useMetrics(workspaceId, options = {}) {
       total: allTickets.length,
       totalInPeriod: curT.length,
       open: open.length,
-      openTrend: bounds != null ? pctChange(curOpen, prevOpen > 0 ? prevOpen : curOpen > 0 ? 0 : 1) : null,
+      openTrend: bounds != null ? pctChange(curOpen, prevOpen) : null,
       resolved: resolved.length,
       resolvedToday: resolvedToday.length,
       resolvedTrend: bounds != null ? pctChange(resolvedToday.length, resolvedYesterday.length || 1) : null,
@@ -146,7 +146,7 @@ export function useMetrics(workspaceId, options = {}) {
       waitingForReply: waitingReply.length,
       trendCreation: bounds != null ? pctChange(curT.length, prevT.length) : null,
     };
-  }, [allTickets, curT, prevT, curD, prevT]);
+  }, [allTickets, curT, prevT, curD]);
 
   const signalMetrics = useMemo(() => {
     const newStage = allSignals.filter((s) => deriveWorkflowStage(s) === "new" && s.status !== "rejected");
@@ -230,6 +230,10 @@ export function useMetrics(workspaceId, options = {}) {
       : 0;
     const withIncident = allKnowledge.filter((k) => k.incident_id).length;
     const withSignal = allKnowledge.filter((k) => k.signal_id).length;
+    const withResTime = allKnowledge.filter((k) => k.resolution_time_hours != null);
+    const avgResolutionTime = withResTime.length > 0
+      ? Math.round(withResTime.reduce((s, k) => s + Number(k.resolution_time_hours), 0) / withResTime.length * 10) / 10
+      : 0;
     const topArticles = [...allKnowledge]
       .sort((a, b) => (b.reference_count || 0) - (a.reference_count || 0))
       .slice(0, 5)
@@ -241,6 +245,7 @@ export function useMetrics(workspaceId, options = {}) {
       published: published.length,
       totalReferences: totalRefs,
       avgConfidence: avgConf,
+      avgResolutionTime,
       withIncident,
       withSignal,
       topArticles,
@@ -262,7 +267,7 @@ export function useMetrics(workspaceId, options = {}) {
   const dashboard = useMemo(() => ({
     openTickets: ticketMetrics.open,
     openTrend: ticketMetrics.openTrend,
-    activeSignals: signalMetrics.total,
+      activeSignals: signalMetrics.pending,
     signalTrend: signalMetrics.trendCreation,
     criticalIncidents: incidentMetrics.critical,
     incidentTrend: incidentMetrics.trendCreation,

@@ -78,7 +78,7 @@ function realisticDate(dayOffset, hourOffset) {
   return d.toISOString();
 }
 
-function generateTicket(workspace, idx, scenario) {
+export function generateTicket(workspace, idx, scenario) {
   const customers = CUSTOMERS[workspace] || CUSTOMERS.corally;
   const customer = customers[idx % customers.length];
   const priority = scenario.priority || pick(PRIORITIES);

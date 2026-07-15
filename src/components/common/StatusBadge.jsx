@@ -1,6 +1,6 @@
 const STATUS_LABELS = {
-  closed: "Resolved",
-  memory: "Resolved",
+  closed: "Closed",
+  memory: "Archived",
 };
 
 const STATUS_COLORS = {

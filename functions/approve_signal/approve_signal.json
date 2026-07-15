@@ -2,9 +2,8 @@
   "code": {
     "$file": "code.py"
   },
-  "code_hash": "7cee4b63afc982db5ccf522b6f90a7a02af13169f34465a17c27b43c7255c503",
   "config": null,
-  "description": "Manager approves a proposed signal: flip status, record approval, calculate impact scores, auto-create incident if criteria met, send Slack alert for high/critical.",
+  "description": "Manager approves a proposed signal: flip status, record approval, calculate impact scores, auto-create incident if criteria met, send email alert for high/critical.",
   "icon_url": null,
   "name": "approve_signal",
   "permissions": {
@@ -51,6 +50,13 @@
         ],
         "resource_name": "approvals",
         "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "connector.use"
+        ],
+        "resource_name": "gmail",
+        "resource_type": "connector"
       }
     ]
   },

@@ -2,9 +2,8 @@
     "code":  {
                  "$file":  "code.py"
              },
-    "code_hash":  "266ad2f3c5ea8f168deac010bf5107d116a7543ea7240ac690e65126858262d8",
     "config":  null,
-    "description":  "On manager approval, flip signal to \u0027memory\u0027, persist enriched memory_entries with root cause + recommended action + expected impact + business priority + evidence, and open incident for high/urgent.",
+    "description":  "On manager approval, flip signal to \u0027memory\u0027, persist enriched memory_entries with root cause + recommended action + expected impact + business priority + evidence, open incident for high/urgent with email alert.",
     "icon_url":  null,
     "name":  "materialize_signal",
     "permissions":  {
@@ -44,16 +43,23 @@
                                            "resource_name":  "memory_entries",
                                            "resource_type":  "datastore_table"
                                        },
-                                       {
-                                           "permission_ids":  [
-                                                                  "datastore.record.write",
-                                                                  "datastore.table.read"
-                                                              ],
-                                           "resource_name":  "audit_logs",
-                                           "resource_type":  "datastore_table"
-                                       }
-                                   ]
-                    },
+       {
+         "permission_ids": [
+           "datastore.record.write",
+           "datastore.table.read"
+         ],
+         "resource_name": "audit_logs",
+         "resource_type": "datastore_table"
+       },
+       {
+         "permission_ids": [
+           "connector.use"
+         ],
+         "resource_name": "gmail",
+        "resource_type": "connector"
+        }
+      ]
+    },
     "python_packages":  [
 
                         ],

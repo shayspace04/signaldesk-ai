@@ -233,10 +233,11 @@ function KnowledgeDrawerView({ m, onClose }) {
 
   return (
     <DrawerShell title="Knowledge Analytics" icon={BookOpen} color="text-amber-500" onClose={onClose} navigate={navigate} csvData={csvData} pagePath="/knowledge" pageLabel="Open Knowledge">
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         <StatMini label="Articles" value={m.knowledge.total} color="text-amber-500" />
         <StatMini label="Avg Confidence" value={`${m.knowledge.avgConfidence || 0}%`} color="text-amber-500" />
         <StatMini label="Total Refs" value={m.knowledge.totalReferences} color="text-amber-500" />
+        <StatMini label="Avg Resolution" value={`${m.knowledge.avgResolutionTime || 0}h`} color="text-cyan-500" />
       </div>
       {topArticles.length > 0 && (
         <div>

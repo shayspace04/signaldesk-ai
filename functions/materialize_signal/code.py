@@ -183,22 +183,51 @@ async def materialize_signal(ctx: FunctionContext, data: MaterializeSignalInput)
             pod.records.update("memory_entries", mem["id"], {"related_incident_id": incident_id})
         except Exception:
             pass
-        # Slack alert for high/urgent
-        if sig.get("proposed_priority") in ("high", "urgent"):
+        # Email alert for high/urgent (dedup: skip if already sent)
+        if sig.get("proposed_priority") in ("high", "urgent") and not inc.get("email_sent"):
             sev_label = "Critical" if sig.get("proposed_priority") == "urgent" else "High"
-            alert_msg = (f"🚨 SignalDesk Alert\n\nIncident:\n[{sig['proposed_priority'].upper()}] {name}\n\n"
-                         f"Severity:\n{sev_label}\n\nLinked Signal:\n{name}\n\n"
-                         f"Affected Customers:\n{sig.get('affected_customer_count', 0)}\n\n"
-                         f"Priority Score:\n{sig.get('priority_score', 0)}\n\nManager Action Required")
-            simulated = True
+            email_subject = f"🚨 {sev_label} Incident Created: {name}"
+            email_body = (
+                f"A new {sev_label.lower()}-severity incident has been auto-created.\n\n"
+                f"Incident: [{sig.get('proposed_priority', '').upper()}] {name}\n"
+                f"Signal: {name}\n"
+                f"Severity: {sev_label}\n"
+                f"Affected Customers: {sig.get('affected_customer_count', 0)}\n"
+                f"Priority Score: {sig.get('priority_score', 0)}\n\n"
+                f"Incident ID: {incident_id}\n"
+                f"Manager action may be required."
+            )
+            email_sent_flag = False
+            gmail_msg_id = None
             try:
-                pod.connectors.operations.execute("slack", "send_message", {"channel": "#signaldesk-alerts", "text": alert_msg})
-                simulated = False
+                gmail_resp = pod.connectors.operations.execute("gmail", "GMAIL_SEND_EMAIL", {
+                    "to": "shay24test@gmail.com",
+                    "subject": email_subject,
+                    "body": email_body,
+                })
+                if gmail_resp:
+                    raw = getattr(gmail_resp, "result", gmail_resp)
+                    if isinstance(raw, dict):
+                        gmail_msg_id = raw.get("id") or raw.get("message_id") or raw.get("thread_id") or raw.get("gmail_message_id")
+                    elif hasattr(raw, "to_dict"):
+                        d = raw.to_dict()
+                        gmail_msg_id = d.get("id") or d.get("message_id") or d.get("thread_id") or d.get("gmail_message_id")
+                email_sent_flag = True
+                now_iso = datetime.now(timezone.utc).isoformat()
+                try:
+                    pod.records.update("incidents", incident_id, {
+                        "email_sent": True,
+                        "email_sent_at": now_iso,
+                        "recipient": "shay24test@gmail.com",
+                        "gmail_message_id": gmail_msg_id,
+                    })
+                except Exception:
+                    pass
             except Exception:
                 pass
-            _audit(pod, "slack.alert_sent", actor_type="system", actor_user_id=actor,
+            _audit(pod, "email.alert_sent", actor_type="system", actor_user_id=actor,
                    resource_type="incident", resource_id=incident_id, signal_id=data.signal_id,
-                   details={"severity": sig.get("proposed_priority"), "simulated": simulated, "message": alert_msg})
+                   details={"severity": sig.get("proposed_priority"), "email_sent": email_sent_flag, "subject": email_subject})
 
     _audit(pod, "memory.materialized", actor_type="user", actor_user_id=actor,
            resource_type="memory_entry", resource_id=mem["id"], signal_id=data.signal_id,

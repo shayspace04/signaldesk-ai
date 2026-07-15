@@ -1,0 +1,49 @@
+{
+    "code":  "#input_type_name: SendApprovedReplyInput\n#output_type_name: SendApprovedReplyOutput\n#function_name: send_approved_reply\n\"\"\"Send the approved draft reply to the customer via Gmail, then mark the draft as sent.\"\"\"\nfrom datetime import datetime, timezone\nfrom typing import Optional\nfrom pydantic import BaseModel\nfrom lemma_sdk import FunctionContext, Pod\n\ndef _audit(pod, action, actor_type=\"user\", actor_user_id=None, actor_agent_name=None,\n           resource_type=None, resource_id=None, ticket_id=None, details=None):\n    try:\n        row = {\"actor_type\": actor_type, \"action\": action}\n        if actor_user_id: row[\"actor_user_id\"] = actor_user_id\n        if actor_agent_name: row[\"actor_agent_name\"] = actor_agent_name\n        if resource_type: row[\"resource_type\"] = resource_type\n        if resource_id: row[\"resource_id\"] = str(resource_id)\n        if ticket_id: row[\"ticket_id\"] = str(ticket_id)\n        if details is not None: row[\"details\"] = details\n        pod.records.create(\"audit_logs\", row)\n    except Exception:\n        pass\n\nclass SendApprovedReplyInput(BaseModel):\n    draft_id: str\n    ticket_id: str\n    channel: Optional[str] = \"email\"\n\nclass SendApprovedReplyOutput(BaseModel):\n    draft_id: str\n    ticket_id: str\n    sent_at: str\n    email_sent: bool = False\n\nasync def send_approved_reply(ctx: FunctionContext, data: SendApprovedReplyInput) -\u003e SendApprovedReplyOutput:\n    pod = Pod.from_env()\n    now = datetime.now(timezone.utc).isoformat()\n\n    draft = pod.records.get(\"drafts\", data.draft_id)\n    if not draft:\n        raise RuntimeError(f\"draft {data.draft_id} not found\")\n    if draft.get(\"status\") != \"approved\":\n        raise RuntimeError(\"draft must be approved before sending\")\n\n    ticket = pod.records.get(\"tickets\", data.ticket_id)\n    ticket_number = ticket.get(\"number\") if ticket else None\n    customer_email = ticket.get(\"customer_email\") if ticket else None\n\n    email_sent = False\n    draft_body = draft.get(\"body\", \"\")\n    subject = f\"Re: {ticket.get(\u0027title\u0027, \u0027Your Support Request\u0027)}\" if ticket else \"Re: Your Support Request\"\n\n    if customer_email:\n        try:\n            pod.connectors.execute(\"gmail\", \"GMAIL_SEND_EMAIL\", {\n                \"to\": customer_email,\n                \"subject\": subject,\n                \"body\": draft_body,\n            })\n            email_sent = True\n        except Exception as e:\n            _audit(pod, \"draft.send_email_failed\", actor_type=\"user\",\n                   actor_user_id=str(ctx.user_id) if ctx.user_id else None,\n                   resource_type=\"draft\", resource_id=data.draft_id, ticket_id=data.ticket_id,\n                   details={\"error\": str(e)[:200], \"customer_email\": customer_email})\n\n    pod.records.update(\"drafts\", data.draft_id, {\"status\": \"sent\", \"sent_at\": now, \"email_sent\": email_sent})\n\n    _audit(pod, \"draft.sent\", actor_type=\"user\",\n           actor_user_id=str(ctx.user_id) if ctx.user_id else None,\n           resource_type=\"draft\", resource_id=data.draft_id, ticket_id=data.ticket_id,\n           details={\"channel\": data.channel, \"ticket_number\": ticket_number, \"email_sent\": email_sent})\n\n    return SendApprovedReplyOutput(draft_id=data.draft_id, ticket_id=data.ticket_id, sent_at=now, email_sent=email_sent)\n",
+    "code_hash":  "",
+    "config":  null,
+    "description":  "Send the approved draft reply to the customer via the specified channel and mark the draft as sent.",
+    "icon_url":  null,
+    "name":  "send_approved_reply",
+    "permissions":  {
+                        "grants":  [
+                                       {
+                                           "permission_ids":  [
+                                                                  "datastore.record.read",
+                                                                  "datastore.record.write",
+                                                                  "datastore.table.read"
+                                                              ],
+                                           "resource_name":  "drafts",
+                                           "resource_type":  "datastore_table"
+                                       },
+                                       {
+                                           "permission_ids":  [
+                                                                  "datastore.record.read",
+                                                                  "datastore.table.read"
+                                                              ],
+                                           "resource_name":  "tickets",
+                                           "resource_type":  "datastore_table"
+                                       },
+                                       {
+                                           "permission_ids":  [
+                                                                  "datastore.record.write",
+                                                                  "datastore.table.read"
+                                                              ],
+                                           "resource_name":  "audit_logs",
+                                           "resource_type":  "datastore_table"
+                                       },
+                                       {
+                                           "permission_ids":  [
+                                                                  "connector.use"
+                                                              ],
+                                           "resource_name":  "gmail",
+                                           "resource_type":  "connector"
+                                       }
+                                   ]
+                    },
+    "python_packages":  [
+
+                        ],
+    "type":  "API",
+    "visibility":  "POD"
+}

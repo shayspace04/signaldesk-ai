@@ -224,7 +224,7 @@ export async function loadEnterpriseWorkspace(workspaceId, onProgress) {
 
   const progress = (msg) => {
     done++;
-    if (onProgress) onProgress(done, totalSteps, msg);
+    if (onProgress) onProgress(workspaceId, wsName, done, totalSteps, msg, Math.round((done / totalSteps) * 100));
   };
 
   const ticketIds = [];

@@ -1,7 +1,7 @@
 #input_type_name: SendApprovedReplyInput
 #output_type_name: SendApprovedReplyOutput
 #function_name: send_approved_reply
-"""Send the approved draft reply to the customer and mark the draft as sent."""
+"""Send the approved draft reply to the customer via Gmail, then mark the draft as sent."""
 from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel
@@ -30,6 +30,7 @@ class SendApprovedReplyOutput(BaseModel):
     draft_id: str
     ticket_id: str
     sent_at: str
+    email_sent: bool = False
 
 async def send_approved_reply(ctx: FunctionContext, data: SendApprovedReplyInput) -> SendApprovedReplyOutput:
     pod = Pod.from_env()
@@ -41,14 +42,33 @@ async def send_approved_reply(ctx: FunctionContext, data: SendApprovedReplyInput
     if draft.get("status") != "approved":
         raise RuntimeError("draft must be approved before sending")
 
-    pod.records.update("drafts", data.draft_id, {"status": "sent", "sent_at": now})
-
     ticket = pod.records.get("tickets", data.ticket_id)
     ticket_number = ticket.get("number") if ticket else None
+    customer_email = ticket.get("customer_email") if ticket else None
+
+    email_sent = False
+    draft_body = draft.get("body", "")
+    subject = f"Re: {ticket.get('title', 'Your Support Request')}" if ticket else "Re: Your Support Request"
+
+    if customer_email:
+        try:
+            pod.connectors.execute("gmail", "GMAIL_SEND_EMAIL", {
+                "to": customer_email,
+                "subject": subject,
+                "body": draft_body,
+            })
+            email_sent = True
+        except Exception as e:
+            _audit(pod, "draft.send_email_failed", actor_type="user",
+                   actor_user_id=str(ctx.user_id) if ctx.user_id else None,
+                   resource_type="draft", resource_id=data.draft_id, ticket_id=data.ticket_id,
+                   details={"error": str(e)[:200], "customer_email": customer_email})
+
+    pod.records.update("drafts", data.draft_id, {"status": "sent", "sent_at": now, "email_sent": email_sent})
 
     _audit(pod, "draft.sent", actor_type="user",
            actor_user_id=str(ctx.user_id) if ctx.user_id else None,
            resource_type="draft", resource_id=data.draft_id, ticket_id=data.ticket_id,
-           details={"channel": data.channel, "ticket_number": ticket_number})
+           details={"channel": data.channel, "ticket_number": ticket_number, "email_sent": email_sent})
 
-    return SendApprovedReplyOutput(draft_id=data.draft_id, ticket_id=data.ticket_id, sent_at=now)
+    return SendApprovedReplyOutput(draft_id=data.draft_id, ticket_id=data.ticket_id, sent_at=now, email_sent=email_sent)

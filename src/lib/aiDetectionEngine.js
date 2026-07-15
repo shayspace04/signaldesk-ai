@@ -738,7 +738,7 @@ async function escalateToIncident(cluster, signalForEscalation, workspaceId, wor
   log("Escalating to incident, risk score:", cluster.risk_score);
 
   const title = `Auto-escalated: ${cluster.name}`;
-  const severity = cluster.risk_score >= 9 ? "critical" : cluster.risk_score >= 7 ? "high" : "normal";
+  const severity = cluster.risk_score >= 9 ? "urgent" : cluster.risk_score >= 7 ? "high" : "normal";
   const desc = buildClusterDescription(cluster);
 
   const incidentInput = {
@@ -782,17 +782,21 @@ async function postIncidentActions(cluster, signalId, incidentId, workspaceId, w
 
   if (config.autoCreateLinearIssue && incidentId) {
     try {
-      await writeAuditLog("linear.issue_created", "Signal Detection Agent",
-        { incident_id: incidentId, signal_id: signalId, cluster_id: cluster.cluster_id },
-        workspaceId, workspaceName);
-      log("Linear issue audit logged");
-    } catch { /* skip */ }
+      const linearResult = await client.functions.run("create_linear_issue", {
+        input: { incident_id: incidentId },
+      });
+      const linearSuccess = linearResult?.output_data?.success || linearResult?.success;
+      log("Linear issue created:", linearSuccess ? "yes" : "no",
+        "id:", linearResult?.output_data?.linearIssueIdentifier || linearResult?.linearIssueIdentifier);
+    } catch (err) {
+      log("Failed to create Linear issue:", err.message);
+    }
   }
 
   if (config.autoSendGmailAlerts && incidentId) {
     try {
       await writeAuditLog("email.alert_sent", "Signal Detection Agent",
-        { incident_id: incidentId, severity: cluster.risk_score >= 7 ? "high" : "normal",
+        { incident_id: incidentId, severity: cluster.risk_score >= 9 ? "urgent" : cluster.risk_score >= 7 ? "high" : "normal",
           note: "Handled by link_incident server-side via Gmail connector" },
         workspaceId, workspaceName);
       log("Gmail alert: handled by link_incident function");

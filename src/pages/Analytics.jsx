@@ -195,6 +195,10 @@ export default function Analytics() {
           onClick={() => setDrawerSection("knowledge")} />
         <KpiCard icon={ExternalLink} color="text-amber-500" value={m.knowledge.withIncident} label="Linked to Incidents" loading={m.loading}
           onClick={() => setDrawerSection("knowledge")} />
+        {m.knowledge.avgResolutionTime > 0 && (
+          <KpiCard icon={Clock} color="text-cyan-500" value={m.knowledge.avgResolutionTime} label="Avg Resolution (hrs)" loading={m.loading}
+            onClick={() => setDrawerSection("knowledge")} />
+        )}
       </div>
 
       {/* ===== Engineering ===== */}
@@ -232,7 +236,7 @@ export default function Analytics() {
               ))}
             </div>
           </div>
-          {Object.keys(chartData).length === 0 ? (
+          {Object.keys(chartData || {}).length === 0 ? (
             <p className="text-sm text-muted dark:text-muted-dark py-8 text-center">No ticket data.</p>
           ) : (
             <div className="space-y-2">

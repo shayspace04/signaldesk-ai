@@ -34,6 +34,13 @@
         ],
         "resource_name": "audit_logs",
         "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "agent.execute"
+        ],
+        "resource_name": "reply-agent",
+        "resource_type": "agent"
       }
     ]
   },

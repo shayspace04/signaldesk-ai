@@ -581,6 +581,7 @@ export default function TicketDrawer({ ticket: initialTicket, onClose, onRefresh
   const [resolving, setResolving] = useState(false);
   const [closing, setClosing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [showAssign, setShowAssign] = useState(false);
   const [showIncidentSelector, setShowIncidentSelector] = useState(false);
@@ -725,8 +726,8 @@ export default function TicketDrawer({ ticket: initialTicket, onClose, onRefresh
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e) => {
-      if (e.key === "Escape" && !showAssign && !showIncidentSelector && !showCreateSignal && !showDeleteConfirm) {
-        onClose();
+      if (e.key === "Escape" && !showAssign && !showIncidentSelector && !showCreateSignal && !showDeleteConfirm && !showCloseConfirm) {
+        handleCloseDrawer();
       }
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
@@ -787,7 +788,11 @@ export default function TicketDrawer({ ticket: initialTicket, onClose, onRefresh
 
   // ==================== Close (drawer only) ====================
   const handleCloseDrawer = () => {
-    onClose();
+    if (hasDirtyFields || !notesSaved) {
+      setShowCloseConfirm(true);
+    } else {
+      onClose();
+    }
   };
 
   // ==================== Assign ====================
@@ -1183,7 +1188,7 @@ export default function TicketDrawer({ ticket: initialTicket, onClose, onRefresh
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={handleCloseDrawer}
       />
 
       {/* Drawer */}
@@ -1214,7 +1219,7 @@ export default function TicketDrawer({ ticket: initialTicket, onClose, onRefresh
               </h2>
             </div>
             <button
-              onClick={onClose}
+              onClick={handleCloseDrawer}
               className="flex-shrink-0 rounded-lg p-2 text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-[#27272A] transition-colors"
             >
               <X size={18} />
@@ -1718,6 +1723,15 @@ export default function TicketDrawer({ ticket: initialTicket, onClose, onRefresh
         ticket={ticket}
         onCreate={handleCreateSignal}
         onCancel={() => setShowCreateSignal(false)}
+      />
+      <ConfirmDialog
+        open={showCloseConfirm}
+        title="Unsaved Changes"
+        message="You have unsaved changes. Are you sure you want to close? Your changes will be lost."
+        confirmLabel="Discard Changes"
+        destructive
+        onConfirm={() => { setShowCloseConfirm(false); onClose(); }}
+        onCancel={() => setShowCloseConfirm(false)}
       />
       <ConfirmDialog
         open={showDeleteConfirm}

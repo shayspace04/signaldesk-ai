@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import client from "@/lib/lemmaClient";
 import { emitRefresh } from "@/lib/refreshEvents";
 import { createNotification } from "@/lib/notifications";
-import { gatherContext, buildFacts, buildDraft, adaptTone, calculateConfidence, TONES } from "@/lib/draftCopilot";
+import { gatherContext, buildFacts, buildDraft, TONES } from "@/lib/draftCopilot";
 
 const STEP_ICONS = {
   search: Search,
@@ -136,13 +136,13 @@ export default function DraftCopilotPanel({ ticket, workspace, permissions = {},
       progressSteps.push({ icon: "search", label: "Drafting response..." });
       setSteps([...progressSteps]);
 
-      await new Promise((r) => setTimeout(r, 400));
-
-      const result = buildDraft(ticket, fts, selectedTone);
+      const result = await client.functions.run("generate_draft_reply", {
+        input: { ticket_id: ticket.id },
+      });
       const newDraft = {
         body: result.body,
-        sections: result.sections,
-        confidence: result.confidence,
+        sections: [{ type: "body", text: result.body }],
+        confidence: { overall: result.confidence, knowledge: 0, incident: 0, historical: 0, reasoning: [] },
         tone: selectedTone,
         created_at: new Date().toISOString(),
         version: 1,
@@ -152,9 +152,9 @@ export default function DraftCopilotPanel({ ticket, workspace, permissions = {},
       progressSteps.push({ icon: "check", label: "Ready" });
       setSteps([...progressSteps]);
 
+      setDraftId(result.draft_id);
       setDrafts([newDraft]);
       setCurrentVersion(0);
-      setDraftId(null);
       setPhase("editing");
 
       try {
@@ -163,7 +163,7 @@ export default function DraftCopilotPanel({ ticket, workspace, permissions = {},
           actor: "AI Copilot",
           resourceType: "ticket",
           resourceId: ticket.id,
-          details: { tone: selectedTone, confidence: result.confidence.overall },
+          details: { tone: selectedTone, confidence: result.confidence },
           workspaceId: ticket.workspaceId,
           workspaceName: ticket.workspaceName,
         });
@@ -188,15 +188,14 @@ export default function DraftCopilotPanel({ ticket, workspace, permissions = {},
     setSteps([...progressSteps]);
 
     try {
-      await new Promise((r) => setTimeout(r, 300));
-
-      const fts = facts || buildFacts(ticket, context || await gatherContext(ticket));
-      const result = buildDraft(ticket, fts, selectedTone);
+      const result = await client.functions.run("generate_draft_reply", {
+        input: { ticket_id: ticket.id },
+      });
 
       const newDraft = {
         body: result.body,
-        sections: result.sections,
-        confidence: result.confidence,
+        sections: [{ type: "body", text: result.body }],
+        confidence: { overall: result.confidence, knowledge: 0, incident: 0, historical: 0, reasoning: [] },
         tone: selectedTone,
         created_at: new Date().toISOString(),
         version: previousVersion + 1,
@@ -207,6 +206,7 @@ export default function DraftCopilotPanel({ ticket, workspace, permissions = {},
       progressSteps.push({ icon: "check", label: "Regenerated" });
       setSteps([...progressSteps]);
 
+      setDraftId(result.draft_id);
       setDrafts((prev) => [...prev, newDraft]);
       setCurrentVersion(drafts.length);
       setPhase("editing");
@@ -215,7 +215,7 @@ export default function DraftCopilotPanel({ ticket, workspace, permissions = {},
       setError(err?.message || "Regeneration failed");
       setPhase("editing");
     }
-  }, [ticket, selectedTone, currentDraft, facts, context, steps, drafts.length, phase]);
+  }, [ticket, selectedTone, currentDraft, steps, drafts.length, phase]);
 
   const handleToneChange = useCallback((newTone) => {
     setSelectedTone(newTone);

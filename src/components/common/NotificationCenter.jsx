@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Bell, CheckCircle2, Brain, Ticket, Radio, ShieldAlert, ArrowRight,
@@ -7,6 +7,7 @@ import { useLemmaRecords } from "@/hooks/useLemmaRecords";
 import { useRefreshListener } from "@/lib/refreshEvents";
 import { formatDistanceToNow } from "date-fns";
 import { useWorkspace } from "@/context/WorkspaceContext";
+import { workspaceFilter } from "@/lib/workspaceConfig";
 
 const SEVERITY_COLORS = {
   urgent: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300",
@@ -28,7 +29,8 @@ function actionMeta(action) {
 
 export default function NotificationCenter() {
   const { workspace } = useWorkspace();
-  const { data: logs, refresh } = useLemmaRecords("audit_logs", { sort: [{ field: "created_at", direction: "desc" }], limit: 20 });
+  const notifFilter = useMemo(() => workspaceFilter(workspace.id), [workspace.id]);
+  const { data: logs, refresh } = useLemmaRecords("audit_logs", { sort: [{ field: "created_at", direction: "desc" }], limit: 20, filters: notifFilter });
   useRefreshListener(refresh);
   const [open, setOpen] = useState(false);
   const [readIds, setReadIds] = useState(() => {

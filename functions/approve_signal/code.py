@@ -203,30 +203,51 @@ async def approve_signal(ctx: FunctionContext, data: ApproveSignalInput) -> Appr
                    resource_type="incident", resource_id=incident_id, signal_id=data.signal_id,
                    details={"severity": inc_severity, "title": inc_title, "auto_created": True, "priority_score": priority_score})
 
-        # 5. Send Slack alert if high or critical
-        if inc_severity in ("high", "urgent"):
+        # 5. Send email alert for high or critical (dedup: skip if already sent)
+        if inc_severity in ("high", "urgent") and not inc.get("email_sent"):
             sev_label = "Critical" if inc_severity == "urgent" else "High"
-            alert_msg = (
-                f"🚨 SignalDesk Alert\n\n"
-                f"Incident:\n{inc_title}\n\n"
-                f"Severity:\n{sev_label}\n\n"
-                f"Linked Signal:\n{sig.get('name', 'Unknown')}\n\n"
-                f"Affected Customers:\n{affected}\n\n"
-                f"Priority Score:\n{priority_score}\n\n"
-                f"Manager Action Required"
+            email_subject = f"🚨 {sev_label} Incident Created: {sig.get('name', 'Unknown')}"
+            email_body = (
+                f"A new {sev_label.lower()}-severity incident has been auto-created.\n\n"
+                f"Incident: {inc_title}\n"
+                f"Signal: {sig.get('name', 'Unknown')}\n"
+                f"Severity: {sev_label}\n"
+                f"Affected Customers: {affected}\n"
+                f"Priority Score: {priority_score}\n\n"
+                f"Incident ID: {incident_id}\n"
+                f"Manager action may be required."
             )
-            # Try real Slack; simulate if unavailable
-            simulated = True
+            email_sent_flag = False
+            gmail_msg_id = None
             try:
-                pod.connectors.operations.execute("slack", "send_message", {
-                    "channel": "#signaldesk-alerts", "text": alert_msg,
+                gmail_resp = pod.connectors.operations.execute("gmail", "GMAIL_SEND_EMAIL", {
+                    "to": "shay24test@gmail.com",
+                    "subject": email_subject,
+                    "body": email_body,
                 })
-                simulated = False
+                if gmail_resp:
+                    raw = getattr(gmail_resp, "result", gmail_resp)
+                    if isinstance(raw, dict):
+                        gmail_msg_id = raw.get("id") or raw.get("message_id") or raw.get("thread_id") or raw.get("gmail_message_id")
+                    elif hasattr(raw, "to_dict"):
+                        d = raw.to_dict()
+                        gmail_msg_id = d.get("id") or d.get("message_id") or d.get("thread_id") or d.get("gmail_message_id")
+                email_sent_flag = True
+                now_iso = datetime.now(timezone.utc).isoformat()
+                try:
+                    pod.records.update("incidents", incident_id, {
+                        "email_sent": True,
+                        "email_sent_at": now_iso,
+                        "recipient": "shay24test@gmail.com",
+                        "gmail_message_id": gmail_msg_id,
+                    })
+                except Exception:
+                    pass
             except Exception:
                 pass
-            _audit(pod, "slack.alert_sent", actor_type="system", actor_user_id=actor,
+            _audit(pod, "email.alert_sent", actor_type="system", actor_user_id=actor,
                    resource_type="incident", resource_id=incident_id, signal_id=data.signal_id,
-                   details={"severity": inc_severity, "simulated": simulated, "message": alert_msg})
-            slack_alert_sent = True
+                   details={"severity": inc_severity, "email_sent": email_sent_flag, "subject": email_subject})
+            slack_alert_sent = email_sent_flag
 
     return ApproveSignalOutput(signal_id=data.signal_id, status="approved", approval_id=appr["id"], incident_id=incident_id, slack_alert_sent=slack_alert_sent)

@@ -44,19 +44,30 @@ export default function Sidebar() {
   const sf = useMemo(() => workspaceFilter(workspace.id), [workspace.id]);
   const tHook = useLemmaRecords("tickets", { limit: 10000, filters: sf });
   const sHook = useLemmaRecords("signals", { limit: 1000, filters: sf });
+  const iHook = useLemmaRecords("incidents", { limit: 500, filters: sf });
+  const dHook = useLemmaRecords("drafts", { limit: 500, filters: sf });
+  const aHook = useLemmaRecords("audit_logs", { sort: [{ field: "created_at", direction: "desc" }], limit: 50, filters: sf });
   const kHook = useLemmaRecords("memory_entries", { limit: 500, filters: sf });
 
-  useRefreshListener(() => { tHook.refresh(); sHook.refresh(); kHook.refresh(); });
+  useRefreshListener(() => { tHook.refresh(); sHook.refresh(); iHook.refresh(); dHook.refresh(); aHook.refresh(); kHook.refresh(); });
 
   const tickets = tHook.data || [];
   const signals = sHook.data || [];
+  const incidents = iHook.data || [];
+  const drafts = dHook.data || [];
+  const logs = aHook.data || [];
   const knowledge = kHook.data || [];
 
   const openTickets = tickets.filter((t) => t.status !== "resolved" && t.status !== "closed").length;
   const pendingSignals = signals.filter((s) => (s.status === "pending" || s.status === "new") && s.status !== "rejected").length;
-  const activeIncidents = 0;
-  const pendingDrafts = 0;
-  const badgeMap = { tickets: openTickets, signals: pendingSignals, incidents: activeIncidents, drafts: pendingDrafts, unread: 0 };
+  const activeIncidents = incidents.filter((i) => i.status !== "closed" && i.status !== "resolved").length;
+  const pendingDrafts = drafts.filter((d) => d.status === "pending" || d.status === "draft").length;
+  let unreadCount = 0;
+  try {
+    const readIds = new Set(JSON.parse(localStorage.getItem("signaldesk-read-notifs") || "[]"));
+    unreadCount = logs.filter((n) => !readIds.has(n.id)).length;
+  } catch { unreadCount = logs.length; }
+  const badgeMap = { tickets: openTickets, signals: pendingSignals, incidents: activeIncidents, drafts: pendingDrafts, unread: unreadCount };
 
   const [searchResults, setSearchResults] = useState([]);
   useEffect(() => {
@@ -140,15 +151,15 @@ export default function Sidebar() {
 
           if (item.path === "/notifications") {
             return (
-              <button
+              <NavLink
                 key={item.path}
-                onClick={() => navigate("/notifications")}
-                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all duration-150 text-muted-base hover:bg-zinc-100 hover:text-body dark:hover:text-primary"
+                to={item.path}
+                className={({ isActive }) => `flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all duration-150 ${isActive ? "bg-zinc-900 font-medium text-white dark:bg-white dark:text-zinc-900" : "text-muted-base hover:bg-zinc-100 hover:text-body dark:hover:text-primary"}`}
               >
                 <Icon size={17} className="flex-shrink-0" />
                 <span className="truncate">{item.name}</span>
                 <Badge value={badgeValue} />
-              </button>
+              </NavLink>
             );
           }
 
@@ -186,7 +197,7 @@ export default function Sidebar() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate text-primary">{workspace.name}</p>
-              <p className="text-[11px] text-muted dark:text-muted-dark">Demo Workspace</p>
+                    <p className="text-[11px] text-muted dark:text-muted-dark">{workspace.subtitle || "Demo Workspace"}</p>
             </div>
             <ChevronDown size={14} className="text-muted dark:text-muted-dark flex-shrink-0" />
           </button>

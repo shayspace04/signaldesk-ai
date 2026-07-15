@@ -95,64 +95,84 @@ async def escalate_incident(ctx: FunctionContext, data: EscalateIncidentInput) -
         except Exception:
             pass
 
-        # Send email alert
-        linked_ticket_titles = []
-        try:
-            ticket_links = _items(pod.records.list("ticket_incidents", filter=[
-                {"field": "incident_id", "op": "eq", "value": data.incident_id},
-            ], limit=50))
-            for link in ticket_links:
-                t = pod.records.get("tickets", link.get("ticket_id"))
-                if t:
-                    linked_ticket_titles.append(t.get("title") or t.get("customer_name") or t["id"])
-        except Exception:
-            pass
-        if not linked_ticket_titles:
-            linked_ticket_titles = [f"{inc.get('affected_ticket_count', 0)} ticket(s) affected"]
-
-        signal_name = "N/A"
-        if inc.get("signal_id"):
+        # Send email alert (dedup: skip if already sent)
+        if not inc.get("email_sent"):
+            linked_ticket_titles = []
             try:
-                sig = pod.records.get("signals", inc["signal_id"])
-                if sig:
-                    signal_name = sig.get("name", "Unknown")
+                ticket_links = _items(pod.records.list("ticket_incidents", filter=[
+                    {"field": "incident_id", "op": "eq", "value": data.incident_id},
+                ], limit=50))
+                for link in ticket_links:
+                    t = pod.records.get("tickets", link.get("ticket_id"))
+                    if t:
+                        linked_ticket_titles.append(t.get("title") or t.get("customer_name") or t["id"])
             except Exception:
                 pass
+            if not linked_ticket_titles:
+                linked_ticket_titles = [f"{inc.get('affected_ticket_count', 0)} ticket(s) affected"]
 
-        email_body = (
-            f"🚨 Incident Escalated – SignalDesk\n\n"
-            f"Incident ID: {data.incident_id}\n"
-            f"Incident Title: {inc.get('title', 'Unknown')}\n"
-            f"Severity: {sev_label} (escalated from {SEVERITY_LABEL.get(old_sev, old_sev)})\n"
-            f"Workspace: {ws_name}\n"
-            f"Linked Signal: {signal_name}\n"
-            f"Linked Tickets:\n"
-        )
-        for t in linked_ticket_titles:
-            email_body += f"  • {t}\n"
-        email_body += (
-            f"\nNumber of Affected Customers: {inc.get('affected_ticket_count', 0)}\n"
-            f"AI Root Cause: {inc.get('summary') or 'N/A'}\n"
-            f"Recommended Action: Immediate investigation required\n"
-            f"Time Escalated: {datetime.now(timezone.utc).isoformat()}\n"
-            f"Dashboard Link: {dash_link}\n"
-        )
+            signal_name = "N/A"
+            if inc.get("signal_id"):
+                try:
+                    sig = pod.records.get("signals", inc["signal_id"])
+                    if sig:
+                        signal_name = sig.get("name", "Unknown")
+                except Exception:
+                    pass
 
-        try:
-            pod.connectors.execute("gmail", "GMAIL_SEND_EMAIL", {
-                "to": MANAGER_EMAIL,
-                "subject": f"[{sev_label}] Incident Escalated – {inc.get('title', 'Unknown')}",
-                "body": email_body,
-            })
-            email_sent = True
-            _audit(pod, "manager.email_sent", actor_type="system",
-                   resource_type="incident", resource_id=data.incident_id,
-                   details={"to": MANAGER_EMAIL, "severity": new_sev,
-                            "title": inc.get("title"), "escalated_from": old_sev})
-        except Exception as e:
-            _audit(pod, "manager.email_error", actor_type="system",
-                   resource_type="incident", resource_id=data.incident_id,
-                   details={"error": str(e), "to": MANAGER_EMAIL, "severity": new_sev})
+            email_body = (
+                f"🚨 Incident Escalated – SignalDesk\n\n"
+                f"Incident ID: {data.incident_id}\n"
+                f"Incident Title: {inc.get('title', 'Unknown')}\n"
+                f"Severity: {sev_label} (escalated from {SEVERITY_LABEL.get(old_sev, old_sev)})\n"
+                f"Workspace: {ws_name}\n"
+                f"Linked Signal: {signal_name}\n"
+                f"Linked Tickets:\n"
+            )
+            for t in linked_ticket_titles:
+                email_body += f"  • {t}\n"
+            email_body += (
+                f"\nNumber of Affected Customers: {inc.get('affected_ticket_count', 0)}\n"
+                f"AI Root Cause: {inc.get('summary') or 'N/A'}\n"
+                f"Recommended Action: Immediate investigation required\n"
+                f"Time Escalated: {datetime.now(timezone.utc).isoformat()}\n"
+                f"Dashboard Link: {dash_link}\n"
+            )
+
+            try:
+                gmail_resp = pod.connectors.execute("gmail", "GMAIL_SEND_EMAIL", {
+                    "to": MANAGER_EMAIL,
+                    "subject": f"[{sev_label}] Incident Escalated – {inc.get('title', 'Unknown')}",
+                    "body": email_body,
+                })
+                gmail_msg_id = None
+                if gmail_resp:
+                    raw = getattr(gmail_resp, "result", gmail_resp)
+                    if isinstance(raw, dict):
+                        gmail_msg_id = raw.get("id") or raw.get("message_id") or raw.get("thread_id") or raw.get("gmail_message_id")
+                    elif hasattr(raw, "to_dict"):
+                        d = raw.to_dict()
+                        gmail_msg_id = d.get("id") or d.get("message_id") or d.get("thread_id") or d.get("gmail_message_id")
+                email_sent = True
+                now_iso = datetime.now(timezone.utc).isoformat()
+                try:
+                    pod.records.update("incidents", data.incident_id, {
+                        "email_sent": True,
+                        "email_sent_at": now_iso,
+                        "recipient": MANAGER_EMAIL,
+                        "gmail_message_id": gmail_msg_id,
+                    })
+                except Exception:
+                    pass
+                _audit(pod, "manager.email_sent", actor_type="system",
+                       resource_type="incident", resource_id=data.incident_id,
+                       details={"to": MANAGER_EMAIL, "severity": new_sev,
+                                "title": inc.get("title"), "escalated_from": old_sev,
+                                "gmail_message_id": gmail_msg_id})
+            except Exception as e:
+                _audit(pod, "manager.email_error", actor_type="system",
+                       resource_type="incident", resource_id=data.incident_id,
+                       details={"error": str(e), "to": MANAGER_EMAIL, "severity": new_sev})
 
     return EscalateIncidentOutput(
         incident_id=data.incident_id,

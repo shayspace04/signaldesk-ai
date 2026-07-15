@@ -55,6 +55,10 @@ export default function Incidents() {
     return () => document.removeEventListener("click", handler);
   }, [showEscalate]);
 
+  useEffect(() => {
+    resetSync();
+  }, [selected]);
+
   const handleEscalate = async (newSeverity) => {
     if (!current || newSeverity === current.severity) return;
     setEscalating(true);
@@ -87,10 +91,10 @@ export default function Incidents() {
     resetSync();
     const result = await syncLinearIssue(current.id);
     toast.dismiss(toastId);
+    refreshIncidents();
     if (result.status === SYNC_STATUS.SYNCED) {
       toast.success("Linear issue synced");
       await createNotification({ action: "linear.issue_created", actor: "Support Manager", resourceType: "incident", resourceId: current.id, details: { name: current.title, linearIssue: result.result?.linearIssueIdentifier }, workspaceId: workspace.id, workspaceName: workspace.name }).catch(() => {});
-      refreshIncidents();
       emitRefresh();
     } else if (result.status === SYNC_STATUS.CONNECTOR_UNAVAILABLE) {
       toast.error("Linear connector is not configured");
@@ -247,7 +251,7 @@ export default function Incidents() {
                   <PriorityBadge priority={inc.severity} />
                 </div>
                 <p className="mt-1.5 text-xs text-muted dark:text-muted-dark">
-                  {inc.affected_ticket_count ? `${inc.affected_ticket_count} tickets` : ""}{inc.affected_customer_count != null ? ` · ${inc.affected_customer_count} customers` : ""}{inc.status ? ` · ${inc.status}` : ""}
+                  {inc.affected_ticket_count != null ? `${inc.affected_ticket_count} tickets` : ""}{inc.affected_customer_count != null ? ` · ${inc.affected_customer_count} customers` : ""}{inc.status ? ` · ${inc.status}` : ""}
                 </p>
                 <div className="mt-1.5 flex items-center gap-2">
                   {inc.linearIssueIdentifier ? (
@@ -294,11 +298,7 @@ export default function Incidents() {
                         {resolving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Resolve
                       </button>
                     )}
-                    {canResolveIncident && current.status !== "resolved" && current.status !== "closed" && !linearIsDone && current.linearIssueId && (
-                      <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 dark:bg-amber-900/20 px-2.5 py-1 text-[10px] font-medium text-amber-600 dark:text-amber-300">
-                        <Clock size={12} /> Awaiting Linear
-                      </span>
-                    )}
+
                   </div>
                 </div>
 
@@ -330,7 +330,7 @@ export default function Incidents() {
                   </div>
                   <div className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024]">
                     <p className="text-xs text-muted dark:text-muted-dark">Affected</p>
-                    <p className="mt-1 text-sm font-medium text-primary">{current.affected_ticket_count || "N/A"} tickets</p>
+                    <p className="mt-1 text-sm font-medium text-primary">{current.affected_ticket_count != null ? current.affected_ticket_count : "N/A"} tickets</p>
                     {current.affected_customer_count != null && <p className="text-xs text-muted dark:text-muted-dark mt-0.5">{current.affected_customer_count} customers</p>}
                   </div>
                   {current.owner_user_id && <div className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024]"><p className="text-xs text-muted dark:text-muted-dark">Owner</p><p className="mt-1 text-sm font-medium text-primary">{current.owner_user_id}</p></div>}
@@ -359,13 +359,7 @@ export default function Incidents() {
                       <ExternalLink size={12} /> Engineering
                     </h3>
                     <div className="flex items-center gap-2">
-                      {syncResult?.issueUrl && (
-                        <a href={syncResult.issueUrl} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 rounded-lg bg-white dark:bg-[#202024] px-2.5 py-1 text-[10px] font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all border border-border dark:border-border-dark">
-                          <ExternalLink size={10} /> Open Linear
-                        </a>
-                      )}
-                      {!syncResult?.issueUrl && current.linearIssueUrl && (
+                      {current.linearIssueUrl && (
                         <a href={current.linearIssueUrl} target="_blank" rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 rounded-lg bg-white dark:bg-[#202024] px-2.5 py-1 text-[10px] font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all border border-border dark:border-border-dark">
                           <ExternalLink size={10} /> Open Linear
@@ -374,16 +368,16 @@ export default function Incidents() {
                     </div>
                   </div>
 
-                  {syncStatus === SYNC_STATUS.SYNCED && syncResult ? (
+                  {current.linearIssueId ? (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 mb-2">
                         <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400" />
-                        <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">Synced</span>
+                        <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">Synced to Linear</span>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
                           <p className="text-[10px] text-muted dark:text-muted-dark">Issue Key</p>
-                          <p className="text-xs font-medium text-primary">{syncResult.identifier || current.linearIssueIdentifier || "—"}</p>
+                          <p className="text-xs font-medium text-primary">{current.linearIssueIdentifier || "—"}</p>
                         </div>
                         <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
                           <p className="text-[10px] text-muted dark:text-muted-dark">Status</p>
@@ -393,73 +387,11 @@ export default function Incidents() {
                         </div>
                         <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
                           <p className="text-[10px] text-muted dark:text-muted-dark">Issue URL</p>
-                          <p className="text-xs font-medium text-primary truncate max-w-[160px]">{syncResult.issueUrl || current.linearIssueUrl || "—"}</p>
+                          <p className="text-xs font-medium text-primary truncate max-w-[160px]">{current.linearIssueUrl || "—"}</p>
                         </div>
                         <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
                           <p className="text-[10px] text-muted dark:text-muted-dark">Last Synced</p>
-                          <p className="text-xs font-medium text-primary">{timeAgo(syncResult.syncedAt || current.linearSyncedAt) || "just now"}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button onClick={handleSync} disabled={syncLoading}
-                          className="flex items-center gap-1.5 rounded-lg bg-indigo-600 dark:bg-indigo-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 dark:hover:bg-indigo-400 transition-all disabled:opacity-50">
-                          {syncLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Sync Now
-                        </button>
-                        {(syncResult.issueUrl || current.linearIssueUrl) && (
-                          <a href={syncResult.issueUrl || current.linearIssueUrl} target="_blank" rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 rounded-lg bg-white dark:bg-[#202024] border border-border dark:border-border-dark px-3 py-1.5 text-xs font-medium text-body dark:hover:bg-[#2A2A2E] transition-all">
-                            <ExternalLink size={12} /> Open in Linear
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  ) : syncStatus === SYNC_STATUS.CONNECTING ? (
-                    <div className="flex items-center gap-2 py-3">
-                      <Loader2 size={14} className="animate-spin text-indigo-600 dark:text-indigo-400" />
-                      <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400">Connecting to Linear...</span>
-                    </div>
-                  ) : syncStatus === SYNC_STATUS.CONNECTOR_UNAVAILABLE ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">Ready to Sync</span>
-                      </div>
-                      <p className="text-xs text-amber-600 dark:text-amber-400">Linear connector is not configured.</p>
-                      <button onClick={handleSync} disabled={syncLoading}
-                        className="flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-500 transition-all disabled:opacity-50">
-                        {syncLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Retry Sync
-                      </button>
-                    </div>
-                  ) : syncStatus === SYNC_STATUS.ERROR ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-red-700 dark:text-red-300">Sync Failed</span>
-                      </div>
-                      <p className="text-xs text-red-600 dark:text-red-400">{syncError || "Unknown error"}</p>
-                      <button onClick={handleSync} disabled={syncLoading}
-                        className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500 transition-all disabled:opacity-50">
-                        {syncLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Retry
-                      </button>
-                    </div>
-                  ) : current.linearIssueId ? (
-                    <div className="space-y-2">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
-                          <p className="text-[10px] text-muted dark:text-muted-dark">Issue Key</p>
-                          <p className="text-xs font-medium text-primary">{current.linearIssueIdentifier || "—"}</p>
-                        </div>
-                        <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
-                          <p className="text-[10px] text-muted dark:text-muted-dark">Status</p>
-                          <p className={`text-xs font-medium ${current.linearStatus === "Done" ? "text-emerald-600 dark:text-emerald-400" : "text-primary"}`}>
-                            {current.linearStatus || "—"}
-                          </p>
-                        </div>
-                        <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
-                          <p className="text-[10px] text-muted dark:text-muted-dark">Last Synced</p>
-                          <p className="text-xs font-medium text-primary">{timeAgo(current.linearSyncedAt) || "—"}</p>
-                        </div>
-                        <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
-                          <p className="text-[10px] text-muted dark:text-muted-dark">Last Result</p>
-                          <p className="text-xs font-medium text-primary">{current.lastSyncResult || "—"}</p>
+                          <p className="text-xs font-medium text-primary">{timeAgo(current.linearSyncedAt) || "just now"}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -475,12 +407,38 @@ export default function Incidents() {
                         )}
                       </div>
                     </div>
+                  ) : syncStatus === SYNC_STATUS.CONNECTING ? (
+                    <div className="flex items-center gap-2 py-3">
+                      <Loader2 size={14} className="animate-spin text-indigo-600 dark:text-indigo-400" />
+                      <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400">Connecting to Linear...</span>
+                    </div>
+                  ) : syncStatus === SYNC_STATUS.CONNECTOR_UNAVAILABLE ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2"><span className="text-xs font-semibold text-amber-700 dark:text-amber-300">Not Escalated</span></div>
+                      <p className="text-xs text-amber-600 dark:text-amber-400">Linear connector is not configured.</p>
+                      <button onClick={handleSync} disabled={syncLoading}
+                        className="flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-500 transition-all disabled:opacity-50">
+                        {syncLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Retry Sync
+                      </button>
+                    </div>
+                  ) : syncStatus === SYNC_STATUS.ERROR ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2"><span className="text-xs font-semibold text-red-700 dark:text-red-300">Sync Failed</span></div>
+                      <p className="text-xs text-red-600 dark:text-red-400">{syncError || "Unknown error"}</p>
+                      <button onClick={handleSync} disabled={syncLoading}
+                        className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500 transition-all disabled:opacity-50">
+                        {syncLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Retry
+                      </button>
+                    </div>
                   ) : (
                     <div className="space-y-2">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-semibold text-muted-base">Not Escalated</span>
+                      </div>
                       <button onClick={handleSync} disabled={syncLoading}
                         className="w-full rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-700 py-2.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all disabled:opacity-50">
                         {syncLoading ? <Loader2 size={12} className="inline animate-spin mr-1" /> : null}
-                        Ready to Sync
+                        Escalate to Linear
                       </button>
                       {!canCreateLinearIssue && (
                         <p className="text-[10px] text-muted dark:text-muted-dark">Only Support Managers can escalate incidents to Engineering.</p>

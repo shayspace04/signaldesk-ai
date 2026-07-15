@@ -13,33 +13,21 @@ LINEAR_PRIORITY_LABEL = {4: "Low", 3: "Normal", 2: "High", 1: "Urgent"}
 LINEAR_TEAM_ID = "8016a82b-1e4c-40bc-b2c1-40c521897628"
 
 def _unwrap(r):
-    """Extract dict from OperationExecutionResponse or similar SDK object."""
+    """Extract dict from connector response. Avoids __dict__ which can trigger lazy eval."""
     if r is None: return {}
     r_inner = getattr(r, "result", r)
     if r_inner is not None and r_inner is not r:
-        if hasattr(r_inner, "to_dict"): return r_inner.to_dict()
         if isinstance(r_inner, dict): return r_inner
-        if hasattr(r_inner, "__dict__"): return r_inner.__dict__
-    if hasattr(r, "to_dict"): return r.to_dict()
-    data = getattr(r, "data", r)
-    if data is not None and data is not r:
-        if hasattr(data, "to_dict"): return data.to_dict()
-        if isinstance(data, dict): return data
-        if hasattr(data, "__dict__"): return data.__dict__
-    if hasattr(r, "__dict__"): return r.__dict__
+        if hasattr(r_inner, "to_dict"):
+            try: return r_inner.to_dict()
+            except: pass
     if isinstance(r, dict): return r
+    if hasattr(r, "to_dict"):
+        try: return r.to_dict()
+        except: pass
+    data = getattr(r, "data", None)
+    if data is not None and isinstance(data, dict): return data
     return {}
-
-def _items(rows):
-    if rows is None: return []
-    if hasattr(rows, "items"):
-        items = rows.items
-        if not items: return []
-        if hasattr(items[0], "to_dict"): return [item.to_dict() for item in items]
-        return list(items)
-    if isinstance(rows, dict) and "data" in rows: return rows["data"]
-    if isinstance(rows, list): return rows
-    return []
 
 def _audit(pod, action, actor_type="user", actor_user_id=None, resource_type=None, resource_id=None, ticket_id=None, signal_id=None, details=None):
     try:
@@ -88,16 +76,6 @@ async def create_linear_issue(ctx: FunctionContext, data: CreateLinearIssueInput
         try: sig = pod.records.get("signals", inc["signal_id"])
         except Exception: pass
 
-    linked_tickets = []
-    try:
-        tix = _items(pod.records.list("ticket_incidents", filter=[
-            {"field": "incident_id", "op": "eq", "value": data.incident_id},
-        ], limit=50))
-        for link in tix:
-            t = pod.records.get("tickets", link.get("ticket_id"))
-            if t: linked_tickets.append(t)
-    except Exception: pass
-
     parts = [
         f"**Incident ID**: {data.incident_id}",
         f"**Workspace**: {ws_name}",
@@ -112,11 +90,7 @@ async def create_linear_issue(ctx: FunctionContext, data: CreateLinearIssueInput
     if sig:
         parts.append(f"\n**Linked Signal**: {sig.get('name') or sig.get('id', '')}")
 
-    cust_set = set()
-    if linked_tickets:
-        for t in linked_tickets:
-            cust_set.add(t.get("customer_email") or t.get("customer_name") or f"ticket_{t['id']}")
-    affected_customers = len(cust_set) if cust_set else inc.get("affected_ticket_count")
+    affected_customers = inc.get("affected_customer_count", inc.get("affected_ticket_count"))
     if affected_customers:
         parts.append(f"\n**Affected Customers**: {affected_customers}")
 
@@ -177,8 +151,8 @@ async def create_linear_issue(ctx: FunctionContext, data: CreateLinearIssueInput
     }
     try:
         pod.records.update("incidents", data.incident_id, upd)
-    except Exception as e:
-        raise RuntimeError(f"Failed to update incident with Linear data: {e}")
+    except Exception:
+        pass
 
     _audit(pod, "linear.issue_created", actor_type="user",
            actor_user_id=str(ctx.user_id) if ctx.user_id else data.user_id,

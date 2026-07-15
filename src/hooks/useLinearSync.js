@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import client from '@/lib/lemmaClient';
 
 export const SYNC_STATUS = {
@@ -15,7 +15,10 @@ export function useLinearSync() {
   const [syncResult, setSyncResult] = useState(null);
   const [syncError, setSyncError] = useState(null);
 
+  const reqRef = useRef(0);
+
   const syncLinearIssue = useCallback(async (incidentId) => {
+    const reqId = ++reqRef.current;
     setSyncStatus(SYNC_STATUS.CONNECTING);
     setSyncLoading(true);
     setSyncResult(null);
@@ -25,6 +28,8 @@ export function useLinearSync() {
       const raw = await client.functions.run("create_linear_issue", {
         input: { incident_id: incidentId },
       });
+      if (reqId !== reqRef.current) return { status: SYNC_STATUS.IDLE };
+
       const result = raw.output_data || raw.output || raw;
 
       if (result.success) {
@@ -47,6 +52,7 @@ export function useLinearSync() {
       setSyncLoading(false);
       return { status, error: msg };
     } catch (err) {
+      if (reqId !== reqRef.current) return { status: SYNC_STATUS.IDLE };
       setSyncStatus(SYNC_STATUS.ERROR);
       setSyncError(err?.message || 'Unable to create Linear issue');
       setSyncLoading(false);
@@ -55,6 +61,7 @@ export function useLinearSync() {
   }, []);
 
   const resetSync = useCallback(() => {
+    reqRef.current += 1;
     setSyncStatus(SYNC_STATUS.IDLE);
     setSyncLoading(false);
     setSyncResult(null);
