@@ -62,56 +62,27 @@ async function createTicket(t, workspaceId, wsName) {
 }
 
 async function createSignal(signal, workspaceId, wsName) {
+  const id = randomId();
   try {
-    const result = await client.functions.run("create_signal", {
-      input: {
-        name: signal.name,
-        summary: signal.summary,
-        category: signal.category,
-        proposed_priority: signal.priority,
-        evidence_count: signal.ticketCount,
-        analysis_confidence: signal.confidence,
-        root_cause: signal.root_cause,
-        workspaceId,
-        workspaceName: wsName,
-      },
+    await client.records.create("signals", {
+      id,
+      name: signal.name,
+      summary: signal.summary,
+      category: signal.category,
+      proposed_priority: signal.priority,
+      priority_score: Math.round(signal.risk_score),
+      analysis_confidence: signal.confidence,
+      evidence_count: signal.ticketCount,
+      affected_customer_count: signal.affectedCustomers?.length || 3,
+      root_cause: signal.root_cause,
+      status: signal.status || "approved",
+      workspaceId,
+      workspaceName: wsName,
     });
-    const signalId = result.output_data?.signal_id || result.signal_id || result.id;
-    if (signalId) {
-      await client.records.update("signals", signalId, {
-        priority_score: Math.round(signal.risk_score),
-        affected_customer_count: signal.affectedCustomers?.length || 3,
-        status: signal.status || "approved",
-        workspaceId,
-        workspaceName: wsName,
-      });
-    }
-    return signalId;
+    return id;
   } catch (err) {
     console.warn("[demo] signal create failed:", signal.name, err?.message);
-    try {
-      // Fallback: direct record creation
-      const id = randomId();
-      await client.records.create("signals", {
-        id,
-        name: signal.name,
-        summary: signal.summary,
-        category: signal.category,
-        proposed_priority: signal.priority,
-        priority_score: Math.round(signal.risk_score),
-        analysis_confidence: signal.confidence,
-        evidence_count: signal.ticketCount,
-        affected_customer_count: signal.affectedCustomers?.length || 3,
-        root_cause: signal.root_cause,
-        status: signal.status || "approved",
-        workspaceId,
-        workspaceName: wsName,
-      });
-      return id;
-    } catch (e2) {
-      console.warn("[demo] signal fallback also failed:", e2?.message);
-      return null;
-    }
+    return null;
   }
 }
 
