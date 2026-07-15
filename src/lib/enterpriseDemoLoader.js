@@ -53,7 +53,6 @@ async function createTicket(t, workspaceId, wsName) {
       received_at: t.created_at,
       workspaceId,
       workspaceName: wsName,
-      tags: [SEED_MARKER, `workspace:${workspaceId}`],
     });
     return record.id;
   } catch (err) {
@@ -80,13 +79,11 @@ async function createSignal(signal, workspaceId, wsName) {
     const signalId = result.output_data?.signal_id || result.signal_id || result.id;
     if (signalId) {
       await client.records.update("signals", signalId, {
-        risk_score: signal.risk_score,
-        business_impact_score: Math.round(signal.risk_score * 10),
+        priority_score: signal.risk_score,
         affected_customer_count: signal.affectedCustomers?.length || 3,
         status: signal.status || "approved",
         workspaceId,
         workspaceName: wsName,
-        tags: [SEED_MARKER, `workspace:${workspaceId}`],
       });
     }
     return signalId;
@@ -100,9 +97,8 @@ async function createSignal(signal, workspaceId, wsName) {
         name: signal.name,
         summary: signal.summary,
         category: signal.category,
-        priority: signal.priority,
-        risk_score: signal.risk_score,
-        business_impact_score: Math.round(signal.risk_score * 10),
+        proposed_priority: signal.priority,
+        priority_score: signal.risk_score,
         analysis_confidence: signal.confidence,
         evidence_count: signal.ticketCount,
         affected_customer_count: signal.affectedCustomers?.length || 3,
@@ -110,7 +106,6 @@ async function createSignal(signal, workspaceId, wsName) {
         status: signal.status || "approved",
         workspaceId,
         workspaceName: wsName,
-        tags: [SEED_MARKER, `workspace:${workspaceId}`],
       });
       return id;
     } catch (e2) {
@@ -194,7 +189,7 @@ async function createKnowledgeArticle(article, workspaceId, wsName) {
         severity: article.severity || "high",
         resolution_time_hours: article.resolution_time_hours || 4,
         preventive_actions: article.preventive_actions || "",
-        symptoms: article.symptoms || [],
+        symptoms: Array.isArray(article.symptoms) ? article.symptoms.join("; ") : (article.symptoms || ""),
         workspaceId,
         workspaceName: wsName,
         tags: [SEED_MARKER, `workspace:${workspaceId}`],
@@ -220,6 +215,7 @@ async function createKnowledgeArticle(article, workspaceId, wsName) {
         severity: article.severity || "high",
         resolution_time_hours: article.resolution_time_hours || 4,
         preventive_actions: article.preventive_actions || "",
+        symptoms: Array.isArray(article.symptoms) ? article.symptoms.join("; ") : (article.symptoms || ""),
         workspaceId,
         workspaceName: wsName,
         tags: [SEED_MARKER, `workspace:${workspaceId}`],
@@ -250,7 +246,6 @@ async function createHandoff(handoff, relatedIncidentId, workspaceId, wsName) {
       },
       workspaceId,
       workspaceName: wsName,
-      tags: [SEED_MARKER, `workspace:${workspaceId}`],
     });
     return id;
   } catch (err) {
@@ -264,14 +259,11 @@ async function createApproval(approval, workspaceId, wsName) {
     const id = randomId();
     await client.records.create("drafts", {
       id,
-      ticket_id: approval.ticketRef != null ? `ref-${workspaceId}-${approval.ticketRef}` : id,
       body: approval.draftBody,
       confidence: approval.confidence || 85,
       status: approval.status || "pending",
-      ai_model: approval.aiModel || "gpt-4",
       workspaceId,
       workspaceName: wsName,
-      tags: [SEED_MARKER, `workspace:${workspaceId}`],
     });
     return id;
   } catch (err) {
@@ -290,7 +282,6 @@ async function createNotificationEntry(action, details, workspaceId, wsName) {
       details: details || {},
       workspaceId,
       workspaceName: wsName,
-      tags: [SEED_MARKER],
     });
   } catch { /* silent */ }
 }
