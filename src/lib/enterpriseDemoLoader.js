@@ -79,7 +79,7 @@ async function createSignal(signal, workspaceId, wsName) {
     const signalId = result.output_data?.signal_id || result.signal_id || result.id;
     if (signalId) {
       await client.records.update("signals", signalId, {
-        priority_score: signal.risk_score,
+        priority_score: Math.round(signal.risk_score),
         affected_customer_count: signal.affectedCustomers?.length || 3,
         status: signal.status || "approved",
         workspaceId,
@@ -98,7 +98,7 @@ async function createSignal(signal, workspaceId, wsName) {
         summary: signal.summary,
         category: signal.category,
         proposed_priority: signal.priority,
-        priority_score: signal.risk_score,
+        priority_score: Math.round(signal.risk_score),
         analysis_confidence: signal.confidence,
         evidence_count: signal.ticketCount,
         affected_customer_count: signal.affectedCustomers?.length || 3,
