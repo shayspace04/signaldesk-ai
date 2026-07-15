@@ -53,7 +53,7 @@ function ticketPriority(i, isRecurring) {
 }
 
 function ticketStatus(i) {
-  const s = ["new","in_review","in_review","waiting","waiting","resolved","closed"];
+  const s = ["new","triaged","triaged","waiting_approval","waiting_approval","resolved","new"];
   return s[i % 7];
 }
 
@@ -74,7 +74,6 @@ function buildTicket(title, category, customer, opts) {
     assignee: assignee(idx),
     body: (BODIES[category] || BODIES.General).replace("{name}", (customer && customer.name) || "Customer"),
     created_at: daysAgo((opts && opts.daysAgo !== undefined) ? opts.daysAgo : (idx + 1)),
-    tags: (opts && opts.tags) || [],
     recurring: isRecurring,
   };
 }
