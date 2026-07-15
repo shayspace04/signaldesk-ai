@@ -2,8 +2,8 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import {
   TicketCheck, Radio, ShieldAlert, FileText, Brain, AlertTriangle,
-  RefreshCw, Download, Search, Activity, BookOpen,
-  Mail, CheckCircle2, ArrowUpRight, ArrowDownRight, Link2, Archive,
+  RefreshCw, Download, Search, Activity, BookOpen, Rocket,
+  Mail, CheckCircle2, ArrowUpRight, ArrowDownRight, Link2, Archive, Loader2,
 } from "lucide-react";
 import c from "react-countup";
 const CountUp = c.default;
@@ -16,6 +16,7 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { toast } from "sonner";
 import { emitRefresh } from "@/lib/refreshEvents";
 import { deriveWorkflowStage } from "@/lib/workflowStage";
+import { launchEnterpriseDemo } from "@/lib/enterpriseDemoLoader";
 
 function Trend({ value, positive }) {
   if (value == null) return null;
@@ -213,6 +214,24 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [timeFilter, setTimeFilter] = useState("7d");
   const [searchQuery, setSearchQuery] = useState("");
+  const [demoLoading, setDemoLoading] = useState(false);
+  const [demoProgress, setDemoProgress] = useState({ current: 0, total: 0, workspace: "", message: "" });
+
+  const handleLaunchDemo = async () => {
+    setDemoLoading(true);
+    setDemoProgress({ current: 0, total: 5, workspace: "Starting...", message: "" });
+    try {
+      await launchEnterpriseDemo((wsId, wsName, step, total, msg, pct) => {
+        setDemoProgress({ current: wsId, total: step, workspace: wsName, message: msg });
+      });
+      toast.success("Enterprise demo launched — all 5 workspaces populated");
+    } catch (err) {
+      toast.error("Demo failed: " + (err.message || "unknown error"));
+    } finally {
+      setDemoLoading(false);
+      setDemoProgress({ current: 0, total: 0, workspace: "", message: "" });
+    }
+  };
 
   const m = useMetrics(workspace.id, { timeFilter, searchQuery });
   const k = workspace.kpi;
@@ -261,6 +280,20 @@ export default function Dashboard() {
             <option value="90d">Last 90 days</option>
             <option value="all">All time</option>
           </select>
+          {workspace.id === "signaldesk" && (
+            <button
+              onClick={handleLaunchDemo}
+              disabled={demoLoading}
+              className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                demoLoading
+                  ? "border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-950/30 text-violet-400 cursor-wait"
+                  : "border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-900/40 hover:border-violet-300 dark:hover:border-violet-700"
+              }`}
+            >
+              {demoLoading ? <Loader2 size={14} className="animate-spin" /> : <Rocket size={14} />}
+              {demoLoading ? "Populating..." : "Launch Enterprise Demo"}
+            </button>
+          )}
           <button
             onClick={m.refresh}
             className="flex items-center gap-2 rounded-xl border border-border dark:border-border-dark bg-card px-3 py-2 text-sm font-medium text-secondary-body hover:bg-zinc-50 dark:hover:bg-[#27272A] hover:border-zinc-300 dark:hover:border-border-dark transition-all duration-200"
@@ -278,11 +311,28 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {isEmptyWorkspace && !searchQuery ? (
+      {demoLoading ? (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-violet-200 dark:border-violet-800 bg-violet-50/50 dark:bg-[#1a0a2e]/50 py-24">
+          <Loader2 size={40} className="mb-4 text-violet-500 animate-spin" />
+          <p className="text-lg font-medium text-violet-700 dark:text-violet-300">Launching Enterprise Demo...</p>
+          <div className="mt-4 flex items-center gap-3">
+            <div className="h-2 w-48 rounded-full bg-violet-200 dark:bg-violet-900/50 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-violet-500 transition-all duration-500"
+                style={{ width: `${Math.round((demoProgress.current !== 0 ? 1 : 0) / 5 * 100)}%` }}
+              />
+            </div>
+          </div>
+          <p className="mt-3 text-sm text-violet-500 dark:text-violet-400">
+            Populating {demoProgress.workspace}...
+          </p>
+          <p className="mt-1 text-xs text-violet-400 dark:text-violet-500">{demoProgress.message}</p>
+        </div>
+      ) : isEmptyWorkspace && !searchQuery ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 dark:border-border-dark bg-zinc-50/50 dark:bg-[#202024]/50 py-24">
           <Radio size={40} className="mb-4 text-zinc-300 dark:text-zinc-500" />
           <p className="text-lg font-medium text-secondary-body">This workspace has no data yet.</p>
-          <p className="mt-1 text-sm text-muted dark:text-muted-dark">Load demo data from Settings to populate the dashboard.</p>
+          <p className="mt-1 text-sm text-muted dark:text-muted-dark">Click &quot;Launch Enterprise Demo&quot; above to populate all workspaces with realistic enterprise support data.</p>
         </div>
       ) : isEmptyWorkspace && searchQuery ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 dark:border-border-dark bg-zinc-50/50 dark:bg-[#202024]/50 py-24">
@@ -304,6 +354,17 @@ export default function Dashboard() {
               className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 transition-colors">
               Show All Time
             </button>
+          </div>
+        </div>
+      ) : demoLoading ? (
+        <div className="mb-6 rounded-xl border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-950/30 p-4 flex items-center gap-4">
+          <Loader2 size={20} className="animate-spin text-violet-500 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-violet-700 dark:text-violet-300">Enterprise Demo: Populating {demoProgress.workspace}...</p>
+            <p className="text-xs text-violet-500 dark:text-violet-400 mt-0.5 truncate">{demoProgress.message}</p>
+          </div>
+          <div className="h-2 w-32 rounded-full bg-violet-200 dark:bg-violet-900/50 overflow-hidden flex-shrink-0">
+            <div className="h-full rounded-full bg-violet-500 transition-all duration-500" style={{ width: `${Math.round((demoProgress.current !== 0 ? 1 : 0) / 5 * 100)}%` }} />
           </div>
         </div>
       ) : (
