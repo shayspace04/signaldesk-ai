@@ -61,11 +61,16 @@ export async function clearEnterpriseDemo(onProgress) {
   return count;
 }
 
+const AUTO_FIELDS = new Set(["number", "created_at", "updated_at", "user_id"]);
+
 async function restoreTable(table, onProgress, wsName) {
   const records = await fetchBackup(table);
   let created = 0;
   for (const rec of records) {
-    const { created_at, updated_at, ...fields } = rec;
+    const fields = {};
+    for (const [k, v] of Object.entries(rec)) {
+      if (!AUTO_FIELDS.has(k)) fields[k] = v;
+    }
     try {
       await client.records.create(table, fields);
       created++;
