@@ -125,30 +125,29 @@ function EngineeringHandoffModal({ signal, onClose }) {
   const [successState, setSuccessState] = useState(null);
   const { syncStatus, syncLoading, syncResult, syncError, syncLinearIssue, resetSync } = useLinearSync();
 
+  const [persistedLinear, setPersistedLinear] = useState(null);
+
+  useEffect(() => {
+    if (!successState?.incidentId) return;
+    setPersistedLinear(null);
+    client.records.get("incidents", successState.incidentId).then((inc) => {
+      if (inc?.linearIssueId) {
+        setPersistedLinear({
+          issueId: inc.linearIssueId,
+          issueUrl: inc.linearIssueUrl || inc.linearUrl || "",
+          identifier: inc.linearIssueIdentifier || inc.linearKey || "",
+          syncedAt: inc.linearSyncedAt || inc.lastSyncedAt || "",
+        });
+      }
+    }).catch(() => {});
+  }, [successState?.incidentId]);
+
   const handleSyncToLinear = useCallback(async () => {
     if (!successState?.incidentId) return;
     resetSync();
     const result = await syncLinearIssue(successState.incidentId);
     if (result.status === SYNC_STATUS.SYNCED) {
-      const r = result.result || {};
-      const issueId = r.id;
-      const issueUrl = r.ticket_url;
-      const identifier = r.issue_title;
-      if (issueId) {
-        const now = new Date().toISOString();
-        await client.records.update("incidents", successState.incidentId, {
-          linearIssueId: issueId,
-          linearIssueUrl: issueUrl || "",
-          linearIssueIdentifier: identifier || "",
-          linearKey: identifier || "",
-          linearUrl: issueUrl || "",
-          linearSyncedAt: now,
-          lastSyncedAt: now,
-          linearStatus: "Todo",
-          syncStatus: "Todo",
-        }).catch(() => {});
-        emitRefresh();
-      }
+      emitRefresh();
     }
   }, [successState, syncLinearIssue, resetSync]);
 
@@ -477,71 +476,82 @@ function EngineeringHandoffModal({ signal, onClose }) {
               <span className="text-sm font-medium text-primary">{successState.customerCount}</span>
             </div>
             {/* Sync Section */}
-            {syncStatus === SYNC_STATUS.SYNCED && syncResult ? (
-              <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400" />
-                  <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Synced</span>
-                </div>
-                {syncResult.identifier && (
-                  <div className="flex items-center justify-between rounded-lg bg-white dark:bg-[#202024] px-3 py-2 mb-2">
-                    <span className="text-xs text-muted dark:text-muted-dark">Issue Key</span>
-                    <span className="text-xs font-mono font-medium text-primary">{syncResult.identifier}</span>
+            {(() => {
+              const syncedData = syncStatus === SYNC_STATUS.SYNCED ? syncResult : persistedLinear;
+              if (syncedData) {
+                return (<div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400" />
+                    <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Synced</span>
                   </div>
-                )}
-                {syncResult.issueUrl && (
-                  <div className="flex items-center justify-between rounded-lg bg-white dark:bg-[#202024] px-3 py-2 mb-2">
-                    <span className="text-xs text-muted dark:text-muted-dark">Issue URL</span>
-                    <a href={syncResult.issueUrl} target="_blank" rel="noopener noreferrer"
-                      className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline truncate max-w-[200px]">{syncResult.issueUrl}</a>
+                  {syncedData.identifier && (
+                    <div className="flex items-center justify-between rounded-lg bg-white dark:bg-[#202024] px-3 py-2 mb-2">
+                      <span className="text-xs text-muted dark:text-muted-dark">Issue Key</span>
+                      <span className="text-xs font-mono font-medium text-primary">{syncedData.identifier}</span>
+                    </div>
+                  )}
+                  {syncedData.issueUrl && (
+                    <div className="flex items-center justify-between rounded-lg bg-white dark:bg-[#202024] px-3 py-2 mb-2">
+                      <span className="text-xs text-muted dark:text-muted-dark">Issue URL</span>
+                      <a href={syncedData.issueUrl} target="_blank" rel="noopener noreferrer"
+                        className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline truncate max-w-[200px]">{syncedData.issueUrl}</a>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between rounded-lg bg-white dark:bg-[#202024] px-3 py-2">
+                    <span className="text-xs text-muted dark:text-muted-dark">Last Synced</span>
+                    <span className="text-xs font-medium text-primary">{syncedData.syncedAt ? new Date(syncedData.syncedAt).toLocaleTimeString() : "—"}</span>
                   </div>
-                )}
-                <div className="flex items-center justify-between rounded-lg bg-white dark:bg-[#202024] px-3 py-2">
-                  <span className="text-xs text-muted dark:text-muted-dark">Last Synced</span>
-                  <span className="text-xs font-medium text-primary">{new Date(syncResult.syncedAt).toLocaleTimeString()}</span>
-                </div>
-              </div>
-            ) : syncStatus === SYNC_STATUS.CONNECTOR_UNAVAILABLE ? (
-              <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm font-semibold text-amber-700 dark:text-amber-300">Ready to Sync</span>
-                </div>
-                <p className="text-xs text-amber-600 dark:text-amber-400">Linear connector is not configured.</p>
-              </div>
-            ) : syncStatus === SYNC_STATUS.ERROR ? (
-              <div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm font-semibold text-red-700 dark:text-red-300">Sync Failed</span>
-                </div>
-                <p className="text-xs text-red-600 dark:text-red-400 mb-3">{syncError || "Unknown error"}</p>
+                </div>);
+              }
+              if (syncStatus === SYNC_STATUS.CONNECTOR_UNAVAILABLE) {
+                return (<div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-semibold text-amber-700 dark:text-amber-300">Ready to Sync</span>
+                  </div>
+                  <p className="text-xs text-amber-600 dark:text-amber-400">Linear connector is not configured.</p>
+                </div>);
+              }
+              if (syncStatus === SYNC_STATUS.ERROR) {
+                return (<div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-semibold text-red-700 dark:text-red-300">Sync Failed</span>
+                  </div>
+                  <p className="text-xs text-red-600 dark:text-red-400 mb-3">{syncError || "Unknown error"}</p>
+                  <button onClick={handleSyncToLinear} disabled={syncLoading}
+                    className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500 transition-all disabled:opacity-50">
+                    {syncLoading ? <Loader2 size={12} className="animate-spin" /> : null} Retry
+                  </button>
+                </div>);
+              }
+              if (syncStatus === SYNC_STATUS.CONNECTING) {
+                return (<div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4">
+                  <div className="flex items-center gap-2">
+                    <Loader2 size={14} className="animate-spin text-amber-600 dark:text-amber-400" />
+                    <span className="text-sm font-medium text-amber-700 dark:text-amber-300">Syncing with Linear...</span>
+                  </div>
+                </div>);
+              }
+              return (
                 <button onClick={handleSyncToLinear} disabled={syncLoading}
-                  className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500 transition-all disabled:opacity-50">
-                  {syncLoading ? <Loader2 size={12} className="animate-spin" /> : null} Retry
+                  className="w-full rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-700 py-3 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all disabled:opacity-50">
+                  {syncLoading ? <Loader2 size={12} className="inline animate-spin mr-1" /> : null}
+                  Ready to Sync
                 </button>
-              </div>
-            ) : syncStatus === SYNC_STATUS.CONNECTING ? (
-              <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4">
-                <div className="flex items-center gap-2">
-                  <Loader2 size={14} className="animate-spin text-amber-600 dark:text-amber-400" />
-                  <span className="text-sm font-medium text-amber-700 dark:text-amber-300">Syncing with Linear...</span>
-                </div>
-              </div>
-            ) : (
-              <button onClick={handleSyncToLinear} disabled={syncLoading}
-                className="w-full rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-700 py-3 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all disabled:opacity-50">
-                Ready to Sync
-              </button>
-            )}
+              );
+            })()}
           </div>
           <div className="flex gap-3">
             <button onClick={onClose}
               className="flex-1 rounded-xl bg-zinc-900 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 transition-all">Done</button>
-            {syncStatus === SYNC_STATUS.SYNCED && syncResult?.issueUrl && (
-              <a href={syncResult.issueUrl} target="_blank" rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-sm font-medium text-body hover:bg-zinc-50 dark:hover:bg-[#202024] transition-all flex-1">
-                <ExternalLink size={14} /> Open in Linear
-              </a>
-            )}
+            {(() => {
+              const url = syncStatus === SYNC_STATUS.SYNCED ? syncResult?.issueUrl : persistedLinear?.issueUrl;
+              return url ? (
+                <a href={url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-sm font-medium text-body hover:bg-zinc-50 dark:hover:bg-[#202024] transition-all flex-1">
+                  <ExternalLink size={14} /> Open in Linear
+                </a>
+              ) : null;
+            })()}
           </div>
         </div>
       </div>

@@ -46,6 +46,12 @@ export default function Incidents() {
       setSelected(null);
     }
   }, [incidents, selected]);
+  useEffect(() => {
+    if (selected) {
+      const updated = incidents.find((i) => i.id === selected.id);
+      if (updated && updated !== selected) setSelected(updated);
+    }
+  }, [incidents]);
   const [resolving, setResolving] = useState(false);
   const [escalating, setEscalating] = useState(false);
   const [showEscalate, setShowEscalate] = useState(false);
@@ -99,24 +105,6 @@ export default function Incidents() {
     toast.dismiss(toastId);
     refreshIncidents();
     if (result.status === SYNC_STATUS.SYNCED) {
-      const r = result.result || {};
-      const issueId = r.id;
-      const issueUrl = r.ticket_url;
-      const identifier = r.issue_title;
-      if (issueId) {
-        const now = new Date().toISOString();
-        await client.records.update("incidents", current.id, {
-          linearIssueId: issueId,
-          linearIssueUrl: issueUrl || "",
-          linearIssueIdentifier: identifier || "",
-          linearKey: identifier || "",
-          linearUrl: issueUrl || "",
-          linearSyncedAt: now,
-          lastSyncedAt: now,
-          linearStatus: "Todo",
-          syncStatus: "Todo",
-        }).catch(() => {});
-      }
       toast.success("Linear issue synced");
       await createNotification({ action: "linear.issue_created", actor: "Support Manager", resourceType: "incident", resourceId: current.id, details: { name: current.title, linearIssue: identifier }, workspaceId: workspace.id, workspaceName: workspace.name }).catch(() => {});
       emitRefresh();
@@ -403,7 +391,7 @@ export default function Incidents() {
                     </div>
                   </div>
 
-                  {current.linearIssueId || syncStatus === SYNC_STATUS.SYNCED ? (
+                  {current.linearIssueId ? (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 mb-2">
                         <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400" />
@@ -412,7 +400,7 @@ export default function Incidents() {
                       <div className="grid grid-cols-2 gap-2">
                         <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
                           <p className="text-[10px] text-muted dark:text-muted-dark">Issue Key</p>
-                          <p className="text-xs font-medium text-primary">{current.linearIssueIdentifier || syncResult?.identifier || "—"}</p>
+                          <p className="text-xs font-medium text-primary">{current.linearIssueIdentifier || current.linearKey || "—"}</p>
                         </div>
                         <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
                           <p className="text-[10px] text-muted dark:text-muted-dark">Status</p>
@@ -422,11 +410,11 @@ export default function Incidents() {
                         </div>
                         <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
                           <p className="text-[10px] text-muted dark:text-muted-dark">Issue URL</p>
-                          <p className="text-xs font-medium text-primary truncate max-w-[160px]">{current.linearIssueUrl || syncResult?.issueUrl || "—"}</p>
+                          <p className="text-xs font-medium text-primary truncate max-w-[160px]">{current.linearIssueUrl || current.linearUrl || "—"}</p>
                         </div>
                         <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
                           <p className="text-[10px] text-muted dark:text-muted-dark">Last Synced</p>
-                          <p className="text-xs font-medium text-primary">{timeAgo(current.linearSyncedAt || syncResult?.syncedAt) || "just now"}</p>
+                          <p className="text-xs font-medium text-primary">{timeAgo(current.linearSyncedAt || current.lastSyncedAt) || "just now"}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -434,8 +422,8 @@ export default function Incidents() {
                           className="flex items-center gap-1.5 rounded-lg bg-indigo-600 dark:bg-indigo-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 dark:hover:bg-indigo-400 transition-all disabled:opacity-50">
                           {syncLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Sync Now
                         </button>
-                        {(current.linearIssueUrl || syncResult?.issueUrl) && (
-                          <a href={current.linearIssueUrl || syncResult?.issueUrl} target="_blank" rel="noopener noreferrer"
+                        {(current.linearIssueUrl || current.linearUrl) && (
+                          <a href={current.linearIssueUrl || current.linearUrl} target="_blank" rel="noopener noreferrer"
                             className="flex items-center gap-1.5 rounded-lg bg-white dark:bg-[#202024] border border-border dark:border-border-dark px-3 py-1.5 text-xs font-medium text-body dark:hover:bg-[#2A2A2E] transition-all">
                             <ExternalLink size={12} /> Open in Linear
                           </a>

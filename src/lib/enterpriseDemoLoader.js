@@ -458,6 +458,7 @@ export async function launchEnterpriseDemo(onProgress) {
     if (connectorErrors.length > 0) {
       console.log(`[perf] Connector errors:`, connectorErrors);
     }
+    emitRefresh();
     window.dispatchEvent(new CustomEvent(DEMO_CONNECTORS_EVENT, {
       detail: { gmailSent, linearSynced, connectorErrors, connTime },
     }));

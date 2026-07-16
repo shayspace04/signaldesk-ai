@@ -9,6 +9,21 @@ export const SYNC_STATUS = {
   ERROR: 'error',
 };
 
+function persistLinearFields(incidentId, issueId, issueUrl, identifier) {
+  const now = new Date().toISOString();
+  return client.records.update("incidents", incidentId, {
+    linearIssueId: issueId,
+    linearIssueUrl: issueUrl || "",
+    linearIssueIdentifier: identifier || "",
+    linearKey: identifier || "",
+    linearUrl: issueUrl || "",
+    linearSyncedAt: now,
+    lastSyncedAt: now,
+    linearStatus: "Todo",
+    syncStatus: "Todo",
+  });
+}
+
 export function useLinearSync() {
   const [syncStatus, setSyncStatus] = useState(SYNC_STATUS.IDLE);
   const [syncLoading, setSyncLoading] = useState(false);
@@ -28,6 +43,24 @@ export function useLinearSync() {
       const incident = await client.records.get("incidents", incidentId).catch(() => null);
       if (reqId !== reqRef.current) return { status: SYNC_STATUS.IDLE };
       if (!incident) throw new Error("Incident not found");
+
+      // Idempotency: skip create if already synced
+      if (incident.linearIssueId) {
+        const result = {
+          id: incident.linearIssueId,
+          ticket_url: incident.linearIssueUrl || "",
+          issue_title: incident.linearIssueIdentifier || incident.linearKey || "",
+        };
+        setSyncStatus(SYNC_STATUS.SYNCED);
+        setSyncResult({
+          issueId: incident.linearIssueId,
+          issueUrl: incident.linearIssueUrl || "",
+          identifier: incident.linearIssueIdentifier || incident.linearKey || "",
+          syncedAt: incident.linearSyncedAt || incident.lastSyncedAt || new Date().toISOString(),
+        });
+        setSyncLoading(false);
+        return { status: SYNC_STATUS.SYNCED, result };
+      }
 
       const priorityMap = { urgent: 1, high: 2, normal: 3, low: 4 };
       const priority = priorityMap[incident.severity] || 0;
@@ -50,6 +83,9 @@ export function useLinearSync() {
       const key = issueUrl.match(/\/issue\/([^/]+)/)?.[1] || opResult.issue_title || "";
 
       if (issueId) {
+        // Persist to datastore BEFORE updating React state
+        await persistLinearFields(incidentId, issueId, issueUrl, key);
+
         setSyncStatus(SYNC_STATUS.SYNCED);
         setSyncResult({
           issueId,

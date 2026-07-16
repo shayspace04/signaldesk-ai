@@ -33,7 +33,7 @@ export async function runGmailAlert(incident) {
     console.log(`[gmail] connector result for ${incident.id}:`, JSON.stringify(opResult).slice(0, 200));
 
     if (sent) {
-      await client.records.update("incidents", incident.id, { email_sent: true }).catch(() => {});
+      await client.records.update("incidents", incident.id, { email_sent: true }).catch(e => console.error(`[gmail] persist failed for ${incident.id}:`, e?.message || e));
     }
 
     await client.records.create("audit_logs", {
@@ -99,7 +99,7 @@ export function syncToLinear(incidentId) {
           linearStatus: "Todo",
           syncStatus: "Todo",
         };
-        await client.records.update("incidents", incidentId, updates).catch(() => {});
+        await client.records.update("incidents", incidentId, updates).catch(e => console.error(`[linear] persist failed for ${incidentId}:`, e?.message || e));
 
         return { status: "synced", issueId, issueUrl, identifier };
       }

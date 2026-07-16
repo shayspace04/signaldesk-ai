@@ -811,7 +811,7 @@ async function postIncidentActions(cluster, signalId, incidentId, workspaceId, w
             lastSyncedAt: now,
             linearStatus: "Todo",
             syncStatus: "Todo",
-          }).catch(() => {});
+          }).catch(e => log("Linear persist failed:", e?.message || e));
           log("Linear issue created and persisted:", identifier);
         } else {
           log("Linear create returned unsuccessful:", opResult.error || "unknown error");
