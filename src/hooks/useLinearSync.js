@@ -45,21 +45,21 @@ export function useLinearSync() {
       if (reqId !== reqRef.current) return { status: SYNC_STATUS.IDLE };
 
       const opResult = raw?.result || {};
-      const synced = opResult.successful !== false && opResult.data?.id;
+      const issueId = opResult.id;
 
-      if (synced) {
+      if (issueId) {
         setSyncStatus(SYNC_STATUS.SYNCED);
         setSyncResult({
-          issueId: opResult.data.id,
-          issueUrl: opResult.data.ticket_url,
-          identifier: opResult.data.issue_title,
+          issueId,
+          issueUrl: opResult.ticket_url,
+          identifier: opResult.issue_title,
           syncedAt: new Date().toISOString(),
         });
         setSyncLoading(false);
-        return { status: SYNC_STATUS.SYNCED, result: opResult.data };
+        return { status: SYNC_STATUS.SYNCED, result: opResult };
       }
 
-      const msg = opResult.error || 'Failed to create Linear issue';
+      const msg = 'Failed to create Linear issue';
       setSyncStatus(SYNC_STATUS.ERROR);
       setSyncError(msg);
       setSyncLoading(false);

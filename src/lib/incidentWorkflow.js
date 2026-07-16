@@ -81,12 +81,11 @@ export function syncToLinear(incidentId) {
       );
 
       const opResult = raw?.result || {};
-      const success = opResult.successful !== false;
-      const issueId = opResult.data?.id;
-      const issueUrl = opResult.data?.ticket_url;
-      const identifier = opResult.data?.issue_title;
+      const issueId = opResult.id;
+      const issueUrl = opResult.ticket_url;
+      const identifier = opResult.issue_title;
 
-      if (success && issueId) {
+      if (issueId) {
         console.log(`[linear] connector success for ${incidentId}: ${identifier} (${issueUrl})`);
 
         const updates = {

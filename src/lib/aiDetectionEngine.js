@@ -796,9 +796,9 @@ async function postIncidentActions(cluster, signalId, incidentId, workspaceId, w
           },
         );
         const opResult = raw?.result || {};
-        const issueId = opResult.data?.id;
-        const issueUrl = opResult.data?.ticket_url;
-        const identifier = opResult.data?.issue_title;
+        const issueId = opResult.id;
+        const issueUrl = opResult.ticket_url;
+        const identifier = opResult.issue_title;
         if (issueId) {
           const now = new Date().toISOString();
           await client.records.update("incidents", incidentId, {

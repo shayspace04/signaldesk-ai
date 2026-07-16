@@ -130,9 +130,10 @@ function EngineeringHandoffModal({ signal, onClose }) {
     resetSync();
     const result = await syncLinearIssue(successState.incidentId);
     if (result.status === SYNC_STATUS.SYNCED) {
-      const issueId = result.result?.linearIssueId || result.result?.issueId;
-      const issueUrl = result.result?.linearIssueUrl || result.result?.issueUrl;
-      const identifier = result.result?.linearIssueIdentifier || result.result?.identifier;
+      const r = result.result || {};
+      const issueId = r.id;
+      const issueUrl = r.ticket_url;
+      const identifier = r.issue_title;
       if (issueId) {
         const now = new Date().toISOString();
         await client.records.update("incidents", successState.incidentId, {
