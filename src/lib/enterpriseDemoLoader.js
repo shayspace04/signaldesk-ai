@@ -33,7 +33,8 @@ async function fetchBackup(table) {
 }
 
 // Tables that have a workspaceId column (can filter by workspace)
-const WS_TABLES = ["tickets", "signals", "incidents", "memory_entries", "audit_logs", "drafts", "ticket_incidents", "ticket_signals", "approvals", "user_roles"];
+// Only include tables verified to have workspaceId as a SQL column.
+const WS_TABLES = ["tickets", "signals", "incidents", "memory_entries", "audit_logs", "drafts"];
 
 async function deleteByWorkspace() {
   let total = 0;
