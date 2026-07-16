@@ -11,20 +11,6 @@ const DEMO_WS_IDS = ["binocs", "zap", "foxo", "corally", "yesmadam"];
 
 const WS_LABELS = { binocs: "Binocs", zap: "Zapdata", foxo: "Foxo", corally: "Corally", yesmadam: "YesMadam" };
 
-const PER_WS_COUNTS = {
-  binocs: { tickets: 64, signals: 8, incidents: 1, memory_entries: 18, audit_logs: 19, drafts: 6 },
-  zap: { tickets: 64, signals: 8, incidents: 2, memory_entries: 18, audit_logs: 20, drafts: 6 },
-  foxo: { tickets: 65, signals: 8, incidents: 1, memory_entries: 18, audit_logs: 19, drafts: 5 },
-  corally: { tickets: 66, signals: 8, incidents: 2, memory_entries: 19, audit_logs: 19, drafts: 6 },
-  yesmadam: { tickets: 105, signals: 15, incidents: 2, memory_entries: 24, audit_logs: 58, drafts: 10 },
-};
-
-const WS_RECORDS = {};
-for (const [ws, tables] of Object.entries(PER_WS_COUNTS)) {
-  WS_RECORDS[ws] = Object.values(tables).reduce((a, b) => a + b, 0);
-}
-const TOTAL_WORK = Object.values(WS_RECORDS).reduce((a, b) => a + b, 0);
-
 const STAGE_LABELS = {
   tickets: "Tickets",
   signals: "Signals",
@@ -108,11 +94,9 @@ async function deleteByWorkspace() {
   const junctionTables = ["ticket_signals", "ticket_incidents", "approvals", "user_roles", "d"];
 
   const [clearResults, auditResults, junctionResults] = await Promise.all([
-    // Phase 1: Clear per-workspace tables
     Promise.all(clearCombos.map(({ wsId, table }) =>
       clearTable(table, { field: "workspaceId", op: "eq", value: wsId })
     )),
-    // Phase 1b: Clear audit_logs by action prefix
     Promise.all(auditCombos.map(async ({ wsId, prefix }) => {
       let subTotal = 0;
       let cursor;
@@ -138,7 +122,6 @@ async function deleteByWorkspace() {
       } while (cursor);
       return subTotal;
     })),
-    // Phase 2: Clear junction tables
     Promise.all(junctionTables.map(t => clearTable(t))),
   ]);
 
@@ -156,99 +139,90 @@ export async function clearEnterpriseDemo(onProgress) {
   return count;
 }
 
-// ─── Chunked Parallel Create ────────────────────────────────────
+// ─── Parallel batch create (no sequential loops) ────────────────
 
-async function createRecords(table, workspaceId, idMap, onBatch) {
-  const allRecords = await fetchBackup(table);
-  const wsRecords = workspaceId
-    ? allRecords.filter(r => r.workspaceId === workspaceId)
-    : allRecords.filter(r => !r.workspaceId || r.workspaceId === "");
+async function batchCreate(table, items) {
+  if (!items.length) return 0;
 
-  if (wsRecords.length === 0) return [];
+  const CHUNK_SIZE = 50;
+  const chunks = [];
+  for (let i = 0; i < items.length; i += CHUNK_SIZE) {
+    chunks.push(items.slice(i, i + CHUNK_SIZE));
+  }
 
-  const results = [];
-  const CHUNK_SIZE = 20;
-
-  for (let i = 0; i < wsRecords.length; i += CHUNK_SIZE) {
-    const chunk = wsRecords.slice(i, i + CHUNK_SIZE);
-    const chunkResults = await Promise.all(chunk.map(async (rec) => {
-      const fields = {};
-      for (const [k, v] of Object.entries(rec)) {
-        if (!AUTO_FIELDS.has(k)) fields[k] = v;
-      }
-      if (idMap && REFERENCE_FIELDS[table]) {
-        for (const refField of REFERENCE_FIELDS[table]) {
-          if (fields[refField] !== undefined) {
-            fields[refField] = remapValue(fields[refField], idMap);
-          }
-        }
-      }
-      fields.id = generateId();
+  const results = await Promise.all(chunks.map(chunk =>
+    Promise.all(chunk.map(async ({ fields }) => {
       try {
-        const result = await client.records.create(table, fields);
-        return { oldId: rec.id, newId: result.id };
+        await client.records.create(table, fields);
+        return 1;
       } catch (err) {
         if (err?.code === "DATASTORE_CONFLICT" || /already exists.*id/i.test(err?.message || "")) {
           fields.id = generateId();
           try {
-            const result = await client.records.create(table, fields);
-            return { oldId: rec.id, newId: result.id };
+            await client.records.create(table, fields);
+            return 1;
           } catch (retryErr) {
-            console.error(`[create] RETRY FAILED ${table}/${rec.id}: ${retryErr?.message || retryErr}`);
-            return null;
+            console.error(`[create] RETRY FAILED ${table}/${fields.id}: ${retryErr?.message || retryErr}`);
+            return 0;
           }
         }
-        console.error(`[create] FAILED ${table}/${rec.id}: ${err?.message || err}`);
-        return null;
-      }
-    }));
-
-    const valid = chunkResults.filter(Boolean);
-    for (const cr of valid) results.push(cr);
-    if (onBatch) onBatch(valid.length);
-  }
-
-  const finalResults = results.filter(Boolean);
-  for (const { oldId, newId } of finalResults) {
-    idMap.set(oldId, newId);
-  }
-  return finalResults;
-}
-
-// ─── Chunked Parallel Cross-Reference Update ────────────────────
-
-async function updateCrossReferences(table, created, idMap) {
-  const refs = REFERENCE_FIELDS[table];
-  if (!refs || !created.length) return 0;
-  const allRecords = await fetchBackup(table);
-  let updated = 0;
-  const CHUNK_SIZE = 30;
-
-  for (let i = 0; i < created.length; i += CHUNK_SIZE) {
-    const chunk = created.slice(i, i + CHUNK_SIZE);
-    const chunkResults = await Promise.all(chunk.map(async ({ oldId, newId }) => {
-      const original = allRecords.find(r => r.id === oldId);
-      if (!original) return 0;
-      const updates = {};
-      for (const refField of refs) {
-        const val = original[refField];
-        if (val == null) continue;
-        const remapped = remapValue(val, idMap);
-        if (JSON.stringify(remapped) !== JSON.stringify(val)) {
-          updates[refField] = remapped;
-        }
-      }
-      if (Object.keys(updates).length === 0) return 0;
-      try {
-        await client.records.update(table, newId, updates);
-        return 1;
-      } catch {
+        console.error(`[create] FAILED ${table}/${fields.id}: ${err?.message || err}`);
         return 0;
       }
-    }));
-    updated += chunkResults.reduce((a, b) => a + b, 0);
+    }))
+  ));
+
+  return results.flat().reduce((a, b) => a + b, 0);
+}
+
+// ─── Generate all data in memory ───────────────────────────────
+
+async function generateAllData() {
+  const idMap = new Map();
+  const allData = {};
+  const allTables = [...WS_TABLES, "ticket_incidents", "ticket_signals", "approvals", "user_roles", "d"];
+
+  for (const table of allTables) {
+    const records = await fetchBackup(table);
+
+    let filtered;
+    if (table === "audit_logs") {
+      filtered = records.filter(r => DEMO_WS_IDS.includes(r.workspaceId) || !r.workspaceId || r.workspaceId === "");
+    } else if (WS_TABLES.includes(table)) {
+      filtered = records.filter(r => DEMO_WS_IDS.includes(r.workspaceId));
+    } else {
+      filtered = records.filter(r => !r.workspaceId || r.workspaceId === "");
+    }
+
+    const prepared = filtered.map(rec => {
+      const fields = {};
+      for (const [k, v] of Object.entries(rec)) {
+        if (!AUTO_FIELDS.has(k)) fields[k] = v;
+      }
+      fields.id = generateId();
+      return { oldId: rec.id, fields };
+    });
+
+    allData[table] = prepared;
+
+    for (const { oldId, fields } of prepared) {
+      idMap.set(oldId, fields.id);
+    }
   }
-  return updated;
+
+  for (const [table, items] of Object.entries(allData)) {
+    const refs = REFERENCE_FIELDS[table];
+    if (!refs) continue;
+    for (const item of items) {
+      for (const refField of refs) {
+        if (item.fields[refField] !== undefined) {
+          item.fields[refField] = remapValue(item.fields[refField], idMap);
+        }
+      }
+    }
+  }
+
+  return { allData, idMap };
 }
 
 // ─── Launch ─────────────────────────────────────────────────────
@@ -256,12 +230,10 @@ async function updateCrossReferences(table, created, idMap) {
 export async function launchEnterpriseDemo(onProgress) {
   _backupCache = {};
   const failures = [];
-  let cumulativeWork = 0;
-  const idMap = new Map();
+  let workDone = 0;
   const startTime = Date.now();
   const phaseTimes = {};
 
-  // API call tracking (wraps client without mutating global)
   const apiCounts = { POST: 0, GET: 0, PATCH: 0, DELETE: 0, FUNC: 0 };
   const c = client;
   const _orig = {
@@ -279,178 +251,144 @@ export async function launchEnterpriseDemo(onProgress) {
   c.records.delete = (...a) => { apiCounts.DELETE++; return _orig.delete(...a); };
   c.functions.run = (...a) => { apiCounts.FUNC++; return _orig.run(...a); };
 
-  const _marks = {};
-  const mark = (label) => { _marks[label] = Date.now(); };
+  const mark = (label) => { phaseTimes[label] = Date.now(); };
   const markEnd = (label) => {
-    const elapsed = (Date.now() - (_marks[label] || Date.now())) / 1000;
-    phaseTimes[label] = (phaseTimes[label] || 0) + elapsed;
+    const started = phaseTimes[label];
+    if (typeof started === "number") {
+      phaseTimes[label] = (Date.now() - started) / 1000;
+    }
   };
 
+  let totalWork = 0;
+
   const fire = (detail) => {
-    detail.percent = Math.min(100, Math.round((cumulativeWork / TOTAL_WORK) * 100));
-    detail.workDone = cumulativeWork;
-    detail.workTotal = TOTAL_WORK;
+    detail.percent = totalWork ? Math.min(100, Math.round((workDone / totalWork) * 100)) : 0;
+    detail.workDone = workDone;
+    detail.workTotal = totalWork;
     if (onProgress) onProgress(detail);
   };
 
-  // Phase: Clear
+  // ── Phase 0: Clear ──────────────────────────────────────────
   mark("clear");
-  try { await clearEnterpriseDemo(onProgress); } catch {}
+  try {
+    if (onProgress) onProgress({ type: "status", status: "clearing" });
+    await deleteByWorkspace();
+    window.dispatchEvent(new CustomEvent(DEMO_CLEAR_EVENT));
+    if (onProgress) onProgress({ type: "status", status: "cleared" });
+  } catch {}
   markEnd("clear");
   console.log(`[perf] clear: ${phaseTimes.clear.toFixed(1)}s`);
 
-  // Phase: Workspace record creation
+  // ── Phase 1: Generate all data in memory ────────────────────
+  mark("generate");
+  if (onProgress) onProgress({ type: "status", status: "generating" });
+  const { allData, idMap } = await generateAllData();
+  markEnd("generate");
+  console.log(`[perf] generate: ${phaseTimes.generate.toFixed(1)}s`);
+
+  totalWork = WS_TABLES.reduce((sum, t) => sum + (allData[t]?.length || 0), 0);
+
+  // Synthetic single workspace for progress UI
+  fire({
+    type: "workspace-start",
+    workspaceId: "enterprise", workspaceLabel: "Enterprise",
+    workspaceIndex: 1, totalWorkspaces: 1,
+  });
+
   const connectorTargets = [];
 
-  for (let wsIndex = 0; wsIndex < DEMO_WS_IDS.length; wsIndex++) {
-    const wsId = DEMO_WS_IDS[wsIndex];
-    const label = WS_LABELS[wsId];
-    const wsCounts = PER_WS_COUNTS[wsId];
+  // ── Phase 2-7: Create tables in dependency order ────────────
+  const createPhase = async (stageId, stageLabel) => {
+    const items = allData[stageId] || [];
+    if (!items.length) return;
 
     fire({
-      type: "workspace-start",
-      workspaceId: wsId, workspaceLabel: label,
-      workspaceIndex: wsIndex + 1, totalWorkspaces: DEMO_WS_IDS.length,
+      type: "stage-start", workspaceId: "enterprise", workspaceLabel: "Enterprise",
+      workspaceIndex: 1, totalWorkspaces: 1,
+      stageId, stageLabel, count: 0, total: items.length,
     });
 
-    const allCreated = {};
-    const wsTimer = `ws_${wsId}`;
-    mark(wsTimer);
+    mark(stageId);
+    const created = await batchCreate(stageId, items);
+    markEnd(stageId);
 
-    await Promise.all(WS_TABLES.map(async (stageId) => {
-      const stageTotal = wsCounts[stageId];
-      const stageLabel = STAGE_LABELS[stageId];
-      fire({
-        type: "stage-start", workspaceId: wsId, workspaceLabel: label,
-        workspaceIndex: wsIndex + 1, totalWorkspaces: DEMO_WS_IDS.length,
-        stageId, stageLabel, count: 0, total: stageTotal,
-      });
+    workDone += created;
 
-      let stageCount = 0;
-      try {
-        const created = await createRecords(stageId, wsId, idMap, (batchSize) => {
-          cumulativeWork += batchSize;
-          stageCount += batchSize;
-          fire({
-            type: "stage-progress", workspaceId: wsId, workspaceLabel: label,
-            workspaceIndex: wsIndex + 1, totalWorkspaces: DEMO_WS_IDS.length,
-            stageId, stageLabel, count: stageCount, total: stageTotal,
+    fire({
+      type: "stage-complete", workspaceId: "enterprise", workspaceLabel: "Enterprise",
+      workspaceIndex: 1, totalWorkspaces: 1,
+      stageId, stageLabel, count: created, total: items.length,
+    });
+
+    if (stageId === "incidents") {
+      for (const item of items) {
+        const sev = item.fields.severity || "";
+        if ((sev === "high" || sev === "urgent") && !item.fields.email_sent) {
+          connectorTargets.push({
+            incident: { id: item.fields.id, ...item.fields },
+            needsGmail: true,
+            needsLinear: sev === "urgent" && !item.fields.linearIssueId,
           });
-        });
-        allCreated[stageId] = created;
-        fire({
-          type: "stage-complete", workspaceId: wsId, workspaceLabel: label,
-          workspaceIndex: wsIndex + 1, totalWorkspaces: DEMO_WS_IDS.length,
-          stageId, stageLabel, count: stageCount, total: stageTotal,
-        });
-      } catch (err) {
-        failures.push({ workspaceId: wsId, workspaceLabel: label, stageId, stageLabel, reason: err.message });
-        fire({
-          type: "stage-error", workspaceId: wsId, workspaceLabel: label,
-          workspaceIndex: wsIndex + 1, totalWorkspaces: DEMO_WS_IDS.length,
-          stageId, stageLabel, reason: err.message,
-        });
-      }
-    }));
-
-    mark("refs");
-    const refTables = ["tickets", "signals", "incidents"];
-    await Promise.all(refTables.map(async (stageId) => {
-      const refs = REFERENCE_FIELDS[stageId];
-      if (!refs || refs.length === 0) return;
-      const created = allCreated[stageId] || [];
-      if (created.length === 0) return;
-      try { await updateCrossReferences(stageId, created, idMap); } catch {}
-    }));
-    markEnd("refs");
-
-    // Collect incidents that need connectors (do NOT start Gmail/Linear yet)
-    mark("collectConnectors");
-    try {
-      let cursor;
-      do {
-        const args = { filters: [{ field: "workspaceId", op: "eq", value: wsId }], limit: 100 };
-        if (cursor) args.cursor = cursor;
-        const page = await client.records.list("incidents", args).catch(() => ({ items: [], records: [], data: [], cursor: null }));
-        const items = page.items || page.records || page.data || [];
-        for (const inc of items) {
-          const sev = inc.severity || "";
-          if ((sev === "high" || sev === "urgent") && !inc.email_sent) {
-            connectorTargets.push({ incident: inc, needsGmail: true, needsLinear: sev === "urgent" && !inc.linearIssueId });
-          } else if (sev === "urgent" && !inc.linearIssueId) {
-            connectorTargets.push({ incident: inc, needsLinear: true });
-          }
+        } else if (sev === "urgent" && !item.fields.linearIssueId) {
+          connectorTargets.push({
+            incident: { id: item.fields.id, ...item.fields },
+            needsLinear: true,
+          });
         }
-        cursor = page.cursor || page.nextCursor || null;
-      } while (cursor);
-    } catch {}
-    markEnd("collectConnectors");
+      }
+    }
+  };
 
-    markEnd(wsTimer);
-    console.log(`[perf] ws_${wsId} (${label}): ${phaseTimes[wsTimer].toFixed(1)}s`);
+  // tickets → signals → incidents → memory_entries
+  await createPhase("tickets", "Tickets");
+  await createPhase("signals", "Signals");
+  await createPhase("incidents", "Incidents");
+  await createPhase("memory_entries", "Knowledge");
 
-    fire({ type: "workspace-complete", workspaceId: wsId, workspaceLabel: label, workspaceIndex: wsIndex + 1, totalWorkspaces: DEMO_WS_IDS.length });
-  }
+  // audit_logs + drafts: no dependencies between them, run in parallel
+  mark("remaining");
+  await Promise.all([
+    createPhase("audit_logs", "Activity Logs"),
+    createPhase("drafts", "Drafts"),
+  ]);
+  markEnd("remaining");
 
-  // Phase: Junction tables (parallel)
+  // ── Phase: Junction tables ──────────────────────────────────
   mark("junctions");
   const junctionTables = ["ticket_incidents", "ticket_signals", "approvals", "user_roles", "d"];
-  await Promise.all(junctionTables.map(async (stageId) => {
-    try {
-      const allRecords = await fetchBackup(stageId);
-      const nonWsRecords = allRecords.filter(r => !r.workspaceId || r.workspaceId === "");
-      if (nonWsRecords.length === 0) return;
-      await createRecords(stageId, null, idMap);
-    } catch {}
+  await Promise.all(junctionTables.map(async (table) => {
+    const items = allData[table] || [];
+    if (!items.length) return;
+    await batchCreate(table, items);
   }));
   markEnd("junctions");
 
-  // Phase: Orphan audit_logs
-  mark("orphans");
-  try {
-    const allAuditLogs = await fetchBackup("audit_logs");
-    const orphanAuditLogs = allAuditLogs.filter(r => !r.workspaceId || r.workspaceId === "");
-    if (orphanAuditLogs.length > 0) {
-      await createRecords("audit_logs", null, idMap);
-    }
-  } catch {}
-  markEnd("orphans");
-
+  // ── Refresh ONCE ────────────────────────────────────────────
   emitRefresh();
 
   const loadTime = ((Date.now() - startTime) / 1000).toFixed(1);
 
-  // Compute summary (record counts)
-  let totalTickets = 0, totalSignals = 0, totalIncidents = 0;
-  let totalKnowledge = 0, totalDrafts = 0;
-  for (const wsId of DEMO_WS_IDS) {
-    const ws = PER_WS_COUNTS[wsId];
-    totalTickets += ws.tickets;
-    totalSignals += ws.signals;
-    totalIncidents += ws.incidents;
-    totalKnowledge += ws.memory_entries;
-    totalDrafts += ws.drafts;
-  }
+  // Summary
+  const summary = {
+    tickets: allData.tickets?.length || 0,
+    signals: allData.signals?.length || 0,
+    incidents: allData.incidents?.length || 0,
+    memory_entries: allData.memory_entries?.length || 0,
+    drafts: allData.drafts?.length || 0,
+    gmail_alerts: 0,
+    linear_issues: 0,
+    workspaces: DEMO_WS_IDS.length,
+  };
 
-  // Fire complete event — demo is ready, connectors will follow
   fire({
     type: "complete",
     results: [],
     failures,
     loadTime,
-    summary: {
-      tickets: totalTickets,
-      signals: totalSignals,
-      incidents: totalIncidents,
-      memory_entries: totalKnowledge,
-      drafts: totalDrafts,
-      gmail_alerts: 0,
-      linear_issues: 0,
-      workspaces: DEMO_WS_IDS.length,
-    },
+    summary,
     percent: 100,
-    workDone: TOTAL_WORK,
-    workTotal: TOTAL_WORK,
+    workDone: totalWork,
+    workTotal: totalWork,
   });
 
   window.dispatchEvent(new CustomEvent(DEMO_COMPLETE_EVENT, { detail: [] }));
@@ -459,14 +397,12 @@ export async function launchEnterpriseDemo(onProgress) {
   console.log("═══════════════════════════════════════════");
   console.log("  ENTERPRISE DEMO PERFORMANCE REPORT");
   console.log("═══════════════════════════════════════════");
-  for (const wsId of DEMO_WS_IDS) {
-    console.log(`  ${WS_LABELS[wsId]}: ${phaseTimes[`ws_${wsId}`]?.toFixed(1)}s`);
+  for (const phase of ["tickets", "signals", "incidents", "memory_entries", "remaining", "junctions", "generate", "clear"]) {
+    const t = phaseTimes[phase];
+    if (t != null && typeof t === "number") {
+      console.log(`  ${phase}: ${t.toFixed(1)}s`);
+    }
   }
-  console.log(`  Refs: ${(phaseTimes.refs || 0).toFixed(1)}s`);
-  console.log(`  Collect connectors: ${(phaseTimes.collectConnectors || 0).toFixed(1)}s`);
-  console.log(`  Junctions: ${(phaseTimes.junctions || 0).toFixed(1)}s`);
-  console.log(`  Orphans: ${(phaseTimes.orphans || 0).toFixed(1)}s`);
-  console.log(`  Clear: ${(phaseTimes.clear || 0).toFixed(1)}s`);
   console.log(`  ─────────────────────────────`);
   console.log(`  TOTAL: ${loadTime}s`);
   const apiTotal = apiCounts.POST + apiCounts.GET + apiCounts.PATCH + apiCounts.DELETE + apiCounts.FUNC;
@@ -482,7 +418,8 @@ export async function launchEnterpriseDemo(onProgress) {
   c.functions.run = _orig.run;
 
   // ── Deferred Connectors (after complete event) ────────────
-  // These run asynchronously — they NEVER block the demo completion
+  if (!connectorTargets.length) return [];
+
   const connStart = Date.now();
   let gmailSent = 0, linearSynced = 0, connectorErrors = [];
 
@@ -511,24 +448,21 @@ export async function launchEnterpriseDemo(onProgress) {
     return Promise.all(tasks);
   });
 
-  // Fire connectors in background — timeout after 30s
   const connTimeout = new Promise(resolve => setTimeout(() => resolve("timeout"), 30000));
   const connRace = Promise.all(connPromises).then(() => "done");
 
-  connRace.then(async (result) => {
+  connRace.then(() => {
     const connTime = ((Date.now() - connStart) / 1000).toFixed(1);
-    console.log(`[perf] Connectors: ${connTime}s (${result})`);
+    console.log(`[perf] Connectors: ${connTime}s`);
     console.log(`[perf] Gmail sent: ${gmailSent}, Linear synced: ${linearSynced}`);
     if (connectorErrors.length > 0) {
       console.log(`[perf] Connector errors:`, connectorErrors);
     }
-    // Dispatch event so UI can update summary
     window.dispatchEvent(new CustomEvent(DEMO_CONNECTORS_EVENT, {
       detail: { gmailSent, linearSynced, connectorErrors, connTime },
     }));
   });
 
-  // Also wait for timeout (don't block, just log)
   connTimeout.then(() => {
     if (!connectorTargets.length) return;
     console.warn(`[perf] Connector timeout after 30s — ${connectorTargets.length - gmailSent - linearSynced} tasks still pending`);
