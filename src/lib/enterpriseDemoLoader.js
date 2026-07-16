@@ -82,7 +82,7 @@ async function restoreTable(table, onProgress, wsName) {
         await client.records.create(table, fields);
         created++;
       } catch (e2) {
-        created++;
+        console.error(`[restore] FAILED create ${table}/${rec.id}: ${e2?.message || e2}. Fields keys: ${Object.keys(fields).join(",")}`);
       }
     }
   }
