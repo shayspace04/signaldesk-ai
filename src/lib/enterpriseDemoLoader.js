@@ -75,7 +75,12 @@ async function restoreTable(table, onProgress, wsName) {
       await client.records.create(table, fields);
       created++;
     } catch (e) {
-      console.warn(`[restore] ${table}/${rec.id}: ${e.message}`);
+      const isConflict = e?.code === "DATASTORE_CONFLICT" || e?.message?.includes?.("already exists");
+      if (isConflict) {
+        created++;
+      } else {
+        console.warn(`[restore] ${table}/${rec.id}: ${e.message}${e?.code ? ` (${e.code})` : ""}`);
+      }
     }
   }
   if (onProgress) onProgress(null, wsName, created, records.length, `Restored ${table}`, 0);
