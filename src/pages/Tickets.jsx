@@ -120,6 +120,7 @@ export default function Tickets() {
   const [sortField, setSortField] = useState("created_at");
   const [sortDir, setSortDir] = useState("desc");
   const [selected, setSelected] = useState(null);
+  const [ticketIdFilter, setTicketIdFilter] = useState(null);
 
   // Clear selected ticket if it was deleted (e.g. by Clear Demo Data)
   useEffect(() => {
@@ -145,7 +146,18 @@ export default function Tickets() {
       const found = tickets.find((t) => t.id === state.focusTicketId);
       if (found) setSelected(found);
     }
+    if (state?.filterTicketIds?.length) {
+      setTicketIdFilter(state.filterTicketIds);
+      setSearch("");
+      setFilters(EMPTY_FILTERS);
+    }
   }, [location.key, tickets]);
+
+  const displayTickets = useMemo(() => {
+    if (!ticketIdFilter?.length) return tickets;
+    const idSet = new Set(ticketIdFilter);
+    return tickets.filter(t => idSet.has(t.id));
+  }, [tickets, ticketIdFilter]);
 
   const filterOptions = useMemo(() => {
     const opts = { status: [], priority: [], category: [], assignee: [] };
@@ -161,7 +173,7 @@ export default function Tickets() {
   const hasActiveFilters = Object.values(filters).some((v) => v !== "" && v !== "All") || churnFilter !== null;
 
   const filtered = useMemo(() => {
-    let result = [...tickets];
+    let result = [...displayTickets];
     if (search) {
       const q = search.toLowerCase();
       result = result.filter((t) =>
@@ -329,9 +341,11 @@ export default function Tickets() {
         <div>
           <h1 className="text-[36px] font-bold tracking-tight text-primary">Tickets</h1>
           <p className="mt-1 text-sm text-muted dark:text-muted-dark">
-            {hasActiveFilters || search
-              ? `${filtered.length} of ${m.tickets.total} ticket${m.tickets.total !== 1 ? "s" : ""}`
-              : `${m.tickets.total} ticket${m.tickets.total !== 1 ? "s" : ""}`}
+            {ticketIdFilter
+              ? `${filtered.length} of ${displayTickets.length} incident-linked ticket${displayTickets.length !== 1 ? "s" : ""}`
+              : hasActiveFilters || search
+                ? `${filtered.length} of ${m.tickets.total} ticket${m.tickets.total !== 1 ? "s" : ""}`
+                : `${m.tickets.total} ticket${m.tickets.total !== 1 ? "s" : ""}`}
           </p>
         </div>
         <div className="flex items-center gap-3">

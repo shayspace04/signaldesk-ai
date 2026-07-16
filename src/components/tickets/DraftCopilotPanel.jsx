@@ -305,6 +305,7 @@ export default function DraftCopilotPanel({ ticket, workspace, permissions = {},
       await client.functions.run("resolve_ticket", {
         input: { ticket_id: ticket.id, draft_id: draftId },
       });
+      await client.records.update("drafts", draftId, { status: "approved", decided_at: new Date().toISOString() }).catch(() => {});
       setPhase("approved");
       toast.success("Draft approved");
       emitRefresh();
@@ -319,6 +320,7 @@ export default function DraftCopilotPanel({ ticket, workspace, permissions = {},
       await client.functions.run("reject_draft", {
         input: { ticket_id: ticket.id, draft_id: draftId },
       });
+      await client.records.update("drafts", draftId, { status: "rejected", decided_at: new Date().toISOString() }).catch(() => {});
       setPhase("rejected");
       toast.success("Draft rejected");
       emitRefresh();

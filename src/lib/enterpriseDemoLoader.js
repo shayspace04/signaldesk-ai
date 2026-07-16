@@ -241,12 +241,11 @@ function enrichTicketRelationships(allData) {
   for (const signal of allData.signals || []) {
     const ws = signal.fields.workspaceId;
     const cat = signal.fields.category || "general";
-    const count = signal.fields.evidence_count || 3;
+    const count = signal.fields.evidence_count ?? 0;
     const pool = wsCatTickets[ws]?.[cat] || [];
-    const selected = pool.slice(0, count);
+    const selected = count > 0 ? pool.slice(0, count) : [];
     const selectedIds = selected.map(t => t.fields.id);
     signal.fields.example_ticket_ids = selectedIds;
-    // Set signal_id on each linked ticket
     for (const ticket of selected) {
       ticket.fields.signal_id = signal.fields.id;
     }
@@ -255,22 +254,18 @@ function enrichTicketRelationships(allData) {
   // Assign ticket_ids and affected counts to incidents
   for (const incident of allData.incidents || []) {
     const signalId = incident.fields.signal_id;
-    if (!signalId) continue;
+    if (!signalId) { console.warn(`[enrich] incident ${incident.fields.id?.slice(0,8)}: no signal_id`); continue; }
     const signal = allData.signals?.find(s => s.fields.id === signalId);
+    if (!signal) { console.warn(`[enrich] incident ${incident.fields.id?.slice(0,8)}: signal ${signalId.slice(0,8)} not found`); continue; }
     const ticketIds = signal?.fields?.example_ticket_ids || [];
-    if (!ticketIds.length) continue;
+    if (!ticketIds.length) { console.warn(`[enrich] incident ${incident.fields.id?.slice(0,8)}: signal ${signalId.slice(0,8)} has 0 example_ticket_ids`); continue; }
     incident.fields.ticket_ids = ticketIds;
     incident.fields.ticket_count = ticketIds.length;
     incident.fields.affected_ticket_count = ticketIds.length;
-
-    const linkedTickets = (allData.tickets || []).filter(t => ticketIds.includes(t.fields.id));
-    const customerNames = new Set(linkedTickets.map(t => t.fields.customer_name).filter(Boolean));
-    if (customerNames.size > 0) {
-      incident.fields.affected_customer_count = Math.max(
-        incident.fields.affected_customer_count || 0,
-        customerNames.size
-      );
-    }
+    incident.fields.affected_customer_count = Math.max(
+      incident.fields.affected_customer_count || 0,
+      new Set((allData.tickets || []).filter(t => ticketIds.includes(t.fields.id)).map(t => t.fields.customer_name).filter(Boolean)).size
+    );
   }
 }
 
@@ -393,6 +388,28 @@ export async function launchEnterpriseDemo(onProgress) {
   await createPhase("tickets", "Tickets");
   await createPhase("signals", "Signals");
   await createPhase("incidents", "Incidents");
+
+  // PATCH ticket_ids on incidents after create (create doesn't persist JSON arrays)
+  if (allData.incidents?.length) {
+    const patches = allData.incidents
+      .filter(item => item.fields.ticket_ids?.length > 0)
+      .map(item => {
+        const f = item.fields;
+        return client.records.update("incidents", f.id, {
+          ticket_ids: f.ticket_ids,
+          ticket_count: f.ticket_count,
+          affected_ticket_count: f.affected_ticket_count,
+          affected_customer_count: f.affected_customer_count,
+        }).then(r => 1).catch(err => {
+          console.error(`[demo] PATCH ticket_ids on incident ${f.id?.slice(0,8)} failed: ${err?.message || err}`);
+          return 0;
+        });
+      });
+    if (patches.length) {
+      await Promise.all(patches);
+    }
+  }
+
   await createPhase("memory_entries", "Knowledge");
 
   // audit_logs + drafts: no dependencies between them, run in parallel

@@ -1,23 +1,40 @@
 import { useState, useCallback, useRef } from 'react';
-import client, { ORG_ID, LINEAR_AUTH_CONFIG, LINEAR_TEAM_ID } from '@/lib/lemmaClient';
+import client from '@/lib/lemmaClient';
 
 export const SYNC_STATUS = {
   IDLE: 'idle',
   CONNECTING: 'connecting',
   SYNCED: 'synced',
-  CONNECTOR_UNAVAILABLE: 'connector_unavailable',
   ERROR: 'error',
 };
 
-function persistLinearFields(incidentId, issueId, issueUrl, identifier) {
+function isAlreadyExistsError(msg) {
+  if (!msg) return false;
+  const lower = msg.toLowerCase();
+  return (
+    lower.includes('already exists') ||
+    lower.includes('duplicate') ||
+    lower.includes('already been created') ||
+    lower.includes('already linked') ||
+    lower.includes('already synced')
+  );
+}
+
+async function fetchIssueFromIncident(incidentId) {
+  const inc = await client.records.get("incidents", incidentId);
+  if (!inc?.linearIssueId) return null;
+
   const now = new Date().toISOString();
-  return client.records.update("incidents", incidentId, {
-    linearIssueId: issueId,
-    linearIssueUrl: issueUrl || "",
-    linearIssueIdentifier: identifier || "",
-    linearSyncedAt: now,
-    linearStatus: "Todo",
-  });
+  await client.records
+    .update("incidents", incidentId, { linearSyncedAt: now })
+    .catch(() => {});
+
+  return {
+    issueId: inc.linearIssueId,
+    issueUrl: inc.linearIssueUrl || '',
+    identifier: inc.linearIssueIdentifier || '',
+    syncedAt: now,
+  };
 }
 
 export function useLinearSync() {
@@ -36,75 +53,98 @@ export function useLinearSync() {
     setSyncError(null);
 
     try {
-      const incident = await client.records.get("incidents", incidentId).catch(() => null);
-      if (reqId !== reqRef.current) return { status: SYNC_STATUS.IDLE };
-      if (!incident) throw new Error("Incident not found");
-
-      // Idempotency: skip create if already synced
-      if (incident.linearIssueId) {
-        const result = {
-          id: incident.linearIssueId,
-          ticket_url: incident.linearIssueUrl || "",
-          issue_title: incident.linearIssueIdentifier || "",
-        };
+      /* ---- Step 1: Check if already synced ---- */
+      const existing = await fetchIssueFromIncident(incidentId);
+      if (existing) {
+        if (reqId !== reqRef.current) return { status: SYNC_STATUS.IDLE };
         setSyncStatus(SYNC_STATUS.SYNCED);
-        setSyncResult({
-          issueId: incident.linearIssueId,
-          issueUrl: incident.linearIssueUrl || "",
-          identifier: incident.linearIssueIdentifier || "",
-          syncedAt: incident.linearSyncedAt || incident.lastSyncedAt || new Date().toISOString(),
-        });
+        setSyncResult(existing);
         setSyncLoading(false);
-        return { status: SYNC_STATUS.SYNCED, result };
+        return { status: SYNC_STATUS.SYNCED, result: existing };
       }
 
-      const priorityMap = { urgent: 1, high: 2, normal: 3, low: 4 };
-      const priority = priorityMap[incident.severity] || 0;
+      /* ---- Step 2: Create new Linear issue ---- */
+      const raw = await client.functions.run("create_linear_issue", {
+        input: { incident_id: incidentId },
+      });
 
-      const raw = await client.connectors.operations.execute(
-        { organizationId: ORG_ID, authConfigName: LINEAR_AUTH_CONFIG },
-        "LINEAR_CREATE_LINEAR_ISSUE",
-        {
-          team_id: LINEAR_TEAM_ID,
-          title: incident.title || `Incident ${incidentId}`,
-          description: incident.description || incident.summary || `Severity: ${incident.severity || "N/A"}`,
-          priority,
-        },
-      );
       if (reqId !== reqRef.current) return { status: SYNC_STATUS.IDLE };
 
-      const opResult = raw?.result || {};
-      const issueId = opResult.id;
-      const issueUrl = opResult.ticket_url || "";
-      const key = issueUrl.match(/\/issue\/([^/]+)/)?.[1] || opResult.issue_title || "";
+      const output = raw?.output_data || raw?.output || raw || {};
 
-      if (issueId) {
-        // Persist to datastore BEFORE updating React state
-        await persistLinearFields(incidentId, issueId, issueUrl, key);
+      if (!output.success) {
+        /* ---- Step 3: Handle "already exists" from Linear API ---- */
+        const errMsg = output.message || output.error || '';
+        if (isAlreadyExistsError(errMsg)) {
+          const recovered = await fetchIssueFromIncident(incidentId);
+          if (recovered) {
+            setSyncStatus(SYNC_STATUS.SYNCED);
+            setSyncResult(recovered);
+            setSyncLoading(false);
+            return { status: SYNC_STATUS.SYNCED, result: recovered };
+          }
+        }
 
-        setSyncStatus(SYNC_STATUS.SYNCED);
-        setSyncResult({
-          issueId,
-          issueUrl,
-          identifier: key,
-          syncedAt: new Date().toISOString(),
-        });
+        setSyncStatus(SYNC_STATUS.ERROR);
+        setSyncError(errMsg || 'Failed to create Linear issue');
         setSyncLoading(false);
-        return { status: SYNC_STATUS.SYNCED, result: { id: issueId, ticket_url: issueUrl, issue_title: key } };
+        return { status: SYNC_STATUS.ERROR, error: errMsg };
       }
 
-      const msg = 'Failed to create Linear issue';
+      /* ---- Step 4: Verify persistence ---- */
+      const result = {
+        issueId: output.linearIssueId,
+        issueUrl: output.linearIssueUrl || '',
+        identifier: output.linearIssueIdentifier || '',
+        syncedAt: new Date().toISOString(),
+      };
+
+      const verified = await fetchIssueFromIncident(incidentId);
+      if (verified) {
+        result.issueId = verified.issueId;
+        result.issueUrl = verified.issueUrl || result.issueUrl;
+        result.identifier = verified.identifier || result.identifier;
+        result.syncedAt = verified.syncedAt;
+      }
+
+      setSyncStatus(SYNC_STATUS.SYNCED);
+      setSyncResult(result);
+      setSyncLoading(false);
+      return { status: SYNC_STATUS.SYNCED, result };
+    } catch (err) {
+      if (reqId !== reqRef.current) return { status: SYNC_STATUS.IDLE };
+      const msg = err?.message || err?.error || 'Unable to create Linear issue';
+
+      /* ---- Catch clause: also check for "already exists" ---- */
+      if (isAlreadyExistsError(msg)) {
+        const recovered = await fetchIssueFromIncident(incidentId).catch(() => null);
+        if (recovered) {
+          setSyncStatus(SYNC_STATUS.SYNCED);
+          setSyncResult(recovered);
+          setSyncLoading(false);
+          return { status: SYNC_STATUS.SYNCED, result: recovered };
+        }
+      }
+
       setSyncStatus(SYNC_STATUS.ERROR);
       setSyncError(msg);
       setSyncLoading(false);
       return { status: SYNC_STATUS.ERROR, error: msg };
-    } catch (err) {
-      if (reqId !== reqRef.current) return { status: SYNC_STATUS.IDLE };
-      setSyncStatus(SYNC_STATUS.ERROR);
-      setSyncError(err?.message || 'Unable to create Linear issue');
-      setSyncLoading(false);
-      return { status: SYNC_STATUS.ERROR, error: err?.message };
     }
+  }, []);
+
+  const checkExistingSync = useCallback(async (incidentId) => {
+    try {
+      const result = await fetchIssueFromIncident(incidentId);
+      if (result) {
+        setSyncStatus(SYNC_STATUS.SYNCED);
+        setSyncResult(result);
+        return true;
+      }
+      setSyncStatus(SYNC_STATUS.IDLE);
+      setSyncResult(null);
+    } catch {}
+    return false;
   }, []);
 
   const resetSync = useCallback(() => {
@@ -115,5 +155,5 @@ export function useLinearSync() {
     setSyncError(null);
   }, []);
 
-  return { syncStatus, syncLoading, syncResult, syncError, syncLinearIssue, resetSync, SYNC_STATUS };
+  return { syncStatus, syncLoading, syncResult, syncError, syncLinearIssue, checkExistingSync, resetSync, SYNC_STATUS };
 }

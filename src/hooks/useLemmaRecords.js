@@ -16,7 +16,7 @@ export function useLemmaRecords(table, options = {}) {
     let mounted = true;
     setLoading(true);
     const queryOptions = { filters, sort, limit };
-    if (refreshKey > 0) queryOptions._t = Date.now();
+    queryOptions._t = Date.now();
     client.records.list(table, queryOptions)
       .then((res) => {
         if (mounted) {

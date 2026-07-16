@@ -123,33 +123,20 @@ function EngineeringHandoffModal({ signal, onClose }) {
   const [linkedTickets, setLinkedTickets] = useState([]);
   const [loadingTickets, setLoadingTickets] = useState(true);
   const [successState, setSuccessState] = useState(null);
-  const { syncStatus, syncLoading, syncResult, syncError, syncLinearIssue, resetSync } = useLinearSync();
-
-  const [persistedLinear, setPersistedLinear] = useState(null);
+  const { syncStatus, syncLoading, syncResult, syncError, syncLinearIssue, checkExistingSync, resetSync } = useLinearSync();
 
   useEffect(() => {
     if (!successState?.incidentId) return;
-    setPersistedLinear(null);
-    client.records.get("incidents", successState.incidentId).then((inc) => {
-      if (inc?.linearIssueId) {
-        setPersistedLinear({
-          issueId: inc.linearIssueId,
-          issueUrl: inc.linearIssueUrl || "",
-          identifier: inc.linearIssueIdentifier || "",
-          syncedAt: inc.linearSyncedAt || "",
-        });
-      }
-    }).catch(() => {});
-  }, [successState?.incidentId]);
+    checkExistingSync(successState.incidentId);
+  }, [successState?.incidentId, checkExistingSync]);
 
   const handleSyncToLinear = useCallback(async () => {
     if (!successState?.incidentId) return;
-    resetSync();
     const result = await syncLinearIssue(successState.incidentId);
     if (result.status === SYNC_STATUS.SYNCED) {
       emitRefresh();
     }
-  }, [successState, syncLinearIssue, resetSync]);
+  }, [successState, syncLinearIssue]);
 
   useEffect(() => {
     const ticketIds = signal.example_ticket_ids || signal.ticket_ids || [];
@@ -186,8 +173,8 @@ function EngineeringHandoffModal({ signal, onClose }) {
     return {
       title: signal.name || signal.summary || "Signal",
       summary: signal.summary || tickets.map((t) => t.title || "").filter(Boolean).join("; ").slice(0, 500) || "",
-      rootCause: signal.root_cause || (tickets.length > 0 ? `Systemic issue identified across ${tickets.length} ticket(s) in ${categories[0] || "multiple"} categories. Common keywords: ${keyTerms.slice(0, 4).join(", ")}.` : ""),
-      confidence: signal.analysis_confidence ?? signal.confidence ?? signal.confidence_score ?? 0,
+      rootCause: signal.root_cause || (tickets.length > 0 ? `Systemic issue identified across ${tickets.length} ticket(s) in ${categories[0] || "multiple"} categories. Common keywords: ${keyTerms.slice(0, 4).join(", ")}.` : signal.summary || "Signal detected by AI analysis — root cause investigation pending ticket linkage."),
+      confidence: signal.analysis_confidence ?? signal.confidence ?? signal.confidence_score ?? (signal.evidence_count > 0 ? Math.min(40 + signal.evidence_count * 10, 90) : 0),
       priority: signal.proposed_priority || maxPriority || "normal",
       severity: signal.proposed_priority || maxPriority || "normal",
       affectedTicketCount: tickets.length || signal.ticket_count || signal.evidence_count || 0,
@@ -196,8 +183,11 @@ function EngineeringHandoffModal({ signal, onClose }) {
       customerEmails,
       ticketIds: tickets.map((t) => t.id),
       ticketTitles: tickets.map((t) => t.title || t.customer_name || t.id),
-      categories: categories.length > 0 ? categories.join(", ") : signal.category || (tickets.length > 0 ? "General" : "N/A"),
+      categories: categories.length > 0 ? categories.join(", ") : signal.category || "General",
       businessImpact: (() => {
+        if (!tickets.length) {
+          return `Signal "${signal.name || signal.summary || "unknown"}" detected in "${signal.category || "general"}" with ${signal.evidence_count || 0} evidence events. Potential impact pending ticket linkage and customer identification.`;
+        }
         const catSet = new Set(categories);
         const highValue = catSet.has("billing") || catSet.has("payment") || catSet.has("financial") || catSet.has("portfolio");
         const customerScale = customerNames.length > 3 ? "multiple customers" : customerNames.length > 1 ? "several customers" : "customer";
@@ -207,6 +197,9 @@ function EngineeringHandoffModal({ signal, onClose }) {
         return `Operational impact affecting ${customerNames.length} ${customerScale}. Technical investigation recommended to determine full blast radius.`;
       })(),
       technicalImpact: (() => {
+        if (!tickets.length) {
+          return `System behavior anomaly detected in "${signal.category || "general"}" — ${signal.evidence_count || 0} evidence events suggest systematic issue. Technical investigation required to identify root cause and affected components.`;
+        }
         const hasOcr = bodies.some((b) => /ocr|pars|extract|document|upload/i.test(b));
         const hasData = bodies.some((b) => /data|import|sync|batch|process|pipeline|integrat/i.test(b));
         const hasCalc = bodies.some((b) => /calculat|comput|formula|valuat|report|aggregat/i.test(b));
@@ -227,7 +220,7 @@ function EngineeringHandoffModal({ signal, onClose }) {
         ? "1. Isolate affected systems to prevent further impact\n2. Implement hotfix or configuration change\n3. Deploy to staging for validation\n4. Roll out to production with monitoring\n5. Verify resolution across all affected accounts\n6. Post-mortem and knowledge documentation"
         : "1. Investigate and reproduce the reported issue\n2. Implement fix in development environment\n3. Deploy to production after validation\n4. Verify resolution with reporter\n5. Document findings in knowledge base",
       recommendedTeam: signal.recommended_team || "Engineering",
-      timeline: signal.detected_at || firstSeen || null,
+      timeline: firstSeen || signal.detected_at || null,
       firstSeen,
       lastSeen,
       durationHours: duration,
@@ -239,9 +232,9 @@ function EngineeringHandoffModal({ signal, onClose }) {
         return `Overall Risk: ${overall}\nTicket Volume Risk: ${ticketRisk}\nCustomer Impact Risk: ${customerRisk}\nSeverity Risk: ${severityRisk}`;
       })(),
       reproductionSummary: tickets.length > 0
-        ? `Reproduced across ${tickets.length} independent ticket(s).\nCommon symptoms: ${keyTerms.slice(0, 5).join(", ")}.\nFirst occurrence: ${firstSeen ? new Date(firstSeen).toISOString().split("T")[0] : "N/A"}\nDuration: ${duration > 0 ? `${durationHours} hours` : "Ongoing"}`
-        : "Awaiting linked ticket data for reproduction analysis.",
-      clusterConfidence: signal.analysis_confidence ?? signal.confidence ?? signal.confidence_score ?? 0,
+        ? `Reproduced across ${tickets.length} independent ticket(s).\nCommon symptoms: ${keyTerms.slice(0, 5).join(", ")}.\nFirst occurrence: ${firstSeen ? new Date(firstSeen).toISOString().split("T")[0] : "N/A"}\nDuration: ${duration > 0 ? `${duration} hours` : "Ongoing"}`
+        : (signal.root_cause || signal.summary || "Awaiting linked ticket data for reproduction analysis."),
+      clusterConfidence: signal.analysis_confidence ?? signal.confidence ?? signal.confidence_score ?? (signal.evidence_count > 0 ? Math.min(40 + signal.evidence_count * 10, 90) : 0),
     };
   }, [signal, linkedTickets]);
 
@@ -251,10 +244,10 @@ function EngineeringHandoffModal({ signal, onClose }) {
       `# Engineering Handoff: ${d.title}`,
       ``,
       `## Executive Summary`,
-      d.summary || "N/A",
+      d.summary || "No detailed summary available — signal detected by AI analysis.",
       ``,
       `## Detailed Root Cause`,
-      d.rootCause || "N/A",
+      d.rootCause,
       ``,
       `## Cluster Analysis`,
       `- **Confidence**: ${d.clusterConfidence}%`,
@@ -266,7 +259,7 @@ function EngineeringHandoffModal({ signal, onClose }) {
       `- **Severity**: ${d.severity.charAt(0).toUpperCase() + d.severity.slice(1)}`,
       ``,
       `## Affected Ticket IDs`,
-      d.ticketIds.length > 0 ? d.ticketIds.map((id) => `- ${id}`).join("\n") : "N/A",
+      d.ticketIds.length > 0 ? d.ticketIds.map((id) => `- ${id}`).join("\n") : "No linked tickets — evidence cluster identified by AI without direct ticket association.",
       ``,
       `## Business Impact`,
       d.businessImpact,
@@ -314,8 +307,8 @@ function EngineeringHandoffModal({ signal, onClose }) {
     const d = handoffData;
     try {
       const description = [
-        `**Executive Summary**: ${d.summary || "N/A"}`,
-        `**Root Cause**: ${d.rootCause || "N/A"}`,
+        `**Executive Summary**: ${d.summary}`,
+        `**Root Cause**: ${d.rootCause}`,
         `**Confidence**: ${d.clusterConfidence}%`,
         `**Priority**: ${d.priority}`,
         `**Severity**: ${d.severity}`,
@@ -385,13 +378,17 @@ function EngineeringHandoffModal({ signal, onClose }) {
 
       if (!incId || typeof incId !== "string") throw new Error("Incident creation returned no ID");
 
-      // Persist ticket_ids + affected_ticket_count on the incident (both paths)
-      if (signal.workspaceId) {
-        client.records.update("incidents", incId, {
-          ticket_ids: d.ticketIds,
-          affected_ticket_count: d.ticketIds.length || d.affectedTicketCount,
-        }).catch(e => console.error("[incident] persist ticket_ids failed:", e?.message || e));
+      const ticketIdsForIncident = d.ticketIds || [];
+      if (!ticketIdsForIncident.length) {
+        console.warn(`[incident] Creating incident ${incId} with 0 ticket_ids! d.ticketIds=${JSON.stringify(d.ticketIds)}`);
       }
+
+      // Persist ticket_ids + affected_ticket_count on the incident (both paths)
+      client.records.update("incidents", incId, {
+        ticket_ids: ticketIdsForIncident,
+        affected_ticket_count: ticketIdsForIncident.length || d.affectedTicketCount || 0,
+        affected_customer_count: d.affectedCustomerCount || 0,
+      }).catch(e => console.error("[incident] persist ticket_ids failed:", e?.message || e));
 
       // Fire Gmail + Linear connectors for urgent incidents via shared workflow
       if (d.severity === "urgent" || d.severity === "high") {
@@ -486,38 +483,30 @@ function EngineeringHandoffModal({ signal, onClose }) {
             </div>
             {/* Sync Section */}
             {(() => {
-              const syncedData = syncStatus === SYNC_STATUS.SYNCED ? syncResult : persistedLinear;
-              if (syncedData) {
+              if (syncStatus === SYNC_STATUS.SYNCED && syncResult) {
                 return (<div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400" />
-                    <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Synced</span>
+                    <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Synced to Linear</span>
                   </div>
-                  {syncedData.identifier && (
-                    <div className="flex items-center justify-between rounded-lg bg-white dark:bg-[#202024] px-3 py-2 mb-2">
-                      <span className="text-xs text-muted dark:text-muted-dark">Issue Key</span>
-                      <span className="text-xs font-mono font-medium text-primary">{syncedData.identifier}</span>
-                    </div>
+                  <div className="flex items-center justify-between rounded-lg bg-white dark:bg-[#202024] px-3 py-2 mb-2">
+                    <span className="text-xs text-muted dark:text-muted-dark">Issue Key</span>
+                    <span className="text-xs font-mono font-bold text-primary">{syncResult.identifier || "\u2014"}</span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg bg-white dark:bg-[#202024] px-3 py-2 mb-2">
+                    <span className="text-xs text-muted dark:text-muted-dark">Status</span>
+                    <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Todo</span>
+                  </div>
+                  {syncResult.issueUrl && (
+                    <a href={syncResult.issueUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 rounded-lg bg-white dark:bg-[#202024] px-3 py-2 text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
+                      <ExternalLink size={12} /> {syncResult.issueUrl}
+                    </a>
                   )}
-                  {syncedData.issueUrl && (
-                    <div className="flex items-center justify-between rounded-lg bg-white dark:bg-[#202024] px-3 py-2 mb-2">
-                      <span className="text-xs text-muted dark:text-muted-dark">Issue URL</span>
-                      <a href={syncedData.issueUrl} target="_blank" rel="noopener noreferrer"
-                        className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline truncate max-w-[200px]">{syncedData.issueUrl}</a>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between rounded-lg bg-white dark:bg-[#202024] px-3 py-2">
-                    <span className="text-xs text-muted dark:text-muted-dark">Last Synced</span>
-                    <span className="text-xs font-medium text-primary">{syncedData.syncedAt ? new Date(syncedData.syncedAt).toLocaleTimeString() : "—"}</span>
+                  <div className="mt-2 flex items-center justify-between rounded-lg bg-white dark:bg-[#202024] px-3 py-2">
+                    <span className="text-xs text-muted dark:text-muted-dark">Synced</span>
+                    <span className="text-xs font-medium text-primary">{syncResult.syncedAt ? new Date(syncResult.syncedAt).toLocaleTimeString() : "now"}</span>
                   </div>
-                </div>);
-              }
-              if (syncStatus === SYNC_STATUS.CONNECTOR_UNAVAILABLE) {
-                return (<div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm font-semibold text-amber-700 dark:text-amber-300">Ready to Sync</span>
-                  </div>
-                  <p className="text-xs text-amber-600 dark:text-amber-400">Linear connector is not configured.</p>
                 </div>);
               }
               if (syncStatus === SYNC_STATUS.ERROR) {
@@ -525,7 +514,7 @@ function EngineeringHandoffModal({ signal, onClose }) {
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-sm font-semibold text-red-700 dark:text-red-300">Sync Failed</span>
                   </div>
-                  <p className="text-xs text-red-600 dark:text-red-400 mb-3">{syncError || "Unknown error"}</p>
+                  <p className="text-xs text-red-600 dark:text-red-400 mb-3">{syncError || "Unable to create Linear issue"}</p>
                   <button onClick={handleSyncToLinear} disabled={syncLoading}
                     className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500 transition-all disabled:opacity-50">
                     {syncLoading ? <Loader2 size={12} className="animate-spin" /> : null} Retry
@@ -536,7 +525,7 @@ function EngineeringHandoffModal({ signal, onClose }) {
                 return (<div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4">
                   <div className="flex items-center gap-2">
                     <Loader2 size={14} className="animate-spin text-amber-600 dark:text-amber-400" />
-                    <span className="text-sm font-medium text-amber-700 dark:text-amber-300">Syncing with Linear...</span>
+                    <span className="text-sm font-medium text-amber-700 dark:text-amber-300">Syncing to Linear...</span>
                   </div>
                 </div>);
               }
@@ -550,17 +539,14 @@ function EngineeringHandoffModal({ signal, onClose }) {
             })()}
           </div>
           <div className="flex gap-3">
-            <button onClick={onClose}
-              className="flex-1 rounded-xl bg-zinc-900 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 transition-all">Done</button>
-            {(() => {
-              const url = syncStatus === SYNC_STATUS.SYNCED ? syncResult?.issueUrl : persistedLinear?.issueUrl;
-              return url ? (
-                <a href={url} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-sm font-medium text-body hover:bg-zinc-50 dark:hover:bg-[#202024] transition-all flex-1">
-                  <ExternalLink size={14} /> Open in Linear
-                </a>
-              ) : null;
-            })()}
+            <button onClick={onClose} disabled={syncStatus === SYNC_STATUS.CONNECTING}
+              className="flex-1 rounded-xl bg-zinc-900 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Done</button>
+            {syncStatus === SYNC_STATUS.SYNCED && syncResult?.issueUrl && (
+              <a href={syncResult.issueUrl} target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-sm font-medium text-body hover:bg-zinc-50 dark:hover:bg-[#202024] transition-all flex-1">
+                <ExternalLink size={14} /> Open in Linear
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -608,12 +594,12 @@ function EngineeringHandoffModal({ signal, onClose }) {
 
         <div className="mb-4 rounded-xl bg-zinc-50 dark:bg-[#202024] p-3">
           <p className="text-xs text-muted dark:text-muted-dark mb-1">Executive Summary</p>
-          <p className="text-sm text-body">{handoffData.summary || "N/A"}</p>
+          <p className="text-sm text-body">{handoffData.summary || "No detailed summary available"}</p>
         </div>
 
         <div className="mb-4 rounded-xl bg-zinc-50 dark:bg-[#202024] p-3">
           <p className="text-xs text-muted dark:text-muted-dark mb-1">Detailed Root Cause</p>
-          <p className="text-sm text-body">{handoffData.rootCause || "N/A"}</p>
+          <p className="text-sm text-body">{handoffData.rootCause}</p>
         </div>
 
         {handoffData.customerNames.length > 0 && (
@@ -661,7 +647,7 @@ function EngineeringHandoffModal({ signal, onClose }) {
             {handoffData.timeline && <p>Detected: {new Date(handoffData.timeline).toISOString().split("T")[0]}</p>}
             {handoffData.firstSeen && <p>First occurrence: {new Date(handoffData.firstSeen).toISOString().split("T")[0]}</p>}
             {handoffData.durationHours > 0 && <p>Duration: {handoffData.durationHours} hours</p>}
-            {!handoffData.timeline && !handoffData.firstSeen && <p>Awaiting timeline data from linked tickets</p>}
+            {!handoffData.timeline && !handoffData.firstSeen && <p>Timeline data pending — signal detected but no linked ticket timeframes available</p>}
           </div>
         </div>
 
@@ -935,6 +921,9 @@ export default function Signals() {
       } else {
         /* Non-incident stages: update workflowStage directly */
         const updates = { workflowStage: targetStage };
+        if (targetStage === "approved") {
+          updates.status = "approved";
+        }
         await client.records.update("signals", signalId, updates);
         await createNotification({
           action: "signal.workflow_changed",

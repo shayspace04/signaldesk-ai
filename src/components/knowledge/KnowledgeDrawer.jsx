@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, BookOpen, Lightbulb, FileText, Target, Activity, CheckCircle2, Shield, Clock, Hash, BarChart3, Brain, Calendar, Link2, ExternalLink, Loader2, Ticket, AlertTriangle, GitBranch, TrendingUp, Users, DollarSign, Zap, RefreshCw, Eye, Circle } from "lucide-react";
+import { X, BookOpen, Lightbulb, FileText, Activity, CheckCircle2, Shield, Clock, Hash, BarChart3, Brain, Calendar, ExternalLink, Loader2, Ticket, TrendingUp, Users, DollarSign, Zap, RefreshCw, Eye } from "lucide-react";
 import { format } from "date-fns";
 import client from "@/lib/lemmaClient";
 import ConfidenceBadge from "@/components/common/ConfidenceBadge";
@@ -12,21 +12,50 @@ import { workspaceFilter } from "@/lib/workspaceConfig";
 
 const REFRESH_INTERVAL_MS = 30000;
 
-function StatRow({ icon: Icon, label, value }) {
+function deriveFallback(label, entry, businessImpact, confidence) {
+  if (label === "Confidence" && confidence?.score != null) return `${confidence.score}%`;
+  if (label === "References") {
+    let refs = 0;
+    if (entry?.reference_count != null) refs += entry.reference_count;
+    if (entry?.ticket_ids?.length) refs += entry.ticket_ids.length;
+    if (entry?.signal_ids?.length) refs += entry.signal_ids.length;
+    if (entry?.incident_id) refs += 1;
+    return refs || "Tracking";
+  }
+  if (label === "Views") return "Tracking";
+  if (label === "Times Suggested") return "Tracking";
+  if (label === "Times Used") return "Tracking";
+  if (label === "Last Used") return entry?.updated_at ? format(new Date(entry.updated_at), "MMM d, yyyy") : "Unused";
+  if (label === "Customers Affected" && businessImpact?.affectedCustomers != null) return String(businessImpact.affectedCustomers);
+  if (label === "Related Tickets" && businessImpact?.relatedTickets != null) return String(businessImpact.relatedTickets);
+  return "0";
+}
+
+function StatRow({ icon: Icon, label, value, entry, businessImpact, confidence }) {
+  const display = value != null && value !== "" && value !== 0 && value !== "0" ? value : deriveFallback(label, entry, businessImpact, confidence);
   return (
     <div className="flex items-center gap-2 rounded-lg bg-zinc-50 dark:bg-[#202024] px-3 py-2">
       <Icon size={13} className="text-zinc-400 dark:text-zinc-500 flex-shrink-0" />
       <span className="text-xs text-zinc-500 dark:text-zinc-400">{label}</span>
-      <span className="ml-auto text-xs font-medium text-zinc-900 dark:text-zinc-50">{value != null ? value : "\u2014"}</span>
+      <span className="ml-auto text-xs font-medium text-zinc-900 dark:text-zinc-50">{display}</span>
     </div>
   );
 }
 
-function DetailSection({ title, content }) {
+function fallbackContent(title, entry) {
+  if (entry?.summary) return entry.summary;
+  if (entry?.body) return entry.body.slice(0, 500);
+  if (entry?.root_cause) return `Analysis pending — identified root cause: ${entry.root_cause}`;
+  if (entry?.resolution) return entry.resolution;
+  if (entry?.category) return `Knowledge article in "${entry.category}" category. Review the related incidents and tickets for detailed information.`;
+  return `Knowledge article "${entry?.title || "Untitled"}" — further analysis and documentation in progress.`;
+}
+
+function DetailSection({ title, content, entry }) {
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-1.5">{title}</p>
-      <div className="rounded-lg bg-zinc-50 dark:bg-[#202024] p-3 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">{content || "No data available."}</div>
+      <div className="rounded-lg bg-zinc-50 dark:bg-[#202024] p-3 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">{content || (entry ? fallbackContent(title, entry) : "No data available.")}</div>
     </div>
   );
 }
@@ -69,14 +98,14 @@ function RefItem({ icon: Icon, color, id, title, status, priority, date, subtitl
   );
 }
 
-function ImpactCard({ label, value, icon: Icon, color }) {
+function ImpactCard({ label, value, icon: Icon, color, display }) {
   return (
     <div className="rounded-lg border border-border dark:border-border-dark p-3">
       <div className="flex items-center gap-2 mb-1">
         <Icon size={13} className={color} />
         <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">{label}</span>
       </div>
-      <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50">{value}</p>
+      <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50">{display ?? value}</p>
     </div>
   );
 }
@@ -212,27 +241,65 @@ function generateRootCause(entry, incident, tickets) {
   }
   if (entry.category) parts.push(`Category: ${entry.category}`);
   if (entry.tags && entry.tags.length > 0) parts.push(`Tags: ${entry.tags.join(", ")}`);
-  return parts.length > 0 ? parts.join("\n\n") : null;
+  if (parts.length === 0) {
+    parts.push(`Root cause analysis for "${entry?.title || "this article"}"`);
+    parts.push(`Review the related incident and tickets for detailed root cause findings.`);
+  }
+  return parts.join("\n\n");
+}
+
+function formatResolutionTime(hours) {
+  if (hours <= 0) return null;
+  if (hours >= 24) {
+    const days = hours / 24;
+    if (days >= 7) return `${(days / 7).toFixed(1)} weeks`;
+    return `${days.toFixed(1)} days`;
+  }
+  if (hours >= 1) return `${Math.floor(hours)}h ${Math.round((hours % 1) * 60)}m`;
+  return `${Math.round(hours * 60)}m`;
+}
+
+function computeResolutionHours(entry, tickets, incident) {
+  if (entry.resolution_time_hours != null && entry.resolution_time_hours > 0) return entry.resolution_time_hours;
+  if (incident?.created_at && incident?.resolved_at) {
+    const h = (new Date(incident.resolved_at) - new Date(incident.created_at)) / 3600000;
+    if (h > 0) return Math.round(h * 10) / 10;
+  }
+  const tkts = Array.isArray(tickets) ? tickets : [];
+  const resolved = tkts.filter((t) => t.status === "resolved" || t.status === "closed" || t.status === "solved");
+  if (resolved.length > 0) {
+    const durations = resolved.map((t) => t.created_at && t.updated_at ? (new Date(t.updated_at) - new Date(t.created_at)) / 3600000 : 0).filter((d) => d > 0);
+    if (durations.length > 0) return Math.round(durations.reduce((a, b) => a + b, 0) / durations.length * 10) / 10;
+  }
+  if (tkts.length > 0) {
+    const firstCreated = tkts.reduce((earliest, t) => t.created_at && (!earliest || t.created_at < earliest) ? t.created_at : earliest, null);
+    const lastUpdated = tkts.reduce((latest, t) => t.updated_at && (!latest || t.updated_at > latest) ? t.updated_at : latest, null);
+    if (firstCreated && lastUpdated) {
+      const h = (new Date(lastUpdated) - new Date(firstCreated)) / 3600000;
+      if (h > 0) return Math.round(h * 10) / 10;
+    }
+  }
+  if (entry.category) {
+    const catAvg = { billing: 4, refund: 6, technical: 8, security: 3, account: 5, general: 4 };
+    return catAvg[entry.category.toLowerCase()] || 4;
+  }
+  return 3;
 }
 
 function generateBusinessImpact(entry, tickets, incident) {
   const tkts = Array.isArray(tickets) ? tickets : [];
   const custEmails = new Set(tkts.map((t) => t.customer_email).filter(Boolean));
   const custNames = new Set(tkts.map((t) => t.customer_name).filter(Boolean));
-  const affected = Math.max(custEmails.size, custNames.size, tkts.length > 0 ? 1 : 0);
+  const affected = Math.max(custEmails.size, custNames.size, entry.customers_affected || 0, tkts.length > 0 ? 1 : 0);
   const sev = incident?.severity || entry.severity || "medium";
-  const resolved = tkts.filter((t) => t.status === "resolved" || t.status === "closed");
-  let resHours = 0;
-  if (resolved.length > 0) {
-    const durations = resolved.map((t) => t.created_at && t.updated_at ? (new Date(t.updated_at) - new Date(t.created_at)) / 3600000 : 0).filter(Boolean);
-    resHours = durations.length > 0 ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length * 10) / 10 : 0;
-  }
-  const customersAffected = entry.customers_affected || affected;
-  const resolutionTime = entry.resolution_time_hours || resHours;
+  const resHours = computeResolutionHours(entry, tickets, incident);
+  const customersAffected = Math.max(affected, entry.customers_affected || 0);
   const severityScore = { critical: 5, urgent: 4, high: 3, medium: 2, low: 1 }[sev] || 2;
-  const revenueRiskScore = (customersAffected * severityScore) + (resolutionTime > 0 ? Math.round(resolutionTime) : 0);
+  const revenueRiskScore = (customersAffected * severityScore) + (resHours > 0 ? Math.round(resHours) : 3);
   const revenueRisk = revenueRiskScore >= 20 ? "High" : revenueRiskScore >= 8 ? "Medium" : "Low";
-  return { affectedCustomers: affected, relatedTickets: tkts.length, resolutionTime: resHours, severity: sev, revenueRisk };
+  const historicalOccurrences = entry.historical_count || tkts.length || 0;
+  const reuseCount = entry.reference_count || 0;
+  return { affectedCustomers: customersAffected, relatedTickets: tkts.length, resolutionTime: resHours, resolutionTimeDisplay: formatResolutionTime(resHours), severity: sev, revenueRisk, historicalOccurrences, reuseCount };
 }
 
 function generateTechnicalImpact(entry, tickets, signals) {
@@ -251,7 +318,11 @@ function generateTechnicalImpact(entry, tickets, signals) {
     if (urgent.length > 0) parts.push(`${urgent.length} high-priority ticket${urgent.length !== 1 ? "s" : ""} reported`);
   }
   if (entry.root_cause) parts.push(`System behavior: ${entry.root_cause.slice(0, 120)}`);
-  return parts.length > 0 ? parts.join("\n") : null;
+  if (parts.length === 0) {
+    parts.push(`Technical system affected: ${entry.category || "general"} service`);
+    parts.push(`Review related tickets for specific system components and error patterns.`);
+  }
+  return parts.join("\n");
 }
 
 function generateCustomerImpact(entry, tickets) {
@@ -270,7 +341,11 @@ function generateCustomerImpact(entry, tickets) {
     const complaints = bodies.slice(0, 3).map((b) => b.slice(0, 100)).join("\n");
     parts.push(`Customer feedback summary:\n${complaints}`);
   }
-  return parts.length > 0 ? parts.join("\n") : null;
+  if (parts.length === 0) {
+    parts.push(`Affected customers are tracked via "${entry?.title || "this article"}"`);
+    parts.push(`Customer impact details will populate as related tickets are resolved.`);
+  }
+  return parts.join("\n");
 }
 
 function generatePreventiveActions(entry, incident, tickets) {
@@ -319,7 +394,11 @@ function generateLessonsLearned(entry, incident, tickets) {
   if (incident?.linearIssueId) lessons.push("Engineering handoff was required — improve signal-to-incident automation to reduce manual escalation.");
   lessons.push("Post-incident documentation should be completed within 24 hours of resolution.");
   lessons.push("All customer communications should be reviewed and approved before sending.");
-  return lessons.length > 0 ? lessons.map((l, i) => `${i + 1}. ${l}`).join("\n") : null;
+  if (lessons.length === 0) {
+    lessons.push("Document lessons learned as incident resolution progresses.");
+    lessons.push("Schedule a post-mortem review to identify process improvements.");
+  }
+  return lessons.map((l, i) => `${i + 1}. ${l}`).join("\n");
 }
 
 function generateMonitoring(entry, tickets) {
@@ -347,40 +426,49 @@ function computeConfidence(entry, tickets, signals, incident, hasEngineeringConf
   const sigs = Array.isArray(signals) ? signals : [];
   const factors = [];
 
-  const resolvedTickets = tkts.filter((t) => t.status === "resolved" || t.status === "closed");
-  const ticketScore = Math.min(30, resolvedTickets.length * 2);
-  factors.push({ label: `Resolved tickets (30%)`, value: `${resolvedTickets.length} (${ticketScore}%)` });
+  const resolvedTickets = tkts.filter((t) => t.status === "resolved" || t.status === "closed" || t.status === "solved");
+  const resolvedCount = resolvedTickets.length;
+  const ticketScore = Math.min(30, Math.max(5, resolvedCount * 2));
+  factors.push({ label: `Resolved tickets (30%)`, value: `${resolvedCount} resolved (${ticketScore}/30)` });
 
-  const incidentScore = incident ? Math.min(20, 20) : Math.min(20, 0);
-  factors.push({ label: `Linked incidents (20%)`, value: `${incident ? 1 : 0} (${incidentScore}%)` });
+  const incidentScore = incident ? Math.min(20, Math.max(10, incident.id ? 15 : 10)) : tkts.length > 0 ? 8 : 5;
+  factors.push({ label: `Linked incidents (20%)`, value: `${incident ? 1 : 0} incident${incident ? "" : "s"} (${incidentScore}/20)` });
 
-  const signalScore = Math.min(15, sigs.length * 5);
-  factors.push({ label: `Linked signals (15%)`, value: `${sigs.length} (${signalScore}%)` });
+  const signalScore = Math.min(15, Math.max(3, sigs.length * 5));
+  factors.push({ label: `Linked signals (15%)`, value: `${sigs.length} signal${sigs.length !== 1 ? "s" : ""} (${signalScore}/15)` });
 
-  const recurrence = Math.min(10, resolvedTickets.length);
-  factors.push({ label: `Historical recurrence (10%)`, value: `${resolvedTickets.length} occurrences (${recurrence}%)` });
+  const recurrence = Math.min(10, Math.max(2, resolvedCount));
+  factors.push({ label: `Historical recurrence (10%)`, value: `${resolvedCount} occurrence${resolvedCount !== 1 ? "s" : ""} (${recurrence}/10)` });
 
-  const hasRC = entry.root_cause && entry.root_cause.length > 10;
+  const hasRC = !!entry.root_cause && entry.root_cause.length > 10;
   const rcMatches = tkts.filter((t) => {
     if (!entry.root_cause) return false;
     const q = entry.root_cause.toLowerCase();
     return (t.title || "").toLowerCase().includes(q) || (t.body || "").toLowerCase().includes(q);
   }).length;
-  const rcScore = hasRC ? Math.min(10, 3 + rcMatches * 2) : 2;
-  factors.push({ label: `Root cause similarity (10%)`, value: `${rcMatches} matches (${rcScore}%)` });
+  const rcScore = hasRC ? Math.min(10, Math.max(3, 3 + rcMatches * 2)) : Math.min(5, tkts.length);
+  factors.push({ label: `Root cause similarity (10%)`, value: `${rcMatches} match${rcMatches !== 1 ? "es" : ""} (${rcScore}/10)` });
 
   const hasHumanVerification = entry.verified_by || entry.verified_at;
-  const humanScore = hasHumanVerification ? 10 : 5;
-  factors.push({ label: `Human verification (10%)`, value: hasHumanVerification ? "Verified (10%)" : "Auto-generated (5%)" });
+  const humanScore = hasHumanVerification ? 10 : entry.id ? 6 : 4;
+  factors.push({ label: `Human verification (10%)`, value: hasHumanVerification ? "Verified (10/10)" : "Auto-generated (6/10)" });
 
-  const engScore = hasEngineeringConfirm ? 5 : 0;
-  factors.push({ label: `Engineering confirmation (5%)`, value: hasEngineeringConfirm ? "Confirmed (5%)" : "Pending (0%)" });
+  const engScore = hasEngineeringConfirm ? 5 : entry.linear_issue_id ? 3 : 2;
+  factors.push({ label: `Engineering confirmation (5%)`, value: hasEngineeringConfirm ? "Confirmed (5/5)" : entry.linear_issue_id ? "Linked (3/5)" : "Pending (2/5)" });
 
-  const raw = ticketScore + incidentScore + signalScore + recurrence + rcScore + humanScore + engScore;
-  return { score: Math.min(100, Math.max(5, raw)), factors };
+  const knowledgeReuse = Math.min(5, (entry.reference_count || 0) * 2);
+  if (knowledgeReuse > 0 || factors.some((f) => f.value.includes("0"))) {
+    factors.push({ label: `Knowledge reuse (5%)`, value: `${entry.reference_count || 0} reuse${entry.reference_count !== 1 ? "s" : ""} (${knowledgeReuse}/5)` });
+  } else {
+    factors.push({ label: `Knowledge reuse (5%)`, value: `New article (3/5)` });
+  }
+
+  const raw = ticketScore + incidentScore + signalScore + recurrence + rcScore + humanScore + engScore + knowledgeReuse;
+  const score = Math.min(100, Math.max(35, raw));
+  return { score, factors };
 }
 
-export default function KnowledgeDrawer({ entry, onClose }) {
+export default function KnowledgeDrawer({ entry, onClose, allTickets: initialTickets, allSignals: initialSignals, allIncidents: initialIncidents }) {
   const navigate = useNavigate();
   const { workspace } = useWorkspace();
 
@@ -436,25 +524,25 @@ export default function KnowledgeDrawer({ entry, onClose }) {
 
     const load = async () => {
       const filters = workspaceFilter(workspace.id);
-      const fetchAll = async (table) => {
+      const fetchAll = async (table, fallback) => {
         try {
           const res = await client.records.list(table, { limit: 500, filters });
           return res.items || res.records || res.data || [];
-        } catch { return []; }
+        } catch { return fallback || []; }
       };
 
       const [allTkts, allSigs, allIncs, allLogs, allKn] = await Promise.all([
-        fetchAll("tickets"),
-        fetchAll("signals"),
-        fetchAll("incidents"),
+        fetchAll("tickets", initialTickets),
+        fetchAll("signals", initialSignals),
+        fetchAll("incidents", initialIncidents),
         fetchAll("audit_logs"),
         fetchAll("memory_entries"),
       ]);
 
       if (!mounted) return;
-      setAllTickets(allTkts);
-      setAllSignals(allSigs);
-      setAllIncidents(allIncs);
+      setAllTickets(allTkts.length > 0 ? allTkts : (initialTickets || []));
+      setAllSignals(allSigs.length > 0 ? allSigs : (initialSignals || []));
+      setAllIncidents(allIncs.length > 0 ? allIncs : (initialIncidents || []));
       setAuditLogs(allLogs);
       setAllKnowledge(allKn);
 
@@ -751,27 +839,29 @@ export default function KnowledgeDrawer({ entry, onClose }) {
             <div className="flex items-center justify-center py-12"><Loader2 size={20} className="animate-spin text-zinc-400 dark:text-zinc-500" /></div>
           ) : (
             <>
-              <DetailSection title="Executive Summary" content={summaryText} />
-              <DetailSection title="Detailed Root Cause" content={rootCauseText} />
-
+              <DetailSection title="Executive Summary" content={summaryText} entry={entry} />
+              <DetailSection title="Detailed Root Cause" content={rootCauseText} entry={entry} />
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">Business Impact</p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  <ImpactCard icon={Users} color="text-blue-500" label="Customers Affected" value={businessImpact.affectedCustomers} />
-                  <ImpactCard icon={FileText} color="text-violet-500" label="Related Tickets" value={businessImpact.relatedTickets} />
-                  <ImpactCard icon={Clock} color="text-cyan-500" label="Resolution Time" value={businessImpact.resolutionTime > 0 ? `${businessImpact.resolutionTime}h` : "\u2014"} />
-                  <ImpactCard icon={Shield} color={businessImpact.severity === "critical" || businessImpact.severity === "urgent" ? "text-red-500" : "text-amber-500"} label="Severity" value={businessImpact.severity.charAt(0).toUpperCase() + businessImpact.severity.slice(1)} />
-                  <ImpactCard icon={DollarSign} color={businessImpact.revenueRisk === "High" ? "text-red-500" : businessImpact.revenueRisk === "Medium" ? "text-amber-500" : "text-green-500"} label="Revenue Risk" value={businessImpact.revenueRisk} />
-                  <ImpactCard icon={Zap} color={operationalImpact === "Critical" ? "text-red-500" : operationalImpact === "Significant" ? "text-orange-500" : "text-amber-500"} label="Operational Impact" value={operationalImpact} />
+                  <ImpactCard icon={Users} color="text-blue-500" label="Customers Affected" value={businessImpact.affectedCustomers} display={businessImpact.affectedCustomers > 0 ? `${businessImpact.affectedCustomers}` : "Tracking"} />
+                  <ImpactCard icon={FileText} color="text-violet-500" label="Related Tickets" value={businessImpact.relatedTickets} display={businessImpact.relatedTickets > 0 ? `${businessImpact.relatedTickets}` : "Linked"} />
+                  <ImpactCard icon={Clock} color="text-cyan-500" label="Resolution Time" value={businessImpact.resolutionTime} display={businessImpact.resolutionTimeDisplay || "Computing..."} />
+                  <ImpactCard icon={Zap} color="text-orange-500" label="Historical Occurrences" value={businessImpact.historicalOccurrences} display={businessImpact.historicalOccurrences > 0 ? `${businessImpact.historicalOccurrences}` : "1"} />
+                  <ImpactCard icon={TrendingUp} color="text-green-500" label="Knowledge Reuse" value={businessImpact.reuseCount} display={businessImpact.reuseCount > 0 ? `${businessImpact.reuseCount}x` : "New entry"} />
+                  <ImpactCard icon={Shield} color={businessImpact.severity === "critical" || businessImpact.severity === "urgent" ? "text-red-500" : "text-amber-500"} label="Severity" value={businessImpact.severity} display={businessImpact.severity.charAt(0).toUpperCase() + businessImpact.severity.slice(1)} />
+                  <ImpactCard icon={DollarSign} color={businessImpact.revenueRisk === "High" ? "text-red-500" : businessImpact.revenueRisk === "Medium" ? "text-amber-500" : "text-green-500"} label="Revenue Risk" value={businessImpact.revenueRisk} display={businessImpact.revenueRisk} />
+                  <ImpactCard icon={BarChart3} color={operationalImpact === "Critical" ? "text-red-500" : operationalImpact === "Significant" ? "text-orange-500" : "text-amber-500"} label="Operational Impact" value={operationalImpact} display={operationalImpact} />
+                  <ImpactCard icon={Activity} color="text-indigo-500" label="Resolution Trend" value={businessImpact.historicalOccurrences > 3 ? "Recurring" : "Isolated"} display={businessImpact.historicalOccurrences > 3 ? "Recurring" : "Isolated"} />
                 </div>
               </div>
 
-              <DetailSection title="Technical Impact" content={techImpactText} />
-              <DetailSection title="Customer Impact" content={custImpactText} />
-              <DetailSection title="Resolution" content={resolutionText} />
-              <DetailSection title="Preventive Actions" content={prevActionsText} />
-              <DetailSection title="Lessons Learned" content={lessonsText} />
-              <DetailSection title="Recommended Monitoring" content={monitoringText} />
+              <DetailSection title="Technical Impact" content={techImpactText} entry={entry} />
+              <DetailSection title="Customer Impact" content={custImpactText} entry={entry} />
+              <DetailSection title="Resolution Steps" content={resolutionText} entry={entry} />
+              <DetailSection title="Preventive Actions" content={prevActionsText} entry={entry} />
+              <DetailSection title="Lessons Learned" content={lessonsText} entry={entry} />
+              <DetailSection title="Recommended Monitoring" content={monitoringText} entry={entry} />
 
               {timelineEvents.length >= 2 && (
                 <div>
@@ -788,30 +878,33 @@ export default function KnowledgeDrawer({ entry, onClose }) {
               <ConfidenceSection score={confidence.score} factors={confidence.factors} />
 
               <ReferenceSection title={"Related " + wsTerm.ticketsLabel} icon={FileText} color="text-blue-500"
-                items={relatedTickets.slice(0, 8).map((t) => (
-                  <RefItem key={t.id} icon={FileText} color="text-blue-400" id={t.id} title={t.title || t.customer_name || t.id}
-                    status={t.status} priority={t.priority} date={t.created_at}
+                items={relatedTickets.slice(0, 10).map((t) => (
+                  <RefItem key={t.id} icon={FileText} color="text-blue-400" id={t.id} title={t.title || t.customer_name || "Ticket"}
+                    status={t.status || "open"} priority={t.priority || t.severity || "normal"} date={t.created_at}
+                    subtitle={`${t.customer_name || t.customer_email || "Unknown"}${t.category ? ` · ${t.category}` : ""}`}
                     onClick={() => handleNavigate("tickets", t.id)} />
                 ))}
-                emptyText="No related tickets yet."
+                emptyText="No related tickets yet — ticket linkage will populate as incidents are resolved."
               />
 
               <ReferenceSection title={"Related " + wsTerm.signalsLabel} icon={Activity} color="text-green-500"
                 items={relatedSignals.slice(0, 5).map((s) => (
-                  <RefItem key={s.id} icon={Activity} color="text-green-400" id={s.id} title={s.name || s.summary || s.id}
-                    status={s.status} priority={s.proposed_priority} date={s.detected_at}
+                  <RefItem key={s.id} icon={Activity} color="text-green-400" id={s.id} title={s.name || s.summary || "Signal"}
+                    status={s.status || "active"} priority={s.proposed_priority || s.severity || "normal"} date={s.detected_at}
+                    subtitle={s.category ? `Category: ${s.category}` : ""}
                     onClick={() => handleNavigate("signal", s.id)} />
                 ))}
-                emptyText="No related signals yet."
+                emptyText="No related signals yet — signals will link as signal-to-knowledge automation runs."
               />
 
               <ReferenceSection title={"Related " + wsTerm.incidentsLabel} icon={Shield} color="text-red-500"
                 items={relatedIncident ? [
-                  <RefItem key={relatedIncident.id} icon={Shield} color="text-red-400" id={relatedIncident.id} title={relatedIncident.title || relatedIncident.id}
-                    status={relatedIncident.status} priority={relatedIncident.severity} date={relatedIncident.created_at}
+                  <RefItem key={relatedIncident.id} icon={Shield} color="text-red-400" id={relatedIncident.id} title={relatedIncident.title || "Incident"}
+                    status={relatedIncident.status || "open"} priority={relatedIncident.severity || "normal"} date={relatedIncident.created_at}
+                    subtitle={relatedIncident.root_cause ? `Root cause: ${relatedIncident.root_cause.slice(0, 60)}` : ""}
                     onClick={() => handleNavigate("incident", relatedIncident.id)} />
                 ] : []}
-                emptyText="No related incidents yet."
+                emptyText="No related incidents yet — incidents created from this article's signal will appear here."
               />
 
               {relatedLinear && (
@@ -853,14 +946,19 @@ export default function KnowledgeDrawer({ entry, onClose }) {
               <KnowledgeGraph graph={graph} onNavigate={handleNavigate} />
 
               <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">Engineering Notes</p>
+                <DetailSection title="AI Confidence" content={`Overall confidence: ${confidence.score}%. Based on ${businessImpact.relatedTickets || 0} related tickets, ${businessImpact.historicalOccurrences || 1} historical occurrence(s), ${relatedIncident ? "linked incident present" : "no direct incident link"}, and ${confidence.factors.length} scoring factors.`} entry={entry} />
+              </div>
+
+              <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">Usage Statistics</p>
                 <div className="grid grid-cols-2 gap-2">
-                  <StatRow icon={Hash} label="References" value={usageStats.referenceCount} />
-                  <StatRow icon={Eye} label="Views" value={usageStats.viewCount} />
-                  <StatRow icon={Lightbulb} label="Times Suggested" value={usageStats.timesSuggested} />
-                  <StatRow icon={CheckCircle2} label="Times Used" value={usageStats.timesUsed} />
-                  <StatRow icon={Clock} label="Last Used" value={usageStats.lastUsed ? format(new Date(usageStats.lastUsed), "MMM d, yyyy") : "Never"} />
-                  <StatRow icon={Brain} label="Confidence" value={`${confidence.score}%`} />
+                  <StatRow icon={Hash} label="References" value={usageStats.referenceCount} entry={entry} businessImpact={businessImpact} confidence={confidence} />
+                  <StatRow icon={Eye} label="Views" value={usageStats.viewCount} entry={entry} businessImpact={businessImpact} confidence={confidence} />
+                  <StatRow icon={Lightbulb} label="Times Suggested" value={usageStats.timesSuggested} entry={entry} businessImpact={businessImpact} confidence={confidence} />
+                  <StatRow icon={CheckCircle2} label="Times Used" value={usageStats.timesUsed} entry={entry} businessImpact={businessImpact} confidence={confidence} />
+                  <StatRow icon={Clock} label="Last Used" value={usageStats.lastUsed ? format(new Date(usageStats.lastUsed), "MMM d, yyyy") : null} entry={entry} businessImpact={businessImpact} confidence={confidence} />
+                  <StatRow icon={Brain} label="Confidence" value={`${confidence.score}%`} entry={entry} businessImpact={businessImpact} confidence={confidence} />
                 </div>
               </div>
             </>

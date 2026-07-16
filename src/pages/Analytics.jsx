@@ -195,28 +195,22 @@ export default function Analytics() {
           onClick={() => setDrawerSection("knowledge")} />
         <KpiCard icon={ExternalLink} color="text-amber-500" value={m.knowledge.withIncident} label="Linked to Incidents" loading={m.loading}
           onClick={() => setDrawerSection("knowledge")} />
-        {m.knowledge.avgResolutionTime > 0 && (
           <KpiCard icon={Clock} color="text-cyan-500" value={m.knowledge.avgResolutionTime} label="Avg Resolution (hrs)" loading={m.loading}
             onClick={() => setDrawerSection("knowledge")} />
-        )}
       </div>
 
       {/* ===== Engineering ===== */}
-      {m.incidents.total > 0 && (
-        <>
-          <SectionHeader title="Engineering" icon={TrendingUp} />
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 mb-8">
-            <KpiCard icon={ExternalLink} color="text-indigo-500" value={m.incidents.escalated} label="Escalated to Engineering" loading={m.loading}
-              onClick={() => setDrawerSection("engineering")} />
-            <KpiCard icon={Loader2} color="text-indigo-500" value={m.incidents.openLinear} label="Open Engineering Issues" loading={m.loading}
-              onClick={() => setDrawerSection("engineering")} />
-            <KpiCard icon={CheckCircle2} color="text-indigo-500" value={m.incidents.resolvedLinear} label="Resolved Engineering Issues" loading={m.loading}
-              onClick={() => setDrawerSection("engineering")} />
-            <KpiCard icon={Clock} color="text-indigo-500" value={m.incidents.avgEscalationTime} label="Avg Esc Time (hrs)" loading={m.loading}
-              onClick={() => setDrawerSection("engineering")} />
-          </div>
-        </>
-      )}
+      <SectionHeader title="Engineering" icon={TrendingUp} />
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 mb-8">
+        <KpiCard icon={ExternalLink} color="text-indigo-500" value={m.incidents.escalated} label="Escalated to Engineering" loading={m.loading}
+          onClick={() => setDrawerSection("engineering")} />
+        <KpiCard icon={Loader2} color="text-indigo-500" value={m.incidents.openLinear} label="Open Engineering Issues" loading={m.loading}
+          onClick={() => setDrawerSection("engineering")} />
+        <KpiCard icon={CheckCircle2} color="text-indigo-500" value={m.incidents.resolvedLinear} label="Resolved Engineering Issues" loading={m.loading}
+          onClick={() => setDrawerSection("engineering")} />
+        <KpiCard icon={Clock} color="text-indigo-500" value={m.incidents.avgEscalationTime} label="Avg Esc Time (hrs)" loading={m.loading}
+          onClick={() => setDrawerSection("engineering")} />
+      </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 mb-8">
         <div className="rounded-xl border border-border dark:border-border-dark bg-card p-5 shadow-sm">
@@ -279,22 +273,16 @@ export default function Analytics() {
         <ChartSection title="Actions by Type" data={Object.fromEntries((m.analytics.actionsByType || []).slice(0, 10))} color="bg-cyan-500" />
         <div className="rounded-xl border border-border dark:border-border-dark bg-card p-5 shadow-sm">
           <h2 className="text-base font-semibold text-primary mb-4">SLA Compliance</h2>
-            {m.analytics.slaCompliance != null ? (
-              <>
-                <div className="flex items-center gap-4">
-                  <span className="text-[36px] font-bold tracking-tight text-primary">
-                    <CountUp end={m.analytics.slaCompliance} duration={1.5} suffix="%" />
-                  </span>
-                  <p className="text-sm text-muted dark:text-muted-dark">Tickets resolved within 24 hours</p>
-                </div>
-                <div className="mt-4 h-3 rounded-full bg-muted-surface overflow-hidden">
-                  <div className={`h-full rounded-full transition-all duration-700 ${m.analytics.slaCompliance >= 90 ? "bg-emerald-500" : m.analytics.slaCompliance >= 70 ? "bg-amber-500" : "bg-red-500"}`}
-                    style={{ width: `${m.analytics.slaCompliance}%` }} />
-                </div>
-              </>
-            ) : (
-              <p className="text-sm text-muted dark:text-muted-dark py-4">No resolved tickets yet.</p>
-            )}
+            <div className="flex items-center gap-4">
+              <span className="text-[36px] font-bold tracking-tight text-primary">
+                <CountUp end={m.analytics.slaCompliance ?? 0} duration={1.5} suffix="%" />
+              </span>
+              <p className="text-sm text-muted dark:text-muted-dark">Tickets resolved within 24 hours</p>
+            </div>
+            <div className="mt-4 h-3 rounded-full bg-muted-surface overflow-hidden">
+              <div className={`h-full rounded-full transition-all duration-700 ${(m.analytics.slaCompliance ?? 0) >= 90 ? "bg-emerald-500" : (m.analytics.slaCompliance ?? 0) >= 70 ? "bg-amber-500" : "bg-red-500"}`}
+                style={{ width: `${Math.max(m.analytics.slaCompliance ?? 0, 2)}%` }} />
+            </div>
           </div>
         <ChartSection title="Resolution Time Trend (hours)" data={Object.fromEntries(m.analytics.avgResTimeByDay)} color="bg-cyan-500" />
         <div className="rounded-xl border border-border dark:border-border-dark bg-card p-5 shadow-sm">
@@ -312,28 +300,26 @@ export default function Analytics() {
         </div>
       </div>
 
-      {m.knowledge.total > 0 && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 mb-8">
-          <ChartSection title="Knowledge Articles by Day" data={m.analytics.knowledgeByDay} color="bg-amber-500" />
-          <div className="rounded-xl border border-border dark:border-border-dark bg-card p-5 shadow-sm lg:col-span-2">
-            <h2 className="text-base font-semibold text-primary mb-4">Top Knowledge Articles</h2>
-            {m.knowledge.topArticles.length === 0 ? (
-              <p className="text-sm text-muted dark:text-muted-dark">No articles yet.</p>
-            ) : (
-              <div className="space-y-2">
-                {m.knowledge.topArticles.map((a, i) => (
-                  <div key={a.id} className="flex items-center gap-3">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-xs font-bold text-white">{i + 1}</span>
-                    <span className="flex-1 text-sm text-primary truncate">{a.title}</span>
-                    <span className="text-xs text-muted dark:text-muted-dark">{a.refs} refs</span>
-                    <span className="rounded-md bg-amber-50 dark:bg-amber-950/20 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">{a.confidence}%</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 mb-8">
+        <ChartSection title="Knowledge Articles by Day" data={m.analytics.knowledgeByDay} color="bg-amber-500" />
+        <div className="rounded-xl border border-border dark:border-border-dark bg-card p-5 shadow-sm lg:col-span-2">
+          <h2 className="text-base font-semibold text-primary mb-4">Top Knowledge Articles</h2>
+          {m.knowledge.topArticles.length === 0 ? (
+            <p className="text-sm text-muted dark:text-muted-dark">No articles yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {m.knowledge.topArticles.map((a, i) => (
+                <div key={a.id} className="flex items-center gap-3">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-xs font-bold text-white">{i + 1}</span>
+                  <span className="flex-1 text-sm text-primary truncate">{a.title}</span>
+                  <span className="text-xs text-muted dark:text-muted-dark">{a.refs} refs</span>
+                  <span className="rounded-md bg-amber-50 dark:bg-amber-950/20 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">{a.confidence}%</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {drawerSection && (
         <AnalyticsDrawer section={drawerSection} m={m} onClose={() => setDrawerSection(null)} />

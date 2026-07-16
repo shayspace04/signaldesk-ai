@@ -108,10 +108,9 @@ export default function Incidents() {
     refreshIncidents();
     if (result.status === SYNC_STATUS.SYNCED) {
       toast.success("Linear issue synced");
-      await createNotification({ action: "linear.issue_created", actor: "Support Manager", resourceType: "incident", resourceId: current.id, details: { name: current.title, linearIssue: identifier }, workspaceId: workspace.id, workspaceName: workspace.name }).catch(() => {});
+      const ident = result?.result?.identifier || result?.result?.issueId || current.id;
+      await createNotification({ action: "linear.issue_created", actor: "Support Manager", resourceType: "incident", resourceId: current.id, details: { name: current.title, linearIssue: ident }, workspaceId: workspace.id, workspaceName: workspace.name }).catch(() => {});
       emitRefresh();
-    } else if (result.status === SYNC_STATUS.CONNECTOR_UNAVAILABLE) {
-      toast.error("Linear connector is not configured");
     } else {
       toast.error(result.error || "Failed to create Linear issue");
     }
@@ -183,21 +182,16 @@ export default function Incidents() {
     setSendingComment(true);
     const toastId = toast.loading("Adding comment...");
     try {
-      const raw = await client.functions.run("add_linear_comment", {
+      await client.functions.run("add_linear_comment", {
         input: { incident_id: current.id, body: commentText.trim(), user_name: "Support Manager" },
       });
-      const result = raw.output_data || raw.output || raw;
       toast.dismiss(toastId);
-      if (result.success) {
-        toast.success("Comment synced to Linear");
-        setCommentText("");
-        refreshIncidents();
-      } else {
-        toast.error("Failed to add comment");
-      }
+      toast.success("Comment synced to Linear");
+      setCommentText("");
+      refreshIncidents();
     } catch (err) {
       toast.dismiss(toastId);
-      toast.error(err?.message || "Unable to add comment");
+      toast.error("Failed to add comment");
     } finally {
       setSendingComment(false);
     }
@@ -343,7 +337,10 @@ export default function Incidents() {
                       )}
                     </div>
                   </div>
-                  <div onClick={() => navigate("/tickets")} className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024] cursor-pointer hover:bg-zinc-100 dark:hover:bg-[#27272A] transition-colors">
+                  <div onClick={() => {
+                    const ids = current.ticket_ids || relatedTickets.map(t => t.id);
+                    navigate("/tickets", { state: ids.length ? { filterTicketIds: ids } : undefined });
+                  }} className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024] cursor-pointer hover:bg-zinc-100 dark:hover:bg-[#27272A] transition-colors">
                     <p className="text-xs text-muted dark:text-muted-dark">Affected</p>
                     <p className="mt-1 text-sm font-medium text-primary">{(current.affected_ticket_count ?? relatedTickets.length)} tickets</p>
                     {current.affected_customer_count != null && <p className="text-xs text-muted dark:text-muted-dark mt-0.5">{current.affected_customer_count} customers</p>}
@@ -437,15 +434,6 @@ export default function Incidents() {
                     <div className="flex items-center gap-2 py-3">
                       <Loader2 size={14} className="animate-spin text-indigo-600 dark:text-indigo-400" />
                       <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400">Connecting to Linear...</span>
-                    </div>
-                  ) : syncStatus === SYNC_STATUS.CONNECTOR_UNAVAILABLE ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2"><span className="text-xs font-semibold text-amber-700 dark:text-amber-300">Not Escalated</span></div>
-                      <p className="text-xs text-amber-600 dark:text-amber-400">Linear connector is not configured.</p>
-                      <button onClick={handleSync} disabled={syncLoading}
-                        className="flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-500 transition-all disabled:opacity-50">
-                        {syncLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Retry Sync
-                      </button>
                     </div>
                   ) : syncStatus === SYNC_STATUS.ERROR ? (
                     <div className="space-y-2">

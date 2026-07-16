@@ -1,3 +1,5 @@
+const VALID_STAGES = ["new", "review", "approved", "incident_created", "rejected"];
+
 const STATUS_TO_STAGE = {
   pending: "new",
   approved: "approved",
@@ -7,5 +9,8 @@ const STATUS_TO_STAGE = {
 
 export function deriveWorkflowStage(signal) {
   if (!signal) return "new";
+  if (signal.workflowStage && VALID_STAGES.includes(signal.workflowStage)) {
+    return signal.workflowStage;
+  }
   return STATUS_TO_STAGE[signal.status] || "new";
 }

@@ -773,17 +773,18 @@ async function escalateToIncident(cluster, signalForEscalation, workspaceId, wor
     }
     // Persist ticket_ids on the incident from cluster ticket IDs
     const ticketIds = cluster.ticket_ids || cluster.example_ticket_ids || [];
-    if (ticketIds.length > 0) {
-      try {
-        await client.records.update("incidents", incId, {
-          ticket_ids: ticketIds,
-          affected_ticket_count: ticketIds.length,
-          affected_customer_count: cluster.affected_customer_count || 0,
-        });
-        log("[escalateToIncident] Ticket IDs persisted on incident:", ticketIds.length);
-      } catch (err) {
-        console.error("FAILED at ticket_ids persist:", err.message);
-      }
+    if (!ticketIds.length) {
+      console.warn(`[escalateToIncident] Creating incident ${incId} with 0 ticket_ids! cluster.ticket_ids=${JSON.stringify(cluster.ticket_ids)}, cluster.example_ticket_ids=${JSON.stringify(cluster.example_ticket_ids)}`);
+    }
+    try {
+      await client.records.update("incidents", incId, {
+        ticket_ids: ticketIds,
+        affected_ticket_count: ticketIds.length,
+        affected_customer_count: cluster.affected_customer_count || 0,
+      });
+      log("[escalateToIncident] Ticket IDs persisted on incident:", ticketIds.length);
+    } catch (err) {
+      console.error("FAILED at ticket_ids persist:", err.message);
     }
   }
   log("Incident created:", incId);

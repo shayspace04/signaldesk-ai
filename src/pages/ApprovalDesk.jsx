@@ -12,7 +12,12 @@ import { workspaceFilter } from "@/lib/workspaceConfig";
 
 export default function ApprovalDesk() {
   const { workspace } = useWorkspace();
-  const draftFilters = workspaceFilter(workspace.id);
+  const wsFilter = workspaceFilter(workspace.id);
+  const draftFilters = useMemo(() => {
+    const base = wsFilter ? [...wsFilter] : [];
+    base.push({ field: "status", op: "eq", value: "pending" });
+    return base;
+  }, [wsFilter]);
   const { data: drafts, loading, refresh } = useLemmaRecords("drafts", { limit: 50, filters: draftFilters });
   const { canApproveDrafts, canRejectDrafts, canEditDrafts, isManager } = useRole();
   const [selectedId, setSelectedId] = useState(null);
@@ -81,6 +86,13 @@ export default function ApprovalDesk() {
       }
       toast.dismiss(toastId);
       toast.success(action === "approve" ? "Draft approved, reply sent, ticket resolved" : "Draft rejected");
+
+      // Persist status via client API path so UI queries see it immediately
+      const newStatus = action === "approve" ? "approved" : "rejected";
+      try {
+        await client.records.update("drafts", draftId, { status: newStatus, decided_at: new Date().toISOString() });
+      } catch {}
+
       localRemoved.current.add(draftId);
       await createNotification(current, action);
       setEditMode(false);
