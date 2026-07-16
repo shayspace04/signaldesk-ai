@@ -120,6 +120,13 @@ export default function Tickets() {
   const [sortField, setSortField] = useState("created_at");
   const [sortDir, setSortDir] = useState("desc");
   const [selected, setSelected] = useState(null);
+
+  // Clear selected ticket if it was deleted (e.g. by Clear Demo Data)
+  useEffect(() => {
+    if (selected && tickets.length > 0 && !tickets.find((t) => t.id === selected.id)) {
+      setSelected(null);
+    }
+  }, [tickets, selected]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ subject: "", customer_name: "", customer_email: "", description: "", priority: "normal", category: "" });
   const [formErrors, setFormErrors] = useState({});

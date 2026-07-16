@@ -40,6 +40,11 @@ export default function Incidents() {
 
   const { canCompleteApproval, canCreateLinearIssue, canResolveIncident } = useRole();
   const [selected, setSelected] = useState(null);
+  useEffect(() => {
+    if (selected && incidents.length > 0 && !incidents.find((i) => i.id === selected.id)) {
+      setSelected(null);
+    }
+  }, [incidents, selected]);
   const [resolving, setResolving] = useState(false);
   const [escalating, setEscalating] = useState(false);
   const [showEscalate, setShowEscalate] = useState(false);

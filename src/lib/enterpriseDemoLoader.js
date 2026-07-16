@@ -3,6 +3,7 @@ import { ENTERPRISE_DEMO_WORKSPACES } from "@/data/enterpriseDemoDatasets";
 import { emitRefresh } from "@/lib/refreshEvents";
 
 export const DEMO_COMPLETE_EVENT = "signaldesk:enterprise-demo-complete";
+export const DEMO_CLEAR_EVENT = "signaldesk:enterprise-demo-clear";
 
 const BACKUP_PREFIX = "/backup/";
 const TABLES_IN_ORDER = [
@@ -81,6 +82,7 @@ async function deleteByWorkspace() {
 
 export async function clearEnterpriseDemo(onProgress) {
   const count = await deleteByWorkspace();
+  window.dispatchEvent(new CustomEvent(DEMO_CLEAR_EVENT));
   emitRefresh();
   if (onProgress) onProgress(0, 0, `Cleared ${count} records`, 100);
   return count;
@@ -97,14 +99,13 @@ async function restoreTable(table, onProgress, wsName) {
       if (!AUTO_FIELDS.has(k)) fields[k] = v;
     }
     try {
-      await client.records.get(table, rec.id);
+      await client.records.create(table, fields);
       created++;
-    } catch {
-      try {
-        await client.records.create(table, fields);
+    } catch (e2) {
+      if (e2?.code === "DATASTORE_CONFLICT" || e2?.message?.includes("already exists")) {
         created++;
-      } catch (e2) {
-        console.error(`[restore] FAILED create ${table}/${rec.id}: ${e2?.message || e2}. Fields keys: ${Object.keys(fields).join(",")}`);
+      } else {
+        console.error(`[restore] FAILED create ${table}/${rec.id}: ${e2?.message || e2}`);
       }
     }
   }
