@@ -31,10 +31,13 @@ async function fetchBackup(table) {
   return data.items || data.records || data.data || [];
 }
 
+// Tables that have a workspaceId column (can filter by workspace)
+const WS_TABLES = ["tickets", "signals", "incidents", "memory_entries", "audit_logs", "drafts"];
+
 async function deleteByWorkspace() {
   let total = 0;
   for (const wsId of DEMO_WS_IDS) {
-    for (const table of TABLES_IN_ORDER) {
+    for (const table of WS_TABLES) {
       let cursor;
       do {
         const filter = { field: "workspaceId", op: "eq", value: wsId };
