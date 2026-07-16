@@ -46,17 +46,19 @@ export function useLinearSync() {
 
       const opResult = raw?.result || {};
       const issueId = opResult.id;
+      const issueUrl = opResult.ticket_url || "";
+      const key = issueUrl.match(/\/issue\/([^/]+)/)?.[1] || opResult.issue_title || "";
 
       if (issueId) {
         setSyncStatus(SYNC_STATUS.SYNCED);
         setSyncResult({
           issueId,
-          issueUrl: opResult.ticket_url,
-          identifier: opResult.issue_title,
+          issueUrl,
+          identifier: key,
           syncedAt: new Date().toISOString(),
         });
         setSyncLoading(false);
-        return { status: SYNC_STATUS.SYNCED, result: opResult };
+        return { status: SYNC_STATUS.SYNCED, result: { id: issueId, ticket_url: issueUrl, issue_title: key } };
       }
 
       const msg = 'Failed to create Linear issue';

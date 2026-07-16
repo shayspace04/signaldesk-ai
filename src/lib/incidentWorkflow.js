@@ -82,8 +82,8 @@ export function syncToLinear(incidentId) {
 
       const opResult = raw?.result || {};
       const issueId = opResult.id;
-      const issueUrl = opResult.ticket_url;
-      const identifier = opResult.issue_title;
+      const issueUrl = opResult.ticket_url || "";
+      const identifier = issueUrl.match(/\/issue\/([^/]+)/)?.[1] || opResult.issue_title || "";
 
       if (issueId) {
         console.log(`[linear] connector success for ${incidentId}: ${identifier} (${issueUrl})`);
