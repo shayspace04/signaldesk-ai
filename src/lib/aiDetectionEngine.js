@@ -785,9 +785,28 @@ async function postIncidentActions(cluster, signalId, incidentId, workspaceId, w
       const linearResult = await client.functions.run("create_linear_issue", {
         input: { incident_id: incidentId },
       });
-      const linearSuccess = linearResult?.output_data?.success || linearResult?.success;
-      log("Linear issue created:", linearSuccess ? "yes" : "no",
-        "id:", linearResult?.output_data?.linearIssueIdentifier || linearResult?.linearIssueIdentifier);
+      const result = linearResult?.output_data || linearResult || {};
+      const linearSuccess = result.success || result.linearIssueId || result.linearIssueIdentifier;
+      if (linearSuccess) {
+        const issueId = result.linearIssueId || result.issueId;
+        const issueUrl = result.linearIssueUrl || result.issueUrl;
+        const identifier = result.linearIssueIdentifier || result.identifier;
+        const now = new Date().toISOString();
+        await client.records.update("incidents", incidentId, {
+          linearIssueId: issueId,
+          linearIssueUrl: issueUrl || "",
+          linearIssueIdentifier: identifier || "",
+          linearKey: identifier || "",
+          linearUrl: issueUrl || "",
+          linearSyncedAt: now,
+          lastSyncedAt: now,
+          linearStatus: "Todo",
+          syncStatus: "Todo",
+        }).catch(() => {});
+        log("Linear issue created and persisted:", identifier);
+      } else {
+        log("Linear issue created but no identifier returned");
+      }
     } catch (err) {
       log("Failed to create Linear issue:", err.message);
     }

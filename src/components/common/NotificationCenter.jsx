@@ -1,13 +1,13 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Bell, CheckCircle2, Brain, Ticket, Radio, ShieldAlert, ArrowRight,
 } from "lucide-react";
 import { useLemmaRecords } from "@/hooks/useLemmaRecords";
+import { useMetrics } from "@/hooks/useMetrics";
 import { useRefreshListener } from "@/lib/refreshEvents";
 import { formatDistanceToNow } from "date-fns";
 import { useWorkspace } from "@/context/WorkspaceContext";
-import { workspaceFilter } from "@/lib/workspaceConfig";
 
 const SEVERITY_COLORS = {
   urgent: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300",
@@ -29,24 +29,33 @@ function actionMeta(action) {
 
 export default function NotificationCenter() {
   const { workspace } = useWorkspace();
-  const notifFilter = useMemo(() => workspaceFilter(workspace.id), [workspace.id]);
-  const { data: logs, refresh } = useLemmaRecords("audit_logs", { sort: [{ field: "created_at", direction: "desc" }], limit: 20, filters: notifFilter });
+  const navigate = useNavigate();
+
+  // Display: 20 most recent audit_logs for the dropdown list
+  const { data: logs, refresh } = useLemmaRecords("audit_logs", {
+    sort: [{ field: "created_at", direction: "desc" }],
+    limit: 20,
+  });
   useRefreshListener(refresh);
+
+  // Badge count: from useMetrics (single source of truth, matches sidebar + notifications page)
+  const m = useMetrics(workspace.id);
+  const unreadCount = m.audit.unread;
+
   const [open, setOpen] = useState(false);
   const [readIds, setReadIds] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem("signaldesk-read-notifs") || "[]")); }
     catch { return new Set(); }
   });
-  const navigate = useNavigate();
 
   const notifications = logs.slice(0, 10);
-  const unreadCount = notifications.filter((n) => !readIds.has(n.id)).length;
 
   const markAllRead = () => {
     const allIds = notifications.map((n) => n.id);
     const next = new Set([...readIds, ...allIds]);
     setReadIds(next);
     try { localStorage.setItem("signaldesk-read-notifs", JSON.stringify([...next])); } catch {}
+    window.dispatchEvent(new CustomEvent("signaldesk:refresh"));
   };
 
   const markRead = (id) => {
@@ -54,6 +63,7 @@ export default function NotificationCenter() {
     const next = new Set([...readIds, id]);
     setReadIds(next);
     try { localStorage.setItem("signaldesk-read-notifs", JSON.stringify([...next])); } catch {}
+    window.dispatchEvent(new CustomEvent("signaldesk:refresh"));
   };
 
   const isIncidentNotification = (item) => item.action === "manager.notification_created";

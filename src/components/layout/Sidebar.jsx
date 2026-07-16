@@ -4,9 +4,7 @@ import { ChevronDown, Search, Activity, Bell, Ticket, Radio, ShieldAlert, BookOp
 import Logo from "@/components/common/Logo";
 import { useWorkspace, workspaces } from "@/context/WorkspaceContext";
 import useRole from "@/hooks/useRole";
-import { useLemmaRecords } from "@/hooks/useLemmaRecords";
-import { workspaceFilter } from "@/lib/workspaceConfig";
-import { useRefreshListener } from "@/lib/refreshEvents";
+import { useMetrics } from "@/hooks/useMetrics";
 import ThemeToggle from "@/components/common/ThemeToggle";
 
 const navItems = [
@@ -24,9 +22,9 @@ const navItems = [
 ];
 
 function Badge({ value }) {
-  if (!value || value === 0) return null;
+  if (value == null) return null;
   return (
-    <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-zinc-900 px-1.5 text-[10px] font-semibold text-white">
+    <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-zinc-900 px-1.5 text-[10px] font-semibold text-white dark:bg-white dark:text-zinc-900">
       {value > 99 ? "99+" : value}
     </span>
   );
@@ -41,33 +39,13 @@ export default function Sidebar() {
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
-  const sf = useMemo(() => workspaceFilter(workspace.id), [workspace.id]);
-  const tHook = useLemmaRecords("tickets", { limit: 10000, filters: sf });
-  const sHook = useLemmaRecords("signals", { limit: 1000, filters: sf });
-  const iHook = useLemmaRecords("incidents", { limit: 500, filters: sf });
-  const dHook = useLemmaRecords("drafts", { limit: 500, filters: sf });
-  const aHook = useLemmaRecords("audit_logs", { sort: [{ field: "created_at", direction: "desc" }], limit: 50, filters: sf });
-  const kHook = useLemmaRecords("memory_entries", { limit: 500, filters: sf });
+  // Single source of truth for all sidebar badges: useMetrics
+  const m = useMetrics(workspace.id);
+  const badgeMap = m.sidebar;
 
-  useRefreshListener(() => { tHook.refresh(); sHook.refresh(); iHook.refresh(); dHook.refresh(); aHook.refresh(); kHook.refresh(); });
-
-  const tickets = tHook.data || [];
-  const signals = sHook.data || [];
-  const incidents = iHook.data || [];
-  const drafts = dHook.data || [];
-  const logs = aHook.data || [];
-  const knowledge = kHook.data || [];
-
-  const openTickets = tickets.filter((t) => t.status !== "resolved" && t.status !== "closed").length;
-  const pendingSignals = signals.filter((s) => (s.status === "pending" || s.status === "new") && s.status !== "rejected").length;
-  const activeIncidents = incidents.filter((i) => i.status !== "closed" && i.status !== "resolved").length;
-  const pendingDrafts = drafts.filter((d) => d.status === "pending" || d.status === "draft").length;
-  let unreadCount = 0;
-  try {
-    const readIds = new Set(JSON.parse(localStorage.getItem("signaldesk-read-notifs") || "[]"));
-    unreadCount = logs.filter((n) => !readIds.has(n.id)).length;
-  } catch { unreadCount = logs.length; }
-  const badgeMap = { tickets: openTickets, signals: pendingSignals, incidents: activeIncidents, drafts: pendingDrafts, unread: unreadCount };
+  const tickets = m.all.tickets || [];
+  const signals = m.all.signals || [];
+  const knowledge = m.all.knowledge || [];
 
   const [searchResults, setSearchResults] = useState([]);
   useEffect(() => {

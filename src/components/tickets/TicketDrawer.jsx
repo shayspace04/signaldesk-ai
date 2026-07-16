@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import client from "@/lib/lemmaClient";
 import { emitRefresh } from "@/lib/refreshEvents";
+import { runGmailAlert, syncToLinear } from "@/lib/incidentWorkflow";
 import { calculateChurnRisk } from "@/lib/churnRisk";
 import useRole from "@/hooks/useRole";
 import { useWorkspace } from "@/context/WorkspaceContext";
@@ -1058,6 +1059,18 @@ export default function TicketDrawer({ ticket: initialTicket, onClose, onRefresh
           workspaceName: ticket.workspaceName,
         });
         incId = result.id || result;
+      }
+      const severity = ticket.priority || "high";
+      if (severity === "urgent" || severity === "high") {
+        runGmailAlert({
+          id: incId, severity, title: ticket.title || "Related ticket",
+          workspaceId: ticket.workspaceId,
+          workspaceName: ticket.workspaceName,
+          email_sent: false,
+        });
+      }
+      if (severity === "urgent") {
+        syncToLinear(incId);
       }
       await client.records.create("ticket_incidents", {
         id: generateId(), ticket_id: ticket.id, incident_id: incId,

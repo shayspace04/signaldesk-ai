@@ -11,6 +11,7 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { workspaceFilter } from "@/lib/workspaceConfig";
 import useRole from "@/hooks/useRole";
 import { createNotification } from "@/lib/notifications";
+import { runGmailAlert, syncToLinear } from "@/lib/incidentWorkflow";
 import { deriveWorkflowStage } from "@/lib/workflowStage";
 import KnowledgeDrawer from "@/components/knowledge/KnowledgeDrawer";
 import ConfidenceBadge from "@/components/common/ConfidenceBadge";
@@ -123,6 +124,32 @@ function EngineeringHandoffModal({ signal, onClose }) {
   const [loadingTickets, setLoadingTickets] = useState(true);
   const [successState, setSuccessState] = useState(null);
   const { syncStatus, syncLoading, syncResult, syncError, syncLinearIssue, resetSync } = useLinearSync();
+
+  const handleSyncToLinear = useCallback(async () => {
+    if (!successState?.incidentId) return;
+    resetSync();
+    const result = await syncLinearIssue(successState.incidentId);
+    if (result.status === SYNC_STATUS.SYNCED) {
+      const issueId = result.result?.linearIssueId || result.result?.issueId;
+      const issueUrl = result.result?.linearIssueUrl || result.result?.issueUrl;
+      const identifier = result.result?.linearIssueIdentifier || result.result?.identifier;
+      if (issueId) {
+        const now = new Date().toISOString();
+        await client.records.update("incidents", successState.incidentId, {
+          linearIssueId: issueId,
+          linearIssueUrl: issueUrl || "",
+          linearIssueIdentifier: identifier || "",
+          linearKey: identifier || "",
+          linearUrl: issueUrl || "",
+          linearSyncedAt: now,
+          lastSyncedAt: now,
+          linearStatus: "Todo",
+          syncStatus: "Todo",
+        }).catch(() => {});
+        emitRefresh();
+      }
+    }
+  }, [successState, syncLinearIssue, resetSync]);
 
   useEffect(() => {
     const ticketIds = signal.example_ticket_ids || signal.ticket_ids || [];
@@ -357,6 +384,18 @@ function EngineeringHandoffModal({ signal, onClose }) {
 
       if (!incId || typeof incId !== "string") throw new Error("Incident creation returned no ID");
 
+      // Fire Gmail + Linear connectors for urgent incidents via shared workflow
+      if (d.severity === "urgent" || d.severity === "high") {
+        runGmailAlert({
+          id: incId, severity: d.severity, title: d.title,
+          workspaceId: workspace.id, workspaceName: workspace.name,
+          email_sent: false,
+        });
+      }
+      if (d.severity === "urgent") {
+        syncToLinear(incId);
+      }
+
       /* Link signal to incident */
       await client.records.update("signals", signal.id, {
         incident_id: incId, workflowStage: "incident_created", status: "approved",
@@ -474,7 +513,7 @@ function EngineeringHandoffModal({ signal, onClose }) {
                   <span className="text-sm font-semibold text-red-700 dark:text-red-300">Sync Failed</span>
                 </div>
                 <p className="text-xs text-red-600 dark:text-red-400 mb-3">{syncError || "Unknown error"}</p>
-                <button onClick={() => syncLinearIssue(successState.incidentId)} disabled={syncLoading}
+                <button onClick={handleSyncToLinear} disabled={syncLoading}
                   className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500 transition-all disabled:opacity-50">
                   {syncLoading ? <Loader2 size={12} className="animate-spin" /> : null} Retry
                 </button>
@@ -487,7 +526,7 @@ function EngineeringHandoffModal({ signal, onClose }) {
                 </div>
               </div>
             ) : (
-              <button onClick={() => syncLinearIssue(successState.incidentId)} disabled={syncLoading}
+              <button onClick={handleSyncToLinear} disabled={syncLoading}
                 className="w-full rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-700 py-3 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all disabled:opacity-50">
                 Ready to Sync
               </button>
@@ -841,6 +880,18 @@ export default function Signals() {
         const output = raw.output_data || raw || {};
         const incId = output.incident_id || output.id || output;
         if (!incId || typeof incId !== "string") throw new Error("Incident creation returned no ID");
+        const severity = signal.proposed_priority || "normal";
+        if (severity === "urgent" || severity === "high") {
+          runGmailAlert({
+            id: incId, severity, title: signal.name || signal.summary,
+            workspaceId: signal.workspaceId || workspace.id,
+            workspaceName: signal.workspaceName || workspace.name,
+            email_sent: false,
+          });
+        }
+        if (severity === "urgent") {
+          syncToLinear(incId);
+        }
         await client.records.update("signals", signalId, { incident_id: incId, workflowStage: "incident_created", status: "approved" });
         await createNotification({
           action: "incident.created",

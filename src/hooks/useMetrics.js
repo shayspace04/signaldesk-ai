@@ -170,7 +170,7 @@ export function useMetrics(workspaceId, options = {}) {
   }, [allSignals, curS, prevS]);
 
   const incidentMetrics = useMemo(() => {
-    const active = allIncidents.filter((i) => i.status !== "closed");
+    const active = allIncidents.filter((i) => i.status !== "closed" && i.status !== "resolved");
     const critical = allIncidents.filter((i) => i.severity === "urgent" || i.severity === "critical" || i.severity === "high");
     const urgent = allIncidents.filter((i) => i.severity === "urgent");
     const escalated = allIncidents.filter((i) => i.linearIssueId);
@@ -208,7 +208,7 @@ export function useMetrics(workspaceId, options = {}) {
   }, [allIncidents, curI, prevI]);
 
   const draftMetrics = useMemo(() => {
-    const pending = allDrafts.filter((d) => d.status === "pending" || d.status === "waiting_approval");
+    const pending = allDrafts.filter((d) => d.status === "pending");
     const approved = allDrafts.filter((d) => d.status === "approved" || d.status === "sent");
     const rejected = allDrafts.filter((d) => d.status === "rejected");
 

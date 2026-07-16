@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { workspaceFilter } from "@/lib/workspaceConfig";
 import { createNotification } from "@/lib/notifications";
+import { escalateIncident } from "@/lib/incidentWorkflow";
 import { deriveWorkflowStage } from "@/lib/workflowStage";
 
 function timeAgo(dateStr) {
@@ -70,17 +71,17 @@ export default function Incidents() {
     setShowEscalate(false);
     const toastId = toast.loading(`Escalating severity to ${newSeverity}...`);
     try {
-      await client.functions.run("escalate_incident", {
-        input: {
-          incident_id: current.id,
-          new_severity: newSeverity,
-          workspace_name: workspace.name,
-          dashboard_link: `${window.location.origin}/incidents`,
-        },
-      });
+      const result = await escalateIncident(current, newSeverity);
       toast.dismiss(toastId);
-      toast.success(`Severity escalated to ${newSeverity}`);
-      await createNotification({ action: "incident.severity_escalated", actor: "Support Manager", resourceType: "incident", resourceId: current.id, details: { name: current.title, severity: newSeverity }, workspaceId: workspace.id, workspaceName: workspace.name });
+      if (result.status === "escalated") {
+        const msg = newSeverity === "urgent"
+          ? `Severity escalated to ${newSeverity}${result.emailConfirmed ? " — Gmail alert sent" : ""}`
+          : `Severity escalated to ${newSeverity}`;
+        toast.success(msg);
+        await createNotification({ action: "incident.severity_escalated", actor: "Support Manager", resourceType: "incident", resourceId: current.id, details: { name: current.title, severity: newSeverity }, workspaceId: workspace.id, workspaceName: workspace.name });
+      } else {
+        toast.info(result.reason || "No change needed");
+      }
       refreshIncidents();
     } catch (err) {
       toast.dismiss(toastId);
@@ -98,8 +99,25 @@ export default function Incidents() {
     toast.dismiss(toastId);
     refreshIncidents();
     if (result.status === SYNC_STATUS.SYNCED) {
+      const issueId = result.result?.linearIssueId || result.result?.issueId;
+      const issueUrl = result.result?.linearIssueUrl || result.result?.issueUrl;
+      const identifier = result.result?.linearIssueIdentifier || result.result?.identifier;
+      if (issueId) {
+        const now = new Date().toISOString();
+        await client.records.update("incidents", current.id, {
+          linearIssueId: issueId,
+          linearIssueUrl: issueUrl || "",
+          linearIssueIdentifier: identifier || "",
+          linearKey: identifier || "",
+          linearUrl: issueUrl || "",
+          linearSyncedAt: now,
+          lastSyncedAt: now,
+          linearStatus: "Todo",
+          syncStatus: "Todo",
+        }).catch(() => {});
+      }
       toast.success("Linear issue synced");
-      await createNotification({ action: "linear.issue_created", actor: "Support Manager", resourceType: "incident", resourceId: current.id, details: { name: current.title, linearIssue: result.result?.linearIssueIdentifier }, workspaceId: workspace.id, workspaceName: workspace.name }).catch(() => {});
+      await createNotification({ action: "linear.issue_created", actor: "Support Manager", resourceType: "incident", resourceId: current.id, details: { name: current.title, linearIssue: identifier }, workspaceId: workspace.id, workspaceName: workspace.name }).catch(() => {});
       emitRefresh();
     } else if (result.status === SYNC_STATUS.CONNECTOR_UNAVAILABLE) {
       toast.error("Linear connector is not configured");
@@ -140,6 +158,7 @@ export default function Incidents() {
       const tags = [...new Set([...(current.tags || []), ...(relatedSignal?.tags || []), "auto-generated", "incident-resolution"])];
 
       await client.records.create("memory_entries", {
+        id: crypto.randomUUID(),
         title: current.title || `Resolved Incident — ${current.id}`,
         summary: current.summary || (current.description ? current.description.slice(0, 200) : ""),
         root_cause: current.root_cause || relatedSignal?.summary || current.description || "",
@@ -337,6 +356,16 @@ export default function Incidents() {
                     <p className="text-xs text-muted dark:text-muted-dark">Affected</p>
                     <p className="mt-1 text-sm font-medium text-primary">{current.affected_ticket_count != null ? current.affected_ticket_count : "N/A"} tickets</p>
                     {current.affected_customer_count != null && <p className="text-xs text-muted dark:text-muted-dark mt-0.5">{current.affected_customer_count} customers</p>}
+                  </div>
+                  <div className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024]">
+                    <p className="text-xs text-muted dark:text-muted-dark">Alert</p>
+                    {current.email_sent ? (
+                      <p className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                        <CheckCircle2 size={12} /> Email sent
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-xs font-medium text-muted dark:text-muted-dark">Not sent</p>
+                    )}
                   </div>
                   {current.owner_user_id && <div className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024]"><p className="text-xs text-muted dark:text-muted-dark">Owner</p><p className="mt-1 text-sm font-medium text-primary">{current.owner_user_id}</p></div>}
                   {current.opened_at && <div className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024]"><p className="text-xs text-muted dark:text-muted-dark">Opened</p><p className="mt-1 text-sm font-medium text-primary">{format(new Date(current.opened_at), "MMM d, HH:mm")}</p></div>}

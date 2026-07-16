@@ -32,12 +32,13 @@ export function useLinearSync() {
 
       const result = raw.output_data || raw.output || raw;
 
-      if (result.success) {
+      const synced = result.success || result.linearIssueId || result.linearIssueIdentifier;
+      if (synced) {
         setSyncStatus(SYNC_STATUS.SYNCED);
         setSyncResult({
-          issueId: result.linearIssueId,
-          issueUrl: result.linearIssueUrl,
-          identifier: result.linearIssueIdentifier,
+          issueId: result.linearIssueId || result.issueId,
+          issueUrl: result.linearIssueUrl || result.issueUrl,
+          identifier: result.linearIssueIdentifier || result.identifier,
           syncedAt: new Date().toISOString(),
         });
         setSyncLoading(false);

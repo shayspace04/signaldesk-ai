@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 const REFRESH_EVENT = "signaldesk:refresh";
 
@@ -7,9 +7,11 @@ export function emitRefresh() {
 }
 
 export function useRefreshListener(fn) {
+  const savedFn = useRef(fn);
+  savedFn.current = fn;
   useEffect(() => {
-    const handler = () => fn();
+    const handler = () => savedFn.current();
     window.addEventListener(REFRESH_EVENT, handler);
     return () => window.removeEventListener(REFRESH_EVENT, handler);
-  }, [fn]);
+  }, []);
 }
