@@ -371,7 +371,8 @@ function EngineeringHandoffModal({ signal, onClose }) {
           severity: d.severity,
           description,
           signal_id: signal.id,
-          affected_ticket_count: d.affectedTicketCount,
+          ticket_ids: d.ticketIds,
+          affected_ticket_count: d.ticketIds.length || d.affectedTicketCount,
           affected_customer_count: d.affectedCustomerCount || 0,
           root_cause: d.rootCause || d.summary,
           category: d.categories?.split(", ")[0] || signal.category || "general",
@@ -383,6 +384,14 @@ function EngineeringHandoffModal({ signal, onClose }) {
 
 
       if (!incId || typeof incId !== "string") throw new Error("Incident creation returned no ID");
+
+      // Persist ticket_ids + affected_ticket_count on the incident (both paths)
+      if (signal.workspaceId) {
+        client.records.update("incidents", incId, {
+          ticket_ids: d.ticketIds,
+          affected_ticket_count: d.ticketIds.length || d.affectedTicketCount,
+        }).catch(e => console.error("[incident] persist ticket_ids failed:", e?.message || e));
+      }
 
       // Fire Gmail + Linear connectors for urgent incidents via shared workflow
       if (d.severity === "urgent" || d.severity === "high") {

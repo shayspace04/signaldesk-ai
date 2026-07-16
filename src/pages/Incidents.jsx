@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { ShieldAlert, CheckCircle2, Loader2, ArrowUp, ExternalLink, RefreshCw, MessageSquare, Clock } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ShieldAlert, CheckCircle2, Loader2, ArrowUp, ExternalLink, RefreshCw, MessageSquare, Clock, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { useLemmaRecords } from "@/hooks/useLemmaRecords";
 import { useLinearSync, SYNC_STATUS } from "@/hooks/useLinearSync";
@@ -31,6 +32,7 @@ const severityOrder = ["low", "normal", "high", "urgent"];
 
 export default function Incidents() {
   const { workspace } = useWorkspace();
+  const navigate = useNavigate();
   const recordFilters = workspaceFilter(workspace.id);
   const { data: incidents, loading, refresh: refreshIncidents } = useLemmaRecords("incidents", { limit: 50, sort: [{ field: "created_at", direction: "desc" }], filters: recordFilters });
   const { data: signals, refresh: refreshSignals } = useLemmaRecords("signals", { limit: 100, filters: recordFilters });
@@ -341,10 +343,11 @@ export default function Incidents() {
                       )}
                     </div>
                   </div>
-                  <div className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024]">
+                  <div onClick={() => navigate("/tickets")} className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024] cursor-pointer hover:bg-zinc-100 dark:hover:bg-[#27272A] transition-colors">
                     <p className="text-xs text-muted dark:text-muted-dark">Affected</p>
-                    <p className="mt-1 text-sm font-medium text-primary">{current.affected_ticket_count != null ? current.affected_ticket_count : "N/A"} tickets</p>
+                    <p className="mt-1 text-sm font-medium text-primary">{(current.affected_ticket_count ?? relatedTickets.length)} tickets</p>
                     {current.affected_customer_count != null && <p className="text-xs text-muted dark:text-muted-dark mt-0.5">{current.affected_customer_count} customers</p>}
+                    <ChevronRight size={12} className="mt-1 text-muted dark:text-muted-dark" />
                   </div>
                   <div className="rounded-xl bg-zinc-50 p-3 dark:bg-[#202024]">
                     <p className="text-xs text-muted dark:text-muted-dark">Alert</p>

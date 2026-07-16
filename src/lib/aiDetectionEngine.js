@@ -771,6 +771,20 @@ async function escalateToIncident(cluster, signalForEscalation, workspaceId, wor
       console.error("FAILED at signal update after incident:", err.message);
       throw err;
     }
+    // Persist ticket_ids on the incident from cluster ticket IDs
+    const ticketIds = cluster.ticket_ids || cluster.example_ticket_ids || [];
+    if (ticketIds.length > 0) {
+      try {
+        await client.records.update("incidents", incId, {
+          ticket_ids: ticketIds,
+          affected_ticket_count: ticketIds.length,
+          affected_customer_count: cluster.affected_customer_count || 0,
+        });
+        log("[escalateToIncident] Ticket IDs persisted on incident:", ticketIds.length);
+      } catch (err) {
+        console.error("FAILED at ticket_ids persist:", err.message);
+      }
+    }
   }
   log("Incident created:", incId);
   return incId;

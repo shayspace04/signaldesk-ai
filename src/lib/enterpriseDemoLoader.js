@@ -225,6 +225,55 @@ async function generateAllData() {
   return { allData, idMap };
 }
 
+// ─── Enrich ticket relationships ────────────────────────────────
+
+function enrichTicketRelationships(allData) {
+  const wsCatTickets = {};
+  for (const ticket of allData.tickets || []) {
+    const ws = ticket.fields.workspaceId;
+    const cat = ticket.fields.category || "general";
+    if (!wsCatTickets[ws]) wsCatTickets[ws] = {};
+    if (!wsCatTickets[ws][cat]) wsCatTickets[ws][cat] = [];
+    wsCatTickets[ws][cat].push(ticket);
+  }
+
+  // Assign example_ticket_ids to signals and set signal_id on linked tickets
+  for (const signal of allData.signals || []) {
+    const ws = signal.fields.workspaceId;
+    const cat = signal.fields.category || "general";
+    const count = signal.fields.evidence_count || 3;
+    const pool = wsCatTickets[ws]?.[cat] || [];
+    const selected = pool.slice(0, count);
+    const selectedIds = selected.map(t => t.fields.id);
+    signal.fields.example_ticket_ids = selectedIds;
+    // Set signal_id on each linked ticket
+    for (const ticket of selected) {
+      ticket.fields.signal_id = signal.fields.id;
+    }
+  }
+
+  // Assign ticket_ids and affected counts to incidents
+  for (const incident of allData.incidents || []) {
+    const signalId = incident.fields.signal_id;
+    if (!signalId) continue;
+    const signal = allData.signals?.find(s => s.fields.id === signalId);
+    const ticketIds = signal?.fields?.example_ticket_ids || [];
+    if (!ticketIds.length) continue;
+    incident.fields.ticket_ids = ticketIds;
+    incident.fields.ticket_count = ticketIds.length;
+    incident.fields.affected_ticket_count = ticketIds.length;
+
+    const linkedTickets = (allData.tickets || []).filter(t => ticketIds.includes(t.fields.id));
+    const customerNames = new Set(linkedTickets.map(t => t.fields.customer_name).filter(Boolean));
+    if (customerNames.size > 0) {
+      incident.fields.affected_customer_count = Math.max(
+        incident.fields.affected_customer_count || 0,
+        customerNames.size
+      );
+    }
+  }
+}
+
 // ─── Launch ─────────────────────────────────────────────────────
 
 export async function launchEnterpriseDemo(onProgress) {
@@ -283,6 +332,7 @@ export async function launchEnterpriseDemo(onProgress) {
   mark("generate");
   if (onProgress) onProgress({ type: "status", status: "generating" });
   const { allData, idMap } = await generateAllData();
+  enrichTicketRelationships(allData);
   markEnd("generate");
   console.log(`[perf] generate: ${phaseTimes.generate.toFixed(1)}s`);
 
