@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import client from '@/lib/lemmaClient';
+import client, { ORG_ID, LINEAR_AUTH_CONFIG, LINEAR_TEAM_ID } from '@/lib/lemmaClient';
 
 export const SYNC_STATUS = {
   IDLE: 'idle',
@@ -25,33 +25,45 @@ export function useLinearSync() {
     setSyncError(null);
 
     try {
-      const raw = await client.functions.run("create_linear_issue", {
-        input: { incident_id: incidentId },
-      });
+      const incident = await client.records.get("incidents", incidentId).catch(() => null);
+      if (reqId !== reqRef.current) return { status: SYNC_STATUS.IDLE };
+      if (!incident) throw new Error("Incident not found");
+
+      const priorityMap = { urgent: 1, high: 2, normal: 3, low: 4 };
+      const priority = priorityMap[incident.severity] || 0;
+
+      const raw = await client.connectors.operations.execute(
+        { organizationId: ORG_ID, authConfigName: LINEAR_AUTH_CONFIG },
+        "LINEAR_CREATE_LINEAR_ISSUE",
+        {
+          team_id: LINEAR_TEAM_ID,
+          title: incident.title || `Incident ${incidentId}`,
+          description: incident.description || incident.summary || `Severity: ${incident.severity || "N/A"}`,
+          priority,
+        },
+      );
       if (reqId !== reqRef.current) return { status: SYNC_STATUS.IDLE };
 
-      const result = raw.output_data || raw.output || raw;
+      const opResult = raw?.result || {};
+      const synced = opResult.successful !== false && opResult.data?.id;
 
-      const synced = result.success || result.linearIssueId || result.linearIssueIdentifier;
       if (synced) {
         setSyncStatus(SYNC_STATUS.SYNCED);
         setSyncResult({
-          issueId: result.linearIssueId || result.issueId,
-          issueUrl: result.linearIssueUrl || result.issueUrl,
-          identifier: result.linearIssueIdentifier || result.identifier,
+          issueId: opResult.data.id,
+          issueUrl: opResult.data.ticket_url,
+          identifier: opResult.data.issue_title,
           syncedAt: new Date().toISOString(),
         });
         setSyncLoading(false);
-        return { status: SYNC_STATUS.SYNCED, result };
+        return { status: SYNC_STATUS.SYNCED, result: opResult.data };
       }
 
-      const msg = result.message || '';
-      const isConnectorError = /connector/i.test(msg) || /not configured/i.test(msg);
-      const status = isConnectorError ? SYNC_STATUS.CONNECTOR_UNAVAILABLE : SYNC_STATUS.ERROR;
-      setSyncStatus(status);
-      setSyncError(msg || 'Failed to create Linear issue');
+      const msg = opResult.error || 'Failed to create Linear issue';
+      setSyncStatus(SYNC_STATUS.ERROR);
+      setSyncError(msg);
       setSyncLoading(false);
-      return { status, error: msg };
+      return { status: SYNC_STATUS.ERROR, error: msg };
     } catch (err) {
       if (reqId !== reqRef.current) return { status: SYNC_STATUS.IDLE };
       setSyncStatus(SYNC_STATUS.ERROR);

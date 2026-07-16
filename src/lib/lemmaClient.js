@@ -64,5 +64,7 @@ client.auth.subscribe((state) => {
 export const ORG_ID = "019ef98f-e90b-74df-9116-d0df1a4baeff";
 export const GMAIL_AUTH_CONFIG = "gmail";
 export const ALERT_RECIPIENT = "shay24test@gmail.com";
+export const LINEAR_AUTH_CONFIG = "linear";
+export const LINEAR_TEAM_ID = "8016a82b-1e4c-40bc-b2c1-40c521897628";
 
 export default client;

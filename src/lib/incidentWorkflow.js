@@ -1,4 +1,4 @@
-import client, { ORG_ID, GMAIL_AUTH_CONFIG, ALERT_RECIPIENT } from "@/lib/lemmaClient";
+import client, { ORG_ID, GMAIL_AUTH_CONFIG, ALERT_RECIPIENT, LINEAR_AUTH_CONFIG, LINEAR_TEAM_ID } from "@/lib/lemmaClient";
 
 export async function runGmailAlert(incident) {
   const sev = incident.severity || "";
@@ -63,17 +63,30 @@ export function syncToLinear(incidentId) {
   return (async () => {
     console.log(`[linear] connector invoked for incident ${incidentId}`);
     try {
-      const raw = await client.functions.run("create_linear_issue", {
-        input: { incident_id: incidentId },
-      });
-      const result = raw.output_data || raw.output || raw;
+      const incident = await client.records.get("incidents", incidentId).catch(() => null);
+      if (!incident) return { status: "error", error: "Incident not found" };
 
-      const success = result.success || result.linearIssueId || result.linearIssueIdentifier;
-      if (success) {
-        const issueId = result.linearIssueId || result.issueId;
-        const issueUrl = result.linearIssueUrl || result.issueUrl;
-        const identifier = result.linearIssueIdentifier || result.identifier;
+      const priorityMap = { urgent: 1, high: 2, normal: 3, low: 4 };
+      const priority = priorityMap[incident.severity] || 0;
 
+      const raw = await client.connectors.operations.execute(
+        { organizationId: ORG_ID, authConfigName: LINEAR_AUTH_CONFIG },
+        "LINEAR_CREATE_LINEAR_ISSUE",
+        {
+          team_id: LINEAR_TEAM_ID,
+          title: incident.title || `Incident ${incidentId}`,
+          description: incident.description || incident.summary || `Severity: ${incident.severity || "N/A"}`,
+          priority,
+        },
+      );
+
+      const opResult = raw?.result || {};
+      const success = opResult.successful !== false;
+      const issueId = opResult.data?.id;
+      const issueUrl = opResult.data?.ticket_url;
+      const identifier = opResult.data?.issue_title;
+
+      if (success && issueId) {
         console.log(`[linear] connector success for ${incidentId}: ${identifier} (${issueUrl})`);
 
         const updates = {
@@ -92,10 +105,9 @@ export function syncToLinear(incidentId) {
         return { status: "synced", issueId, issueUrl, identifier };
       }
 
-      const msg = result.message || "";
-      const isConnectorError = /connector/i.test(msg) || /not configured/i.test(msg);
-      console.warn(`[linear] connector failed for ${incidentId}: ${msg || "unknown error"}`);
-      return { status: isConnectorError ? "connector_unavailable" : "error", error: msg || "Failed to create Linear issue" };
+      const msg = opResult.error || "Unknown error";
+      console.warn(`[linear] connector failed for ${incidentId}: ${msg}`);
+      return { status: "error", error: msg };
     } catch (err) {
       console.error(`[linear] connector ERROR for ${incidentId}:`, err?.message || err);
       return { status: "error", error: err?.message || "Unable to create Linear issue" };

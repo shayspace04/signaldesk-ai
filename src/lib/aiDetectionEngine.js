@@ -1,4 +1,4 @@
-import client from "@/lib/lemmaClient";
+import client, { ORG_ID, LINEAR_AUTH_CONFIG, LINEAR_TEAM_ID } from "@/lib/lemmaClient";
 import { emitRefresh } from "@/lib/refreshEvents";
 import { createNotification } from "@/lib/notifications";
 import { getAIDetectionConfig, getThresholds, isSignalAutomationEnabled, getSignalAutomation, getIncidentAutomation } from "@/lib/aiDetectionConfig";
@@ -782,30 +782,40 @@ async function postIncidentActions(cluster, signalId, incidentId, workspaceId, w
 
   if (config.autoCreateLinearIssue && incidentId) {
     try {
-      const linearResult = await client.functions.run("create_linear_issue", {
-        input: { incident_id: incidentId },
-      });
-      const result = linearResult?.output_data || linearResult || {};
-      const linearSuccess = result.success || result.linearIssueId || result.linearIssueIdentifier;
-      if (linearSuccess) {
-        const issueId = result.linearIssueId || result.issueId;
-        const issueUrl = result.linearIssueUrl || result.issueUrl;
-        const identifier = result.linearIssueIdentifier || result.identifier;
-        const now = new Date().toISOString();
-        await client.records.update("incidents", incidentId, {
-          linearIssueId: issueId,
-          linearIssueUrl: issueUrl || "",
-          linearIssueIdentifier: identifier || "",
-          linearKey: identifier || "",
-          linearUrl: issueUrl || "",
-          linearSyncedAt: now,
-          lastSyncedAt: now,
-          linearStatus: "Todo",
-          syncStatus: "Todo",
-        }).catch(() => {});
-        log("Linear issue created and persisted:", identifier);
-      } else {
-        log("Linear issue created but no identifier returned");
+      const incident = await client.records.get("incidents", incidentId).catch(() => null);
+      if (incident) {
+        const priorityMap = { urgent: 1, high: 2, normal: 3, low: 4 };
+        const raw = await client.connectors.operations.execute(
+          { organizationId: ORG_ID, authConfigName: LINEAR_AUTH_CONFIG },
+          "LINEAR_CREATE_LINEAR_ISSUE",
+          {
+            team_id: LINEAR_TEAM_ID,
+            title: incident.title || `Incident ${incidentId}`,
+            description: incident.description || incident.summary || `Severity: ${incident.severity || "N/A"}`,
+            priority: priorityMap[incident.severity] || 0,
+          },
+        );
+        const opResult = raw?.result || {};
+        const issueId = opResult.data?.id;
+        const issueUrl = opResult.data?.ticket_url;
+        const identifier = opResult.data?.issue_title;
+        if (issueId) {
+          const now = new Date().toISOString();
+          await client.records.update("incidents", incidentId, {
+            linearIssueId: issueId,
+            linearIssueUrl: issueUrl || "",
+            linearIssueIdentifier: identifier || "",
+            linearKey: identifier || "",
+            linearUrl: issueUrl || "",
+            linearSyncedAt: now,
+            lastSyncedAt: now,
+            linearStatus: "Todo",
+            syncStatus: "Todo",
+          }).catch(() => {});
+          log("Linear issue created and persisted:", identifier);
+        } else {
+          log("Linear create returned unsuccessful:", opResult.error || "unknown error");
+        }
       }
     } catch (err) {
       log("Failed to create Linear issue:", err.message);
