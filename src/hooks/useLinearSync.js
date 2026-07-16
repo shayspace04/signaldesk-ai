@@ -15,12 +15,8 @@ function persistLinearFields(incidentId, issueId, issueUrl, identifier) {
     linearIssueId: issueId,
     linearIssueUrl: issueUrl || "",
     linearIssueIdentifier: identifier || "",
-    linearKey: identifier || "",
-    linearUrl: issueUrl || "",
     linearSyncedAt: now,
-    lastSyncedAt: now,
     linearStatus: "Todo",
-    syncStatus: "Todo",
   });
 }
 
@@ -49,13 +45,13 @@ export function useLinearSync() {
         const result = {
           id: incident.linearIssueId,
           ticket_url: incident.linearIssueUrl || "",
-          issue_title: incident.linearIssueIdentifier || incident.linearKey || "",
+          issue_title: incident.linearIssueIdentifier || "",
         };
         setSyncStatus(SYNC_STATUS.SYNCED);
         setSyncResult({
           issueId: incident.linearIssueId,
           issueUrl: incident.linearIssueUrl || "",
-          identifier: incident.linearIssueIdentifier || incident.linearKey || "",
+          identifier: incident.linearIssueIdentifier || "",
           syncedAt: incident.linearSyncedAt || incident.lastSyncedAt || new Date().toISOString(),
         });
         setSyncLoading(false);

@@ -134,9 +134,9 @@ function EngineeringHandoffModal({ signal, onClose }) {
       if (inc?.linearIssueId) {
         setPersistedLinear({
           issueId: inc.linearIssueId,
-          issueUrl: inc.linearIssueUrl || inc.linearUrl || "",
-          identifier: inc.linearIssueIdentifier || inc.linearKey || "",
-          syncedAt: inc.linearSyncedAt || inc.lastSyncedAt || "",
+          issueUrl: inc.linearIssueUrl || "",
+          identifier: inc.linearIssueIdentifier || "",
+          syncedAt: inc.linearSyncedAt || "",
         });
       }
     }).catch(() => {});

@@ -92,12 +92,8 @@ export function syncToLinear(incidentId) {
           linearIssueId: issueId,
           linearIssueUrl: issueUrl || "",
           linearIssueIdentifier: identifier || "",
-          linearKey: identifier || "",
-          linearUrl: issueUrl || "",
           linearSyncedAt: new Date().toISOString(),
-          lastSyncedAt: new Date().toISOString(),
           linearStatus: "Todo",
-          syncStatus: "Todo",
         };
         await client.records.update("incidents", incidentId, updates).catch(e => console.error(`[linear] persist failed for ${incidentId}:`, e?.message || e));
 
