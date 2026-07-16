@@ -63,6 +63,6 @@ client.auth.subscribe((state) => {
 
 export const ORG_ID = "019ef98f-e90b-74df-9116-d0df1a4baeff";
 export const GMAIL_AUTH_CONFIG = "gmail";
-export const ALERT_RECIPIENT = "shayelpanda@gmail.com";
+export const ALERT_RECIPIENT = "shay24test@gmail.com";
 
 export default client;
