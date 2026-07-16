@@ -1,326 +1,40 @@
 import client from "@/lib/lemmaClient";
-import { ENTERPRISE_DEMO, ENTERPRISE_DEMO_WORKSPACES, WORKSPACE_NAMES } from "@/data/enterpriseDemoDatasets";
+import { ENTERPRISE_DEMO_WORKSPACES } from "@/data/enterpriseDemoDatasets";
 import { emitRefresh } from "@/lib/refreshEvents";
 
 export const DEMO_COMPLETE_EVENT = "signaldesk:enterprise-demo-complete";
 
-const STORAGE_KEY = "enterprise_demo_ids";
-
-function randomId() {
-  return crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
-}
+const BACKUP_PREFIX = "/backup/";
+const TABLES_IN_ORDER = [
+  "tickets",
+  "signals",
+  "incidents",
+  "memory_entries",
+  "audit_logs",
+  "drafts",
+  "ticket_incidents",
+  "ticket_signals",
+  "approvals",
+  "user_roles",
+  "d",
+];
+const DEMO_WS_IDS = ["yesmadam", "corally", "foxo", "zap", "binocs"];
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-function loadRegistry() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch { return {}; }
-}
-
-function saveRegistry(registry) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(registry)); } catch { }
-}
-
-function trackId(table, id) {
-  const reg = loadRegistry();
-  if (!reg[table]) reg[table] = [];
-  reg[table].push(id);
-  saveRegistry(reg);
-}
-
-async function deleteRegistryRecords() {
-  const reg = loadRegistry();
-  let total = 0;
-  for (const [table, ids] of Object.entries(reg)) {
-    for (const id of ids) {
-      try { await client.records.delete(table, id); total++; } catch { }
-    }
-  }
-  localStorage.removeItem(STORAGE_KEY);
-  return total;
-}
-
-async function createTicket(t, workspaceId, wsName) {
-  const id = randomId();
-  try {
-    await client.records.create("tickets", {
-      id,
-      title: t.title,
-      body: t.body,
-      customer_email: t.customer.email,
-      customer_name: t.customer.name,
-      channel: "email",
-      priority: t.priority,
-      category: t.category,
-      status: t.status || "new",
-      received_at: t.created_at,
-      workspaceId,
-      workspaceName: wsName,
-    });
-    trackId("tickets", id);
-    return id;
-  } catch (err) {
-    console.warn("[demo] ticket create failed:", t.title, err?.message);
-    return null;
-  }
-}
-
-async function createSignal(signal, workspaceId, wsName) {
-  const id = randomId();
-  try {
-    await client.records.create("signals", {
-      id,
-      name: signal.name,
-      summary: signal.summary,
-      category: signal.category,
-      proposed_priority: signal.priority,
-      priority_score: Math.round(signal.risk_score),
-      analysis_confidence: signal.confidence,
-      evidence_count: signal.ticketCount,
-      affected_customer_count: signal.affectedCustomers?.length || 3,
-      root_cause: signal.root_cause,
-      status: "approved",
-      workspaceId,
-      workspaceName: wsName,
-    });
-    trackId("signals", id);
-    return id;
-  } catch (err) {
-    console.warn("[demo] signal create failed:", signal.name, err?.message);
-    return null;
-  }
-}
-
-async function createIncident(incident, signalId, workspaceId, wsName) {
-  const id = randomId();
-  try {
-    await client.records.create("incidents", {
-      id,
-      signal_id: signalId || id,
-      title: incident.title,
-      summary: incident.summary,
-      severity: incident.severity,
-      status: incident.status || "investigating",
-      category: incident.category,
-      affected_customer_count: incident.affectedCustomerCount || 3,
-      root_cause: incident.rootCause || "",
-      description: incident.summary,
-      workspaceId,
-      workspaceName: wsName,
-    });
-    trackId("incidents", id);
-    return id;
-  } catch (err) {
-    console.warn("[demo] incident create failed:", incident.title, err?.message);
-    return null;
-  }
-}
-
-async function createKnowledgeArticle(article, workspaceId, wsName) {
-  const id = randomId();
-  try {
-    await client.records.create("memory_entries", {
-      id,
-      title: article.title,
-      summary: article.summary,
-      body: article.body || article.summary,
-      root_cause: article.root_cause || "",
-      resolution: article.resolution || "",
-      category: article.category,
-      tags: article.tags || [],
-      confidence: article.confidence || 85,
-      status: "published",
-      customers_affected: article.customers_affected || 3,
-      severity: article.severity || "high",
-      resolution_time_hours: article.resolution_time_hours || 4,
-      preventive_actions: article.preventive_actions || "",
-      symptoms: Array.isArray(article.symptoms) ? article.symptoms.join("; ") : (article.symptoms || ""),
-      workspaceId,
-      workspaceName: wsName,
-    });
-    trackId("memory_entries", id);
-    return id;
-  } catch (err) {
-    console.warn("[demo] knowledge create failed:", article.title, err?.message);
-    return null;
-  }
-}
-
-async function createHandoff(handoff, relatedIncidentId, workspaceId, wsName) {
-  const id = randomId();
-  try {
-    await client.records.create("audit_logs", {
-      id,
-      action: "engineering.handoff",
-      actor_agent_name: "Enterprise Demo",
-      resource_type: "incident",
-      resource_id: relatedIncidentId || "",
-      details: {
-        handoff_title: handoff.title,
-        description: handoff.description,
-        priority: handoff.priority,
-        package_name: handoff.package_name,
-        engineering_notes: handoff.engineering_notes || "",
-        ticket_refs: handoff.ticketRefs || [],
-      },
-      workspaceId,
-      workspaceName: wsName,
-    });
-    trackId("audit_logs", id);
-    return id;
-  } catch (err) {
-    console.warn("[demo] handoff create failed:", handoff.title, err?.message);
-    return null;
-  }
-}
-
-async function createApproval(approval, workspaceId, wsName) {
-  const id = randomId();
-  try {
-    await client.records.create("drafts", {
-      id,
-      body: approval.draftBody,
-      confidence: approval.confidence || 85,
-      status: approval.status || "pending",
-      workspaceId,
-      workspaceName: wsName,
-    });
-    trackId("drafts", id);
-    return id;
-  } catch (err) {
-    console.warn("[demo] approval create failed:", err?.message);
-    return null;
-  }
-}
-
-async function createNotificationEntry(action, details, workspaceId, wsName) {
-  try {
-    const id = randomId();
-    await client.records.create("audit_logs", {
-      id,
-      action,
-      actor_agent_name: "Enterprise Demo",
-      resource_type: "system",
-      details: details || {},
-      workspaceId,
-      workspaceName: wsName,
-    });
-    trackId("audit_logs", id);
-  } catch { }
-}
-
-export async function loadEnterpriseWorkspace(workspaceId, onProgress) {
-  const dataset = ENTERPRISE_DEMO[workspaceId];
-  if (!dataset) throw new Error(`No enterprise demo dataset for workspace: ${workspaceId}`);
-
-  const wsName = WORKSPACE_NAMES[workspaceId] || workspaceId;
-  const totalSteps = dataset.tickets.length + dataset.signals.length + dataset.incidents.length
-    + dataset.knowledge.length + dataset.handoffs.length + dataset.approvals.length;
-  let done = 0;
-
-  const progress = (msg) => {
-    done++;
-    if (onProgress) onProgress(workspaceId, wsName, done, totalSteps, msg, Math.round((done / totalSteps) * 100));
-  };
-
-  const ticketIds = [];
-  for (let i = 0; i < dataset.tickets.length; i++) {
-    const tid = await createTicket(dataset.tickets[i], workspaceId, wsName);
-    if (tid) ticketIds.push(tid);
-    progress(`Ticket ${i + 1}/${dataset.tickets.length}`);
-    if (i > 0 && i % 5 === 0) await sleep(0);
-  }
-
-  const signalIds = [];
-  for (let i = 0; i < dataset.signals.length; i++) {
-    const sid = await createSignal(dataset.signals[i], workspaceId, wsName);
-    if (sid) signalIds.push(sid);
-    progress(`Signal ${i + 1}/${dataset.signals.length}`);
-    await sleep(20);
-  }
-
-  const incidentIds = [];
-  for (let i = 0; i < dataset.incidents.length; i++) {
-    const incident = dataset.incidents[i];
-    const signalId = incident.signalRef != null ? signalIds[incident.signalRef] : null;
-    const iid = await createIncident(incident, signalId, workspaceId, wsName);
-    if (iid) incidentIds.push(iid);
-    progress(`Incident ${i + 1}/${dataset.incidents.length}`);
-    await sleep(20);
-  }
-
-  for (let i = 0; i < dataset.knowledge.length; i++) {
-    await createKnowledgeArticle(dataset.knowledge[i], workspaceId, wsName);
-    progress(`Knowledge ${i + 1}/${dataset.knowledge.length}`);
-    await sleep(20);
-  }
-
-  for (let i = 0; i < dataset.handoffs.length; i++) {
-    const handoff = dataset.handoffs[i];
-    const relatedInc = handoff.incidentRef != null ? incidentIds[handoff.incidentRef] : null;
-    await createHandoff(handoff, relatedInc, workspaceId, wsName);
-    progress(`Handoff ${i + 1}/${dataset.handoffs.length}`);
-    await sleep(20);
-  }
-
-  for (let i = 0; i < dataset.approvals.length; i++) {
-    await createApproval(dataset.approvals[i], workspaceId, wsName);
-    progress(`Approval ${i + 1}/${dataset.approvals.length}`);
-    await sleep(20);
-  }
-
-  await createNotificationEntry("demo.enterprise.completed", {
-    workspace: workspaceId, tickets: dataset.tickets.length, signals: dataset.signals.length,
-    incidents: dataset.incidents.length, knowledge: dataset.knowledge.length,
-    handoffs: dataset.handoffs.length, approvals: dataset.approvals.length,
-  }, workspaceId, wsName);
-
-  emitRefresh();
-
-  return {
-    workspaceName: wsName,
-    ticketsCreated: dataset.tickets.length,
-    signalsGenerated: dataset.signals.length,
-    incidentsGenerated: dataset.incidents.length,
-    knowledgeGenerated: dataset.knowledge.length,
-    handoffsGenerated: dataset.handoffs.length,
-    approvalsGenerated: dataset.approvals.length,
-  };
-}
-
-export async function launchEnterpriseDemo(onProgress) {
-  const results = [];
-  let totalDone = 0;
-  const totalWorkspaces = ENTERPRISE_DEMO_WORKSPACES.length;
-
-  for (let wi = 0; wi < totalWorkspaces; wi++) {
-    const wsId = ENTERPRISE_DEMO_WORKSPACES[wi];
-    const wsName = WORKSPACE_NAMES[wsId] || wsId;
-    const pct = Math.round((totalDone / totalWorkspaces) * 100);
-    if (onProgress) onProgress(wsId, wsName, 0, 0, `Loading ${wsName}...`, pct);
-    try {
-      const r = await loadEnterpriseWorkspace(wsId);
-      results.push(r);
-      totalDone++;
-    } catch (err) {
-      results.push({ workspaceName: wsName, error: err.message });
-      totalDone++;
-    }
-  }
-  emitRefresh();
-  window.dispatchEvent(new CustomEvent(DEMO_COMPLETE_EVENT, { detail: results }));
-  return results;
+async function fetchBackup(table) {
+  const res = await fetch(`${BACKUP_PREFIX}${table}.json`);
+  if (!res.ok) throw new Error(`Failed to fetch backup/${table}.json`);
+  const data = await res.json();
+  return data.items || data.records || data.data || [];
 }
 
 async function deleteByWorkspace() {
   let total = 0;
-  const tables = ["tickets", "signals", "incidents", "memory_entries", "audit_logs", "drafts"];
-  for (const wsId of ENTERPRISE_DEMO_WORKSPACES) {
-    for (const table of tables) {
+  for (const wsId of DEMO_WS_IDS) {
+    for (const table of TABLES_IN_ORDER) {
       let cursor;
       do {
         const filter = { field: "workspaceId", op: "eq", value: wsId };
@@ -341,11 +55,64 @@ async function deleteByWorkspace() {
 }
 
 export async function clearEnterpriseDemo(onProgress) {
-  let count = await deleteRegistryRecords();
-  if (count === 0) {
-    count = await deleteByWorkspace();
-  }
+  const count = await deleteByWorkspace();
   emitRefresh();
   if (onProgress) onProgress(0, 0, `Cleared ${count} records`, 100);
   return count;
+}
+
+async function restoreTable(table, onProgress, wsName) {
+  const records = await fetchBackup(table);
+  let created = 0;
+  for (const rec of records) {
+    const { created_at, updated_at, ...fields } = rec;
+    try {
+      await client.records.create(table, fields);
+      created++;
+    } catch (e) {
+      console.warn(`[restore] ${table}/${rec.id}: ${e.message}`);
+    }
+  }
+  if (onProgress) onProgress(null, wsName, created, records.length, `Restored ${table}`, 0);
+  return { table, created, total: records.length };
+}
+
+export async function loadEnterpriseWorkspace(workspaceId, onProgress) {
+  const wsName = workspaceId;
+  let totalRecords = 0;
+  let totalCreated = 0;
+
+  for (const table of TABLES_IN_ORDER) {
+    const result = await restoreTable(table, onProgress, wsName);
+    totalRecords += result.total;
+    totalCreated += result.created;
+    await sleep(10);
+  }
+
+  emitRefresh();
+
+  return {
+    workspaceName: wsName,
+    ticketsCreated: totalCreated,
+    totalRecords,
+  };
+}
+
+export async function launchEnterpriseDemo(onProgress) {
+  const results = [];
+
+  for (let wi = 0; wi < DEMO_WS_IDS.length; wi++) {
+    const wsId = DEMO_WS_IDS[wi];
+    if (onProgress) onProgress(wsId, wsId, 0, 0, `Loading ${wsId}...`, Math.round((wi / DEMO_WS_IDS.length) * 100));
+    try {
+      const r = await loadEnterpriseWorkspace(wsId, onProgress);
+      results.push(r);
+    } catch (err) {
+      results.push({ workspaceName: wsId, error: err.message });
+    }
+  }
+
+  emitRefresh();
+  window.dispatchEvent(new CustomEvent(DEMO_COMPLETE_EVENT, { detail: results }));
+  return results;
 }

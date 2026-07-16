@@ -2,7 +2,6 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Rocket, Trash2, Loader2, CheckCircle2, AlertCircle, Database, FlaskConical } from "lucide-react";
 import { launchEnterpriseDemo, clearEnterpriseDemo, DEMO_COMPLETE_EVENT } from "@/lib/enterpriseDemoLoader";
-import { WORKSPACE_NAMES } from "@/data/enterpriseDemoDatasets";
 
 export default function EnterpriseDemo() {
   const [loading, setLoading] = useState(false);
@@ -146,12 +145,7 @@ export default function EnterpriseDemo() {
                   <p className="text-xs text-red-500">{r.error}</p>
                 ) : (
                   <div className="space-y-1 text-xs text-muted dark:text-muted-dark">
-                    <p>Tickets: {r.ticketsCreated}</p>
-                    <p>Signals: {r.signalsGenerated}</p>
-                    <p>Incidents: {r.incidentsGenerated}</p>
-                    <p>Knowledge: {r.knowledgeGenerated}</p>
-                    <p>Handoffs: {r.handoffsGenerated}</p>
-                    <p>Approvals: {r.approvalsGenerated}</p>
+                    <p>Total records restored: {r.totalRecords}</p>
                   </div>
                 )}
               </div>
