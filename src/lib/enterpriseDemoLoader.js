@@ -59,7 +59,7 @@ async function deleteByWorkspace() {
     for (const prefix of actionPrefixes) {
       let cursor;
       do {
-        const prefixFilter = { field: "action", op: "startswith", value: prefix };
+        const prefixFilter = { field: "action", op: "like", value: `${prefix}%` };
         // Only delete from demo workspaces: filter by details.workspaceId via a second pass
         const args = { filters: [prefixFilter], limit: 200 };
         if (cursor) args.cursor = cursor;
