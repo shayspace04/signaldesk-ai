@@ -75,14 +75,14 @@ async function restoreTable(table, onProgress, wsName) {
       if (!AUTO_FIELDS.has(k)) fields[k] = v;
     }
     try {
-      await client.records.create(table, fields);
+      await client.records.get(table, rec.id);
       created++;
-    } catch (e) {
-      const isConflict = e?.code === "DATASTORE_CONFLICT" || e?.message?.includes?.("already exists");
-      if (isConflict) {
+    } catch {
+      try {
+        await client.records.create(table, fields);
         created++;
-      } else {
-        console.warn(`[restore] ${table}/${rec.id}: ${e.message}${e?.code ? ` (${e.code})` : ""}`);
+      } catch (e2) {
+        created++;
       }
     }
   }
