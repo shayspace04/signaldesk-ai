@@ -1,4 +1,4 @@
-import client from "@/lib/lemmaClient";
+import client, { ORG_ID, GMAIL_AUTH_CONFIG, ALERT_RECIPIENT } from "@/lib/lemmaClient";
 
 export async function runGmailAlert(incident) {
   const sev = incident.severity || "";
@@ -11,39 +11,48 @@ export async function runGmailAlert(incident) {
   console.log(`[gmail] connector invoked for incident ${incident.id} (severity=${sev})`);
 
   try {
-    const raw = await client.functions.run("escalate_incident", {
-      input: {
-        incident_id: incident.id,
-        new_severity: sev,
-        workspace_name: workspaceName,
-        dashboard_link: `${window.location.origin}/incidents`,
-      },
-    });
-    const result = raw.output_data || raw.output || raw;
+    const body = [
+      `🚨 ${sev.toUpperCase()} INCIDENT ALERT`,
+      ``,
+      `Incident: ${incident.title || "Untitled"}`,
+      `Severity: ${sev}`,
+      `Workspace: ${workspaceName} (${workspaceId})`,
+      `Dashboard: ${window.location.origin}/incidents`,
+      incident.description ? `\nDescription: ${incident.description}` : "",
+    ].filter(Boolean).join("\n");
 
-    console.log(`[gmail] connector result for ${incident.id}:`, JSON.stringify(result).slice(0, 200));
+    const raw = await client.connectors.operations.execute(
+      { organizationId: ORG_ID, authConfigName: GMAIL_AUTH_CONFIG },
+      "GMAIL_SEND_EMAIL",
+      { recipient_email: ALERT_RECIPIENT, subject: `[${sev.toUpperCase()}] ${incident.title || "Incident Alert"}`, body },
+    );
 
-    await client.records.update("incidents", incident.id, { email_sent: true });
+    const opResult = raw?.result || {};
+    const sent = opResult.successful !== false;
 
-    const details = {
-      name: incident.title,
-      severity: sev,
-      note: "Gmail alert sent via incident workflow",
-      recipient: result.recipient || result.to || result.email || "unknown",
-      subject: result.subject || `[${sev.toUpperCase()}] ${incident.title || "Incident Alert"}`,
-    };
+    console.log(`[gmail] connector result for ${incident.id}:`, JSON.stringify(opResult).slice(0, 200));
+
+    if (sent) {
+      await client.records.update("incidents", incident.id, { email_sent: true }).catch(() => {});
+    }
+
     await client.records.create("audit_logs", {
       id: crypto.randomUUID(),
       action: "email.alert_sent",
       actor_type: "system",
       resource_type: "incident",
       resource_id: incident.id,
-      details,
+      details: {
+        name: incident.title, severity: sev,
+        note: sent ? "Gmail alert sent via connector" : "Gmail connector op returned unsuccessful",
+        recipient: ALERT_RECIPIENT,
+        subject: `[${sev.toUpperCase()}] ${incident.title || "Incident Alert"}`,
+      },
       workspaceId,
       workspaceName,
     }).catch(() => {});
 
-    return { status: "sent", result, details };
+    return { status: sent ? "sent" : "error", details: { recipient: ALERT_RECIPIENT } };
   } catch (err) {
     console.error(`[gmail] connector FAILED for ${incident.id}:`, err?.message || err);
     return { status: "error", error: err?.message || String(err) };
@@ -115,13 +124,18 @@ export async function escalateIncident(incident, newSeverity) {
   const result = raw.output_data || raw.output || raw;
 
   const updates = { severity: newSeverity };
-  const emailConfirmed = result.email_sent || result.gmail_message_id;
+  const emailSentByServer = result.email_sent || result.gmail_message_id;
 
-  if (newSeverity === "urgent" || emailConfirmed) {
+  if (emailSentByServer) {
     updates.email_sent = true;
   }
 
   await client.records.update("incidents", incident.id, updates);
+
+  let gmailResult;
+  if (newSeverity === "urgent" || newSeverity === "high") {
+    gmailResult = await runGmailAlert({ ...incident, severity: newSeverity, email_sent: !!updates.email_sent });
+  }
 
   if (newSeverity === "urgent") {
     await client.records.create("audit_logs", {
@@ -130,7 +144,7 @@ export async function escalateIncident(incident, newSeverity) {
       actor_type: "system",
       resource_type: "incident",
       resource_id: incident.id,
-      details: { name: incident.title, severity: newSeverity, note: "Triggered by severity escalation to urgent" },
+      details: { name: incident.title, severity: newSeverity, note: "Triggered by severity escalation" },
       workspaceId: incident.workspaceId || "",
       workspaceName: incident.workspaceName || "",
     }).catch(() => {});
@@ -138,5 +152,5 @@ export async function escalateIncident(incident, newSeverity) {
 
   const linearPromise = syncToLinear(incident.id);
 
-  return { status: "escalated", emailConfirmed, updates, linear: linearPromise };
+  return { status: "escalated", emailConfirmed: !!(updates.email_sent || gmailResult?.status === "sent"), updates, linear: linearPromise };
 }
