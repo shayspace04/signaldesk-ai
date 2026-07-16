@@ -1,0 +1,3345 @@
+﻿{
+  "items": [
+    {
+      "id": "622f6654-e226-45ae-ab22-19ef19fb0f60",
+      "created_at": "2026-07-15T22:28:53.436556Z",
+      "updated_at": "2026-07-15T22:28:53.436556Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "linear.issue_created",
+      "resource_type": "incident",
+      "resource_id": "e190cd7a-afeb-4f09-9ccc-c3832cf2bbf1",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Webhook Delivery Infrastructure Failure",
+        "linearIssue": "SIG-149"
+      },
+      "workspaceId": "signaldesk",
+      "workspaceName": "SignalDesk"
+    },
+    {
+      "id": "735f5ca2-48ce-40db-a364-38f1f90062a5",
+      "created_at": "2026-07-15T22:28:52.864537Z",
+      "updated_at": "2026-07-15T22:28:52.864537Z",
+      "actor_type": "user",
+      "actor_user_id": "014e210c-a34f-4200-9c17-e0fd765fffe2",
+      "actor_agent_name": null,
+      "action": "linear.issue_created",
+      "resource_type": "incident",
+      "resource_id": "e190cd7a-afeb-4f09-9ccc-c3832cf2bbf1",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "title": "Webhook Delivery Infrastructure Failure",
+        "severity": "high",
+        "simulated": false,
+        "linearIssueId": "e59e2063-ceea-40e9-8f41-8e16d6b4750e",
+        "linearIssueUrl": "https://linear.app/signaldesk-ui/issue/SIG-149/high-webhook-delivery-infrastructure-failure",
+        "linearIssueIdentifier": "SIG-149"
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "f28ec6ca-b3ab-4756-8c3f-a595e36add6b",
+      "created_at": "2026-07-15T22:28:29.484392Z",
+      "updated_at": "2026-07-15T22:28:29.484392Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "incident.severity_escalated",
+      "resource_type": "incident",
+      "resource_id": "b23cb851-ef0d-421c-b464-92ea79d480ef",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Lab Results Processing Pipeline Failure",
+        "severity": "urgent"
+      },
+      "workspaceId": "signaldesk",
+      "workspaceName": "SignalDesk"
+    },
+    {
+      "id": "c135cd92-1a84-4db6-8ac0-33647a234ffd",
+      "created_at": "2026-07-15T22:28:28.805905Z",
+      "updated_at": "2026-07-15T22:28:28.805905Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": null,
+      "action": "manager.email_sent",
+      "resource_type": "incident",
+      "resource_id": "b23cb851-ef0d-421c-b464-92ea79d480ef",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "to": "shay24test@gmail.com",
+        "title": "Lab Results Processing Pipeline Failure",
+        "severity": "urgent",
+        "escalated_from": "high",
+        "gmail_message_id": "19f67e54837915a0"
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "ab531bd0-e9ea-4178-8340-499dee591acc",
+      "created_at": "2026-07-15T22:28:23.590489Z",
+      "updated_at": "2026-07-15T22:28:23.590489Z",
+      "actor_type": "user",
+      "actor_user_id": "014e210c-a34f-4200-9c17-e0fd765fffe2",
+      "actor_agent_name": null,
+      "action": "incident.escalated",
+      "resource_type": "incident",
+      "resource_id": "b23cb851-ef0d-421c-b464-92ea79d480ef",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "title": "Lab Results Processing Pipeline Failure",
+        "new_severity": "urgent",
+        "old_severity": "high"
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "5026c606-ad5a-4270-a089-efdf3a47afcf",
+      "created_at": "2026-07-15T22:12:27.742793Z",
+      "updated_at": "2026-07-15T22:12:27.742793Z",
+      "actor_type": "user",
+      "actor_user_id": "014e210c-a34f-4200-9c17-e0fd765fffe2",
+      "actor_agent_name": null,
+      "action": "linear.issue_created",
+      "resource_type": "incident",
+      "resource_id": "a87feb73-6d4b-40aa-bb13-871b0f2f3dd2",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "title": "CRM Sync and Data Integrity Incident",
+        "severity": "high",
+        "simulated": false,
+        "linearIssueId": "4a535e80-68bf-42e4-bad2-7dee87508382",
+        "linearIssueUrl": "https://linear.app/signaldesk-ui/issue/SIG-148/high-crm-sync-and-data-integrity-incident",
+        "linearIssueIdentifier": "SIG-148"
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "c83c6c6c-e7d3-43bf-81da-028fe1376053",
+      "created_at": "2026-07-15T22:12:15.142097Z",
+      "updated_at": "2026-07-15T22:12:15.142097Z",
+      "actor_type": "user",
+      "actor_user_id": "014e210c-a34f-4200-9c17-e0fd765fffe2",
+      "actor_agent_name": null,
+      "action": "linear.issue_created",
+      "resource_type": "incident",
+      "resource_id": "7c6775fe-9703-466b-89c1-6836bd2f4c73",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "title": "Refund Processing Pipeline Backlog",
+        "severity": "high",
+        "simulated": false,
+        "linearIssueId": "c4592b51-61bc-4b1b-ba8a-899cc712ba63",
+        "linearIssueUrl": "https://linear.app/signaldesk-ui/issue/SIG-147/high-refund-processing-pipeline-backlog",
+        "linearIssueIdentifier": "SIG-147"
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "66a8ff2f-9316-4911-b315-a0acacaf2f9d",
+      "created_at": "2026-07-15T22:00:10.813477Z",
+      "updated_at": "2026-07-15T22:00:10.813477Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": null,
+      "action": "manager.email_sent",
+      "resource_type": "incident",
+      "resource_id": "2eff2b59-a1dd-43a9-ac20-0c64bb828ba3",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "to": "shay24test@gmail.com",
+        "title": "CRM Partner Sync System Incident",
+        "severity": "urgent",
+        "escalated_from": "high",
+        "gmail_message_id": "19f67cb61e3168c6"
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "189e3c72-5762-4dcc-852a-132b385200c8",
+      "created_at": "2026-07-15T22:00:04.773558Z",
+      "updated_at": "2026-07-15T22:00:04.773558Z",
+      "actor_type": "user",
+      "actor_user_id": "014e210c-a34f-4200-9c17-e0fd765fffe2",
+      "actor_agent_name": null,
+      "action": "incident.escalated",
+      "resource_type": "incident",
+      "resource_id": "2eff2b59-a1dd-43a9-ac20-0c64bb828ba3",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "title": "CRM Partner Sync System Incident",
+        "new_severity": "urgent",
+        "old_severity": "high"
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "2cf2e6ae-c252-4a6a-9096-87e281d9b1ac",
+      "created_at": "2026-07-15T21:59:45.634798Z",
+      "updated_at": "2026-07-15T21:59:45.634798Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "signal.workflow_changed",
+      "resource_type": "signal",
+      "resource_id": "a1971b04-83eb-4a99-a672-f85d1d59149c",
+      "ticket_id": null,
+      "signal_id": "a1971b04-83eb-4a99-a672-f85d1d59149c",
+      "details": {
+        "to": "incident_created",
+        "from": "approved",
+        "name": "Refund Processing Pipeline Delays"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "c3c716e6-373a-4a25-9e8e-f89bd44b61d1",
+      "created_at": "2026-07-15T21:59:45.387332Z",
+      "updated_at": "2026-07-15T21:59:45.387332Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "incident.created",
+      "resource_type": "incident",
+      "resource_id": "e39516c6-1c7d-41d5-8c0b-8c1f6d85b5d9",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Refund Processing Pipeline Delays"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "acd67ba0-844c-4136-8cae-bb6043a7a477",
+      "created_at": "2026-07-15T21:59:44.339416Z",
+      "updated_at": "2026-07-15T21:59:44.339416Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": null,
+      "action": "manager.notification_created",
+      "resource_type": "incident",
+      "resource_id": "e39516c6-1c7d-41d5-8c0b-8c1f6d85b5d9",
+      "ticket_id": null,
+      "signal_id": "a1971b04-83eb-4a99-a672-f85d1d59149c",
+      "details": {
+        "severity": "urgent",
+        "incident_id": "e39516c6-1c7d-41d5-8c0b-8c1f6d85b5d9",
+        "incident_title": "Incident: Refund Processing Pipeline Delays",
+        "affected_tickets": 0
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "a8be7f46-92cf-430d-a46d-837230370707",
+      "created_at": "2026-07-15T21:59:43.912172Z",
+      "updated_at": "2026-07-15T21:59:43.912172Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": null,
+      "action": "manager.email_sent",
+      "resource_type": "incident",
+      "resource_id": "e39516c6-1c7d-41d5-8c0b-8c1f6d85b5d9",
+      "ticket_id": null,
+      "signal_id": "a1971b04-83eb-4a99-a672-f85d1d59149c",
+      "details": {
+        "to": "shay24test@gmail.com",
+        "title": "Incident: Refund Processing Pipeline Delays",
+        "severity": "urgent",
+        "simulated": false,
+        "incident_title": "Incident: Refund Processing Pipeline Delays",
+        "gmail_message_id": "19f67caf8999193d"
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "bb8ad63a-ea2f-42c4-83e9-de2d1ba65bd0",
+      "created_at": "2026-07-15T21:59:39.403256Z",
+      "updated_at": "2026-07-15T21:59:39.403256Z",
+      "actor_type": "system",
+      "actor_user_id": "014e210c-a34f-4200-9c17-e0fd765fffe2",
+      "actor_agent_name": null,
+      "action": "slack.alert_sent",
+      "resource_type": "incident",
+      "resource_id": "e39516c6-1c7d-41d5-8c0b-8c1f6d85b5d9",
+      "ticket_id": null,
+      "signal_id": "a1971b04-83eb-4a99-a672-f85d1d59149c",
+      "details": {
+        "message": "≡ƒÜ¿ SignalDesk Alert\n\nIncident:\nIncident: Refund Processing Pipeline Delays\n\nSeverity:\nCritical\n\nLinked Signal:\nRefund Processing Pipeline Delays\n\nAffected Customers:\n3\n\nPriority Score:\n9\n\nManager Action Required",
+        "severity": "urgent",
+        "simulated": true
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "7ad3391a-5fd7-47f9-8ea8-e2fc0b9b1aa2",
+      "created_at": "2026-07-15T21:59:38.299261Z",
+      "updated_at": "2026-07-15T21:59:38.299261Z",
+      "actor_type": "user",
+      "actor_user_id": "014e210c-a34f-4200-9c17-e0fd765fffe2",
+      "actor_agent_name": null,
+      "action": "incident.updated",
+      "resource_type": "incident",
+      "resource_id": "e39516c6-1c7d-41d5-8c0b-8c1f6d85b5d9",
+      "ticket_id": null,
+      "signal_id": "a1971b04-83eb-4a99-a672-f85d1d59149c",
+      "details": {
+        "note": "Existing incident updated with new occurrences.",
+        "title": "Incident: Refund Processing Pipeline Delays",
+        "severity": "urgent",
+        "affected_tickets": 0
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "432704b4-b81d-4f4c-ab11-70e3c77c4687",
+      "created_at": "2026-07-15T21:58:08.954271Z",
+      "updated_at": "2026-07-15T21:58:08.954271Z",
+      "actor_type": "user",
+      "actor_user_id": "014e210c-a34f-4200-9c17-e0fd765fffe2",
+      "actor_agent_name": null,
+      "action": "incident.escalated",
+      "resource_type": "incident",
+      "resource_id": "0af42ab8-44fe-43f3-9981-f1e0fe1b4843",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "title": "Partner Onboarding Pipeline Failure",
+        "new_severity": "urgent",
+        "old_severity": "high"
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "e3bdb625-ea6c-450d-a992-0b8b1ce21175",
+      "created_at": "2026-07-15T21:56:41.716275Z",
+      "updated_at": "2026-07-15T21:56:41.716275Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": null,
+      "action": "manager.notification_created",
+      "resource_type": "incident",
+      "resource_id": "38c6383d-236e-4795-b1e7-feead67801b6",
+      "ticket_id": null,
+      "signal_id": "a2d76f12-77da-4795-8d1b-aee437029fb2",
+      "details": {
+        "severity": "urgent",
+        "incident_id": "38c6383d-236e-4795-b1e7-feead67801b6",
+        "incident_title": "Test: Payment Gateway Failures",
+        "affected_tickets": 0
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "c5ccb3d6-afcb-44a6-bd69-ccddea8ab806",
+      "created_at": "2026-07-15T21:56:41.375143Z",
+      "updated_at": "2026-07-15T21:56:41.375143Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": null,
+      "action": "manager.email_sent",
+      "resource_type": "incident",
+      "resource_id": "38c6383d-236e-4795-b1e7-feead67801b6",
+      "ticket_id": null,
+      "signal_id": "a2d76f12-77da-4795-8d1b-aee437029fb2",
+      "details": {
+        "to": "shay24test@gmail.com",
+        "title": "Test: Payment Gateway Failures",
+        "severity": "urgent",
+        "simulated": false,
+        "incident_title": "Test: Payment Gateway Failures",
+        "gmail_message_id": "19f67c82f75f01eb"
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "e3ea6a1c-aba5-429c-bd12-1e4870152d20",
+      "created_at": "2026-07-15T21:56:36.754708Z",
+      "updated_at": "2026-07-15T21:56:36.754708Z",
+      "actor_type": "system",
+      "actor_user_id": "014e210c-a34f-4200-9c17-e0fd765fffe2",
+      "actor_agent_name": null,
+      "action": "slack.alert_sent",
+      "resource_type": "incident",
+      "resource_id": "38c6383d-236e-4795-b1e7-feead67801b6",
+      "ticket_id": null,
+      "signal_id": "a2d76f12-77da-4795-8d1b-aee437029fb2",
+      "details": {
+        "message": "≡ƒÜ¿ SignalDesk Alert\n\nIncident:\nTest: Payment Gateway Failures\n\nSeverity:\nCritical\n\nLinked Signal:\nPayment Gateway Failures\n\nAffected Customers:\nNone\n\nPriority Score:\nNone\n\nManager Action Required",
+        "severity": "urgent",
+        "simulated": true
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "ccec9858-f9e1-457a-846e-c5adb7d524e1",
+      "created_at": "2026-07-15T21:56:35.808117Z",
+      "updated_at": "2026-07-15T21:56:35.808117Z",
+      "actor_type": "user",
+      "actor_user_id": "014e210c-a34f-4200-9c17-e0fd765fffe2",
+      "actor_agent_name": null,
+      "action": "incident.created",
+      "resource_type": "incident",
+      "resource_id": "38c6383d-236e-4795-b1e7-feead67801b6",
+      "ticket_id": null,
+      "signal_id": "a2d76f12-77da-4795-8d1b-aee437029fb2",
+      "details": {
+        "title": "Test: Payment Gateway Failures",
+        "severity": "urgent",
+        "affected_tickets": 0
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "d23b1043-2906-4ae7-bca5-55b330344613",
+      "created_at": "2026-07-15T21:42:30.478311Z",
+      "updated_at": "2026-07-15T21:42:30.478311Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "incident.severity_escalated",
+      "resource_type": "incident",
+      "resource_id": "e39516c6-1c7d-41d5-8c0b-8c1f6d85b5d9",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Refund Processing Pipeline Backlog",
+        "severity": "urgent"
+      },
+      "workspaceId": "signaldesk",
+      "workspaceName": "SignalDesk"
+    },
+    {
+      "id": "8197cc02-21bb-4571-a220-891b79d7fef5",
+      "created_at": "2026-07-15T21:42:30.043539Z",
+      "updated_at": "2026-07-15T21:42:30.043539Z",
+      "actor_type": "user",
+      "actor_user_id": "014e210c-a34f-4200-9c17-e0fd765fffe2",
+      "actor_agent_name": null,
+      "action": "incident.escalated",
+      "resource_type": "incident",
+      "resource_id": "e39516c6-1c7d-41d5-8c0b-8c1f6d85b5d9",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "title": "Refund Processing Pipeline Backlog",
+        "new_severity": "urgent",
+        "old_severity": "high"
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "2f7d9d6a-85da-4c01-a9b5-8118dd86bc8b",
+      "created_at": "2026-07-15T21:40:03.850233Z",
+      "updated_at": "2026-07-15T21:40:03.850233Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "linear.issue_created",
+      "resource_type": "incident",
+      "resource_id": "e39516c6-1c7d-41d5-8c0b-8c1f6d85b5d9",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Refund Processing Pipeline Backlog",
+        "linearIssue": "SIG-146"
+      },
+      "workspaceId": "signaldesk",
+      "workspaceName": "SignalDesk"
+    },
+    {
+      "id": "c440ef28-8a6b-4a0a-9f9b-f33f1d2ab897",
+      "created_at": "2026-07-15T21:40:03.268384Z",
+      "updated_at": "2026-07-15T21:40:03.268384Z",
+      "actor_type": "user",
+      "actor_user_id": "014e210c-a34f-4200-9c17-e0fd765fffe2",
+      "actor_agent_name": null,
+      "action": "linear.issue_created",
+      "resource_type": "incident",
+      "resource_id": "e39516c6-1c7d-41d5-8c0b-8c1f6d85b5d9",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "title": "Refund Processing Pipeline Backlog",
+        "severity": "high",
+        "simulated": false,
+        "linearIssueId": "3a833f9e-bf87-440f-b1aa-be7af421ef16",
+        "linearIssueUrl": "https://linear.app/signaldesk-ui/issue/SIG-146/high-refund-processing-pipeline-backlog",
+        "linearIssueIdentifier": "SIG-146"
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "ce97db0b-4898-4f10-b339-dafd689cf63d",
+      "created_at": "2026-07-15T21:38:56.842925Z",
+      "updated_at": "2026-07-15T21:38:56.842925Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Enterprise Demo",
+      "action": "demo.enterprise.completed",
+      "resource_type": "system",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "signals": 4,
+        "tickets": 38,
+        "handoffs": 3,
+        "approvals": 4,
+        "incidents": 2,
+        "knowledge": 3,
+        "workspace": "yesmadam"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "4d3b484c-1bee-4046-9afa-b5e61e04d791",
+      "created_at": "2026-07-15T21:38:55.727533Z",
+      "updated_at": "2026-07-15T21:38:55.727533Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Enterprise Demo",
+      "action": "engineering.handoff",
+      "resource_type": "incident",
+      "resource_id": "e39516c6-1c7d-41d5-8c0b-8c1f6d85b5d9",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "priority": "urgent",
+        "description": "Implement idempotency keys for payment callbacks to prevent race conditions",
+        "ticket_refs": [
+          0,
+          1
+        ],
+        "package_name": "ym-payment-gateway-v3.0",
+        "handoff_title": "Payment Gateway Idempotency Fix",
+        "engineering_notes": "Implement idempotency using payment gateway transaction ID + timestamp hash. Add lock on booking creation during callback processing. Implement retry with idempotency check for failed callbacks."
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "d0bc9c1e-9c6b-4f38-8205-0adf1c66aa67",
+      "created_at": "2026-07-15T21:38:45.576984Z",
+      "updated_at": "2026-07-15T21:38:45.576984Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Enterprise Demo",
+      "action": "demo.enterprise.completed",
+      "resource_type": "system",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "signals": 4,
+        "tickets": 38,
+        "handoffs": 3,
+        "approvals": 3,
+        "incidents": 2,
+        "knowledge": 3,
+        "workspace": "corally"
+      },
+      "workspaceId": "corally",
+      "workspaceName": "Corally"
+    },
+    {
+      "id": "33149276-72ae-4ac4-846f-a796eaba9697",
+      "created_at": "2026-07-15T21:38:44.766068Z",
+      "updated_at": "2026-07-15T21:38:44.766068Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Enterprise Demo",
+      "action": "engineering.handoff",
+      "resource_type": "incident",
+      "resource_id": "0af42ab8-44fe-43f3-9981-f1e0fe1b4843",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "priority": "high",
+        "description": "Implement domain-specific rate limiting for partner invitation emails",
+        "ticket_refs": [
+          2,
+          3
+        ],
+        "package_name": "corally-email-service-v2.0",
+        "handoff_title": "Email Delivery Rate Limiting Fix",
+        "engineering_notes": "Implement per-domain rate limiting using token bucket algorithm. Add delivery status tracking with webhook callbacks. Configure retry with exponential backoff per domain. Need to update email template rendering for partner onboarding."
+      },
+      "workspaceId": "corally",
+      "workspaceName": "Corally"
+    },
+    {
+      "id": "c71b303e-e10e-4c8c-a117-83db5e1cb766",
+      "created_at": "2026-07-15T21:38:44.549685Z",
+      "updated_at": "2026-07-15T21:38:44.549685Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Enterprise Demo",
+      "action": "engineering.handoff",
+      "resource_type": "incident",
+      "resource_id": "2eff2b59-a1dd-43a9-ac20-0c64bb828ba3",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "priority": "urgent",
+        "description": "Update Salesforce field mappings for API v58.0 compatibility",
+        "ticket_refs": [
+          0,
+          1
+        ],
+        "package_name": "corally-salesforce-connector-v3.2",
+        "handoff_title": "Salesforce API Migration Patch",
+        "engineering_notes": "Salesforce Summer 25 API update changed Account object field paths for partner hierarchy. Need to update field mapping configuration and add API version compatibility tests. Implement feature flag for gradual rollout."
+      },
+      "workspaceId": "corally",
+      "workspaceName": "Corally"
+    },
+    {
+      "id": "1892446e-aadb-4ce7-a6f8-b5c0234c0749",
+      "created_at": "2026-07-15T21:38:34.852112Z",
+      "updated_at": "2026-07-15T21:38:34.852112Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Enterprise Demo",
+      "action": "demo.enterprise.completed",
+      "resource_type": "system",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "signals": 4,
+        "tickets": 38,
+        "handoffs": 3,
+        "approvals": 3,
+        "incidents": 2,
+        "knowledge": 3,
+        "workspace": "foxo"
+      },
+      "workspaceId": "foxo",
+      "workspaceName": "Foxo"
+    },
+    {
+      "id": "a5d9b99c-9998-4659-af37-8b05e9e44d20",
+      "created_at": "2026-07-15T21:38:33.934798Z",
+      "updated_at": "2026-07-15T21:38:33.934798Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Enterprise Demo",
+      "action": "engineering.handoff",
+      "resource_type": "incident",
+      "resource_id": "b23cb851-ef0d-421c-b464-92ea79d480ef",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "priority": "urgent",
+        "description": "Reconnect booking confirmation service to payment gateway callback",
+        "ticket_refs": [
+          0,
+          1
+        ],
+        "package_name": "foxo-booking-webhook-v2.1",
+        "handoff_title": "Appointment Booking Webhook Fix",
+        "engineering_notes": "Payment gateway changed callback URL format in their latest API version. Need to update webhook endpoint configuration and add retry logic with idempotency keys. Also need to add webhook health monitoring."
+      },
+      "workspaceId": "foxo",
+      "workspaceName": "Foxo"
+    },
+    {
+      "id": "ade30477-2976-41c2-9d00-b47a6f11744e",
+      "created_at": "2026-07-15T21:38:24.446881Z",
+      "updated_at": "2026-07-15T21:38:24.446881Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Enterprise Demo",
+      "action": "demo.enterprise.completed",
+      "resource_type": "system",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "signals": 4,
+        "tickets": 38,
+        "handoffs": 3,
+        "approvals": 3,
+        "incidents": 2,
+        "knowledge": 3,
+        "workspace": "zap"
+      },
+      "workspaceId": "zap",
+      "workspaceName": "Zapdata"
+    },
+    {
+      "id": "73205e02-8e18-4070-95fb-153bdfeb4f69",
+      "created_at": "2026-07-15T21:38:23.538293Z",
+      "updated_at": "2026-07-15T21:38:23.538293Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Enterprise Demo",
+      "action": "engineering.handoff",
+      "resource_type": "incident",
+      "resource_id": "e190cd7a-afeb-4f09-9ccc-c3832cf2bbf1",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "priority": "urgent",
+        "description": "Migrate webhook delivery from in-memory to Redis stream-backed persistent queue",
+        "ticket_refs": [
+          4,
+          5
+        ],
+        "package_name": "zap-webhook-queue-v2.0",
+        "handoff_title": "Webhook Queue Migration",
+        "engineering_notes": "Replace in-memory ConcurrentLinkedQueue with Redis Streams. Implement consumer groups for parallel processing. Add dead-letter stream for failed deliveries after max retries."
+      },
+      "workspaceId": "zap",
+      "workspaceName": "Zapdata"
+    },
+    {
+      "id": "c71a05a9-fe62-4e26-886c-b7fd3f2d4684",
+      "created_at": "2026-07-15T21:38:23.332466Z",
+      "updated_at": "2026-07-15T21:38:23.332466Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Enterprise Demo",
+      "action": "engineering.handoff",
+      "resource_type": "incident",
+      "resource_id": "a87feb73-6d4b-40aa-bb13-871b0f2f3dd2",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "priority": "high",
+        "description": "Distributed locking implementation for CRM contact record operations",
+        "ticket_refs": [
+          0,
+          1,
+          34
+        ],
+        "package_name": "zap-crm-sync-v4.2.0",
+        "handoff_title": "CRM Sync Performance Hotfix",
+        "engineering_notes": "Implement Redis-based distributed locks for contact record operations. Add deadlock detection with automatic retry. Need to handle lock expiry and cleanup for stuck transactions."
+      },
+      "workspaceId": "zap",
+      "workspaceName": "Zapdata"
+    },
+    {
+      "id": "53cb6945-1514-4e9b-9a25-76bdb56d1e24",
+      "created_at": "2026-07-15T21:38:13.592541Z",
+      "updated_at": "2026-07-15T21:38:13.592541Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Enterprise Demo",
+      "action": "demo.enterprise.completed",
+      "resource_type": "system",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "signals": 4,
+        "tickets": 38,
+        "handoffs": 3,
+        "approvals": 4,
+        "incidents": 2,
+        "knowledge": 3,
+        "workspace": "binocs"
+      },
+      "workspaceId": "binocs",
+      "workspaceName": "Binocs"
+    },
+    {
+      "id": "fd6aab2e-f5ce-4689-aa68-c0c425690c78",
+      "created_at": "2026-07-15T21:38:12.414455Z",
+      "updated_at": "2026-07-15T21:38:12.414455Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Enterprise Demo",
+      "action": "engineering.handoff",
+      "resource_type": "incident",
+      "resource_id": "2bc05036-9646-4a7b-94cc-cfcf0db47634",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "priority": "urgent",
+        "description": "Emergency patch for portfolio aggregation pipeline memory leak",
+        "ticket_refs": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "package_name": "binocs-report-engine-v2.4.1",
+        "handoff_title": "Financial Report Engine Hotfix",
+        "engineering_notes": "Root cause identified as unbounded result set in portfolio aggregation query. Memory usage grows linearly with portfolio count. Need to implement cursor-based pagination and streaming aggregation."
+      },
+      "workspaceId": "binocs",
+      "workspaceName": "Binocs"
+    },
+    {
+      "id": "434f03bd-5bdb-49b3-bd66-7d148316817c",
+      "created_at": "2026-07-15T21:22:26.834566Z",
+      "updated_at": "2026-07-15T21:22:26.834566Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "signal.workflow_changed",
+      "resource_type": "signal",
+      "resource_id": "775a37c5-f776-4af0-b366-8bf430e5af99",
+      "ticket_id": null,
+      "signal_id": "775a37c5-f776-4af0-b366-8bf430e5af99",
+      "details": {
+        "to": "incident_created",
+        "from": "new",
+        "name": "Appointment Booking Failures"
+      },
+      "workspaceId": "foxo",
+      "workspaceName": "Foxo"
+    },
+    {
+      "id": "370b26c8-25c8-4d01-aec1-c7cd2738e25a",
+      "created_at": "2026-07-15T21:22:26.537281Z",
+      "updated_at": "2026-07-15T21:22:26.537281Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "incident.created",
+      "resource_type": "incident",
+      "resource_id": "019f67a8-ab24-714d-9e27-7f5daeb96e4d",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Appointment Booking Failures"
+      },
+      "workspaceId": "foxo",
+      "workspaceName": "Foxo"
+    },
+    {
+      "id": "e09aa91f-159d-44c4-9b90-8787b84e8b41",
+      "created_at": "2026-07-15T21:22:26.495419Z",
+      "updated_at": "2026-07-15T21:22:26.495419Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "signal.workflow_changed",
+      "resource_type": "signal",
+      "resource_id": "05fc2a70-3847-4ff7-889b-fee5823c3b7c",
+      "ticket_id": null,
+      "signal_id": "05fc2a70-3847-4ff7-889b-fee5823c3b7c",
+      "details": {
+        "to": "incident_created",
+        "from": "new",
+        "name": "Report Generation Failures"
+      },
+      "workspaceId": "binocs",
+      "workspaceName": "Binocs"
+    },
+    {
+      "id": "01624d80-549d-4ccf-a792-b9220fb5cbcb",
+      "created_at": "2026-07-15T21:22:26.292969Z",
+      "updated_at": "2026-07-15T21:22:26.292969Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "incident.created",
+      "resource_type": "incident",
+      "resource_id": "019f67a8-9000-74ba-895c-fa2c6ee92829",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Report Generation Failures"
+      },
+      "workspaceId": "binocs",
+      "workspaceName": "Binocs"
+    },
+    {
+      "id": "f7f829b9-00f5-4235-9d02-5fde2b22b611",
+      "created_at": "2026-07-15T21:10:12.781563Z",
+      "updated_at": "2026-07-15T21:10:12.781563Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "signal.workflow_changed",
+      "resource_type": "signal",
+      "resource_id": "089b1278-680b-439f-9111-83f0f1c385c1",
+      "ticket_id": null,
+      "signal_id": "089b1278-680b-439f-9111-83f0f1c385c1",
+      "details": {
+        "to": "incident_created",
+        "from": "approved",
+        "name": "Refund Processing Delays"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "376eff10-fc6d-4280-833c-272d99909251",
+      "created_at": "2026-07-15T21:10:12.591330Z",
+      "updated_at": "2026-07-15T21:10:12.591330Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "incident.created",
+      "resource_type": "incident",
+      "resource_id": "019f679d-3dde-70d3-8029-557ff57361cf",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Refund Processing Delays"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "49cb5ad4-181c-4ae5-a8b6-20ce8c0b3af4",
+      "created_at": "2026-07-15T21:10:08.575444Z",
+      "updated_at": "2026-07-15T21:10:08.575444Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "signal.workflow_changed",
+      "resource_type": "signal",
+      "resource_id": "089b1278-680b-439f-9111-83f0f1c385c1",
+      "ticket_id": null,
+      "signal_id": "089b1278-680b-439f-9111-83f0f1c385c1",
+      "details": {
+        "to": "incident_created",
+        "from": "approved",
+        "name": "Refund Processing Delays"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "da1a2c74-989f-4727-ae4b-cf8c457bf0bb",
+      "created_at": "2026-07-15T21:10:08.359945Z",
+      "updated_at": "2026-07-15T21:10:08.359945Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "incident.created",
+      "resource_type": "incident",
+      "resource_id": "019f679d-28ad-75f3-8d20-acfaba65b023",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Refund Processing Delays"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "e1a50bb3-d0d4-4fcf-9244-6bea353d1bf1",
+      "created_at": "2026-07-15T21:04:02.822623Z",
+      "updated_at": "2026-07-15T21:04:02.822623Z",
+      "actor_type": "user",
+      "actor_user_id": "014e210c-a34f-4200-9c17-e0fd765fffe2",
+      "actor_agent_name": null,
+      "action": "linear.issue_created",
+      "resource_type": "incident",
+      "resource_id": "31f4d8e7-4e10-4a56-8988-05cd6d503139",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "title": "Partner Onboarding Pipeline Failure",
+        "severity": "high",
+        "simulated": false,
+        "linearIssueId": "f40c0e4f-4f8f-4535-8a53-f5ca6d72ae47",
+        "linearIssueUrl": "https://linear.app/signaldesk-ui/issue/SIG-145/high-partner-onboarding-pipeline-failure",
+        "linearIssueIdentifier": "SIG-145"
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "9a84f967-bcd4-4d7d-8342-37a78aedbca7",
+      "created_at": "2026-07-15T20:48:29.023871Z",
+      "updated_at": "2026-07-15T20:48:29.023871Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "signal.workflow_changed",
+      "resource_type": "signal",
+      "resource_id": "b3b4faf7-79ae-4cfe-a9bb-8d4648fa3c1d",
+      "ticket_id": null,
+      "signal_id": "b3b4faf7-79ae-4cfe-a9bb-8d4648fa3c1d",
+      "details": {
+        "to": "incident_created",
+        "from": "new",
+        "name": "CRM Sync Degradation"
+      },
+      "workspaceId": "zap",
+      "workspaceName": "Zap"
+    },
+    {
+      "id": "b709a123-8158-420a-aec3-a1feca9c34f7",
+      "created_at": "2026-07-15T20:48:28.841875Z",
+      "updated_at": "2026-07-15T20:48:28.841875Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "incident.created",
+      "resource_type": "incident",
+      "resource_id": "019f6789-8dbd-7537-ab2a-45c34ac9a7bb",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "CRM Sync Degradation"
+      },
+      "workspaceId": "zap",
+      "workspaceName": "Zap"
+    },
+    {
+      "id": "2f79ff32-60e1-493a-9dec-336199b7502d",
+      "created_at": "2026-07-15T20:48:24.046569Z",
+      "updated_at": "2026-07-15T20:48:24.046569Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "signal.workflow_changed",
+      "resource_type": "signal",
+      "resource_id": "a2d76f12-77da-4795-8d1b-aee437029fb2",
+      "ticket_id": null,
+      "signal_id": "a2d76f12-77da-4795-8d1b-aee437029fb2",
+      "details": {
+        "to": "incident_created",
+        "from": "approved",
+        "name": "Payment Gateway Failures"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "78163eb9-c96b-491a-a514-f358c61f9443",
+      "created_at": "2026-07-15T20:48:23.909478Z",
+      "updated_at": "2026-07-15T20:48:23.909478Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "signal.workflow_changed",
+      "resource_type": "signal",
+      "resource_id": "a2d76f12-77da-4795-8d1b-aee437029fb2",
+      "ticket_id": null,
+      "signal_id": "a2d76f12-77da-4795-8d1b-aee437029fb2",
+      "details": {
+        "to": "incident_created",
+        "from": "approved",
+        "name": "Payment Gateway Failures"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "f1ea0173-350e-489f-be18-34a417f139bc",
+      "created_at": "2026-07-15T20:48:23.866482Z",
+      "updated_at": "2026-07-15T20:48:23.866482Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "incident.created",
+      "resource_type": "incident",
+      "resource_id": "019f6789-20e8-7208-a044-7ba256a69a4a",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Payment Gateway Failures"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "232c665f-4b91-4373-a819-a9b8ef11e9e1",
+      "created_at": "2026-07-15T20:48:23.716499Z",
+      "updated_at": "2026-07-15T20:48:23.716499Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "incident.created",
+      "resource_type": "incident",
+      "resource_id": "019f6789-2078-7165-b78f-2dcc62236329",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Payment Gateway Failures"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "ca7d6c42-3819-40c7-877c-6ac3eac972c1",
+      "created_at": "2026-07-15T20:48:07.700885Z",
+      "updated_at": "2026-07-15T20:48:07.700885Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": null,
+      "action": "manager.email_sent",
+      "resource_type": "incident",
+      "resource_id": "9f64409a-74c4-4772-ac82-9f6db7d7f051",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "to": "shay24test@gmail.com",
+        "title": "Refund Processing Pipeline Backlog",
+        "severity": "urgent",
+        "escalated_from": "high"
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "ca3cc29e-dab6-4966-9827-323116fc4888",
+      "created_at": "2026-07-15T20:48:02.632819Z",
+      "updated_at": "2026-07-15T20:48:02.632819Z",
+      "actor_type": "user",
+      "actor_user_id": "014e210c-a34f-4200-9c17-e0fd765fffe2",
+      "actor_agent_name": null,
+      "action": "incident.escalated",
+      "resource_type": "incident",
+      "resource_id": "9f64409a-74c4-4772-ac82-9f6db7d7f051",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "title": "Refund Processing Pipeline Backlog",
+        "new_severity": "urgent",
+        "old_severity": "high"
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "c01637a7-eee1-4604-aac3-67524ade5bc2",
+      "created_at": "2026-07-15T20:45:00.379625Z",
+      "updated_at": "2026-07-15T20:45:00.379625Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "signal.workflow_changed",
+      "resource_type": "signal",
+      "resource_id": "a2d76f12-77da-4795-8d1b-aee437029fb2",
+      "ticket_id": null,
+      "signal_id": "a2d76f12-77da-4795-8d1b-aee437029fb2",
+      "details": {
+        "to": "review",
+        "from": "approved",
+        "name": "Payment Gateway Failures"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "596e6130-0f7a-4b37-bb9b-757a831fbcd5",
+      "created_at": "2026-07-15T20:44:56.304377Z",
+      "updated_at": "2026-07-15T20:44:56.304377Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "signal.workflow_changed",
+      "resource_type": "signal",
+      "resource_id": "a2d76f12-77da-4795-8d1b-aee437029fb2",
+      "ticket_id": null,
+      "signal_id": "a2d76f12-77da-4795-8d1b-aee437029fb2",
+      "details": {
+        "to": "review",
+        "from": "approved",
+        "name": "Payment Gateway Failures"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "01cccae3-6e86-45f1-8870-44733eaa48d7",
+      "created_at": "2026-07-15T20:24:37.436812Z",
+      "updated_at": "2026-07-15T20:24:37.436812Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "signal.workflow_changed",
+      "resource_type": "signal",
+      "resource_id": "238a5cff-72b6-43fe-a802-a68c7dc1c584",
+      "ticket_id": null,
+      "signal_id": "238a5cff-72b6-43fe-a802-a68c7dc1c584",
+      "details": {
+        "to": "approved",
+        "from": "new",
+        "name": "Beautician No-Show Spike"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "aee1691c-fcc9-4129-b7d2-ed51d36d89d1",
+      "created_at": "2026-07-15T20:23:09.335208Z",
+      "updated_at": "2026-07-15T20:23:09.335208Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "engineering.handoff",
+      "resource_type": "incident",
+      "resource_id": "019f6772-616a-7516-a9a6-02918c894cbe",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Refund Processing Pipeline Delays",
+        "severity": "urgent",
+        "ticketCount": 3
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "e7c12ca0-8068-4472-958a-da379a9f3791",
+      "created_at": "2026-07-15T20:23:09.140321Z",
+      "updated_at": "2026-07-15T20:23:09.140321Z",
+      "actor_type": "user",
+      "actor_user_id": null,
+      "actor_agent_name": null,
+      "action": "engineering.handoff",
+      "resource_type": "incident",
+      "resource_id": "019f6772-616a-7516-a9a6-02918c894cbe",
+      "ticket_id": null,
+      "signal_id": "eeb9820a-86b7-432d-821d-c4890065b428",
+      "details": {
+        "title": "Refund Processing Pipeline Delays",
+        "severity": "urgent",
+        "ticketCount": 3,
+        "customerCount": 3
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "ad4bcc6a-c4d5-410b-a026-324feebb71f9",
+      "created_at": "2026-07-15T20:22:41.176337Z",
+      "updated_at": "2026-07-15T20:22:41.176337Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "System",
+      "action": "ticket.resolved",
+      "resource_type": "ticket",
+      "resource_id": "7037dc0e-c70b-4e43-ab0c-924c77723c52",
+      "ticket_id": "7037dc0e-c70b-4e43-ab0c-924c77723c52",
+      "signal_id": null,
+      "details": {
+        "previous_status": "waiting_approval"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "c469fdb3-d881-4266-b788-20e775be34a5",
+      "created_at": "2026-07-15T20:22:32.833601Z",
+      "updated_at": "2026-07-15T20:22:32.833601Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "System",
+      "action": "ticket.resolved",
+      "resource_type": "ticket",
+      "resource_id": "984ea2fb-e86a-4ac8-969a-6f9a3a7cd2b1",
+      "ticket_id": "984ea2fb-e86a-4ac8-969a-6f9a3a7cd2b1",
+      "signal_id": null,
+      "details": {
+        "previous_status": "new"
+      },
+      "workspaceId": "corally",
+      "workspaceName": "Corally"
+    },
+    {
+      "id": "ab12b09f-705e-41e9-8300-06d5301d5b59",
+      "created_at": "2026-07-15T20:22:19.416414Z",
+      "updated_at": "2026-07-15T20:22:19.416414Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "System",
+      "action": "ticket.resolved",
+      "resource_type": "ticket",
+      "resource_id": "79ca1c0c-6f6e-44a3-8e01-c16c4cab317f",
+      "ticket_id": "79ca1c0c-6f6e-44a3-8e01-c16c4cab317f",
+      "signal_id": null,
+      "details": {
+        "previous_status": "triaged"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "ac2c64b3-cba0-4795-b146-9a7d54cab298",
+      "created_at": "2026-07-15T20:22:13.780591Z",
+      "updated_at": "2026-07-15T20:22:13.780591Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "System",
+      "action": "ticket.resolved",
+      "resource_type": "ticket",
+      "resource_id": "c8a86128-8d0e-4c03-8673-c0cbf37f1a2d",
+      "ticket_id": "c8a86128-8d0e-4c03-8673-c0cbf37f1a2d",
+      "signal_id": null,
+      "details": {
+        "previous_status": "waiting_approval"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "4edc3d92-e875-4c0d-9266-2620e01e5085",
+      "created_at": "2026-07-15T20:11:23.571205Z",
+      "updated_at": "2026-07-15T20:11:23.571205Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "linear.issue_created",
+      "resource_type": "incident",
+      "resource_id": "a6c37c70-75e9-406e-9618-25f9487608cb",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "CRM Sync and Data Integrity Incident",
+        "linearIssue": "SIG-142"
+      },
+      "workspaceId": "signaldesk",
+      "workspaceName": "SignalDesk"
+    },
+    {
+      "id": "ce13beb3-6086-48f7-a7a5-d996927e98d4",
+      "created_at": "2026-07-15T20:11:23.103325Z",
+      "updated_at": "2026-07-15T20:11:23.103325Z",
+      "actor_type": "user",
+      "actor_user_id": "014e210c-a34f-4200-9c17-e0fd765fffe2",
+      "actor_agent_name": null,
+      "action": "linear.issue_created",
+      "resource_type": "incident",
+      "resource_id": "a6c37c70-75e9-406e-9618-25f9487608cb",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "title": "CRM Sync and Data Integrity Incident",
+        "severity": "high",
+        "simulated": false,
+        "linearIssueId": "dc79b1a9-d7e0-4106-836d-2e8a4a8a977e",
+        "linearIssueUrl": "https://linear.app/signaldesk-ui/issue/SIG-142/high-crm-sync-and-data-integrity-incident",
+        "linearIssueIdentifier": "SIG-142"
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "454a5060-c644-40f7-b8f3-c9be0f707dce",
+      "created_at": "2026-07-15T20:07:45.688542Z",
+      "updated_at": "2026-07-15T20:07:45.688542Z",
+      "actor_type": "user",
+      "actor_user_id": "014e210c-a34f-4200-9c17-e0fd765fffe2",
+      "actor_agent_name": null,
+      "action": "linear.issue_created",
+      "resource_type": "incident",
+      "resource_id": "66b286e9-9a36-449a-8054-907239de19f3",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "title": "CRM Partner Sync System Incident",
+        "severity": "high",
+        "simulated": false,
+        "linearIssueId": "b8b01230-2c96-4323-8e65-6c34003be62d",
+        "linearIssueUrl": "https://linear.app/signaldesk-ui/issue/SIG-141/high-crm-partner-sync-system-incident",
+        "linearIssueIdentifier": "SIG-141"
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "2312c4e7-8e38-4e48-85d6-dd40ef562e57",
+      "created_at": "2026-07-15T20:04:25.932228Z",
+      "updated_at": "2026-07-15T20:04:25.932228Z",
+      "actor_type": "user",
+      "actor_user_id": "014e210c-a34f-4200-9c17-e0fd765fffe2",
+      "actor_agent_name": null,
+      "action": "linear.issue_created",
+      "resource_type": "incident",
+      "resource_id": "836f1f67-83ab-4420-ba5a-0de26674190f",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "title": "Lab Results Processing Pipeline Failure",
+        "severity": "high",
+        "simulated": false,
+        "linearIssueId": "f11a3d40-f84f-4506-9651-41478bb99db7",
+        "linearIssueUrl": "https://linear.app/signaldesk-ui/issue/SIG-135/high-lab-results-processing-pipeline-failure",
+        "linearIssueIdentifier": "SIG-135"
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "23b9a55f-a55b-4b89-b426-b453a01d780a",
+      "created_at": "2026-07-15T19:56:43.504039Z",
+      "updated_at": "2026-07-15T19:56:43.504039Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "System",
+      "action": "ticket.resolved",
+      "resource_type": "ticket",
+      "resource_id": "28b1d248-8835-47ea-8025-10f39e02c4cd",
+      "ticket_id": "28b1d248-8835-47ea-8025-10f39e02c4cd",
+      "signal_id": null,
+      "details": {
+        "previous_status": "waiting_approval"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "38ac673b-3291-4ef5-8a02-14fab7834f56",
+      "created_at": "2026-07-15T19:56:20.404469Z",
+      "updated_at": "2026-07-15T19:56:20.404469Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "AI Copilot",
+      "action": "draft.generated",
+      "resource_type": "ticket",
+      "resource_id": "28b1d248-8835-47ea-8025-10f39e02c4cd",
+      "ticket_id": "28b1d248-8835-47ea-8025-10f39e02c4cd",
+      "signal_id": null,
+      "details": {
+        "tone": "professional",
+        "confidence": 89
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "1eb3283b-8685-471a-bfd7-4363c12c100f",
+      "created_at": "2026-07-15T19:51:49.618585Z",
+      "updated_at": "2026-07-15T19:51:49.618585Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": null,
+      "action": "manager.email_sent",
+      "resource_type": "incident",
+      "resource_id": "871956b2-9ca7-4457-8c6b-eb714ce93c18",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "to": "shay24test@gmail.com",
+        "title": "Webhook Delivery Infrastructure Failure",
+        "severity": "urgent",
+        "escalated_from": "high"
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "e666bacc-98b2-4ee7-b4e9-f4ba608a38a6",
+      "created_at": "2026-07-15T19:51:44.384901Z",
+      "updated_at": "2026-07-15T19:51:44.384901Z",
+      "actor_type": "user",
+      "actor_user_id": "014e210c-a34f-4200-9c17-e0fd765fffe2",
+      "actor_agent_name": null,
+      "action": "incident.escalated",
+      "resource_type": "incident",
+      "resource_id": "871956b2-9ca7-4457-8c6b-eb714ce93c18",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "title": "Webhook Delivery Infrastructure Failure",
+        "new_severity": "urgent",
+        "old_severity": "high"
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "819727fd-bb27-4b8b-95b5-64833c254a5a",
+      "created_at": "2026-07-15T19:50:56.140604Z",
+      "updated_at": "2026-07-15T19:50:56.140604Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "linear.issue_created",
+      "resource_type": "incident",
+      "resource_id": "9f64409a-74c4-4772-ac82-9f6db7d7f051",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Refund Processing Pipeline Backlog",
+        "linearIssue": "SIG-134"
+      },
+      "workspaceId": "signaldesk",
+      "workspaceName": "SignalDesk"
+    },
+    {
+      "id": "8007d8f3-3a2b-4467-861f-8c9d8962e496",
+      "created_at": "2026-07-15T19:50:55.452982Z",
+      "updated_at": "2026-07-15T19:50:55.452982Z",
+      "actor_type": "user",
+      "actor_user_id": "014e210c-a34f-4200-9c17-e0fd765fffe2",
+      "actor_agent_name": null,
+      "action": "linear.issue_created",
+      "resource_type": "incident",
+      "resource_id": "9f64409a-74c4-4772-ac82-9f6db7d7f051",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "title": "Refund Processing Pipeline Backlog",
+        "severity": "high",
+        "simulated": false,
+        "linearIssueId": "a698ab83-1927-4db2-82c3-2fd160193376",
+        "linearIssueUrl": "https://linear.app/signaldesk-ui/issue/SIG-134/high-refund-processing-pipeline-backlog",
+        "linearIssueIdentifier": "SIG-134"
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "858438da-4c82-42fc-a103-cabf346088b1",
+      "created_at": "2026-07-15T19:43:04.496035Z",
+      "updated_at": "2026-07-15T19:43:04.496035Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "signal.detected",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Wallet amount deducted twice for single service booking"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "b7d6d83b-3865-4b76-89d9-592b0cb85c3e",
+      "created_at": "2026-07-15T19:43:04.325670Z",
+      "updated_at": "2026-07-15T19:43:04.325670Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Reply Agent",
+      "action": "manager.notification_created",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Wallet balance showing incorrect after top-up via UPI"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "b7f9403a-7db9-49b3-98cb-c187f0e12941",
+      "created_at": "2026-07-15T19:43:04.133749Z",
+      "updated_at": "2026-07-15T19:43:04.133749Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Knowledge Agent",
+      "action": "draft.generated",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Wallet cashback not credited after referral completion"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "74901947-a20a-41c6-bb6c-b1302095d622",
+      "created_at": "2026-07-15T19:43:03.951591Z",
+      "updated_at": "2026-07-15T19:43:03.951591Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Signal Detection Agent",
+      "action": "knowledge.search.completed",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "UPI payment stuck in processing for over 24 hours"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "9e572e65-79bd-4f4c-baf0-f2901be8ad19",
+      "created_at": "2026-07-15T19:43:03.785193Z",
+      "updated_at": "2026-07-15T19:43:03.785193Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Triage Agent",
+      "action": "triage.completed",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Payment deducted after OTP but booking shows as failed"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "95771c7a-c454-4054-9f68-ee08e02479b4",
+      "created_at": "2026-07-15T19:43:03.608563Z",
+      "updated_at": "2026-07-15T19:43:03.608563Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "ticket.created",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Customer charged twice for single booking transaction"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "394f7881-d060-4ceb-ae54-ba7c45244622",
+      "created_at": "2026-07-15T19:43:03.420697Z",
+      "updated_at": "2026-07-15T19:43:03.420697Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Reply Agent",
+      "action": "ticket.escalated",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Partial refund for service downgrade calculated incorrectly"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "989181c4-a645-4055-a4dd-25cd62e626bc",
+      "created_at": "2026-07-15T19:43:03.244269Z",
+      "updated_at": "2026-07-15T19:43:03.244269Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Knowledge Agent",
+      "action": "draft.pending_approval",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Refund amount processed but not reflecting in bank"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "40412ea8-de92-4fca-a51b-5e45e8826bb4",
+      "created_at": "2026-07-15T19:43:03.069104Z",
+      "updated_at": "2026-07-15T19:43:03.069104Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Signal Detection Agent",
+      "action": "incident.created",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Refund for cancelled package pending for 8 days"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "9b8af056-bc5d-439a-8bdc-97a36d6f238f",
+      "created_at": "2026-07-15T19:43:02.902214Z",
+      "updated_at": "2026-07-15T19:43:02.902214Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Triage Agent",
+      "action": "signal.detected",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Beautician rating and review not posting after service"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "1d290cd2-5841-41d2-8a02-b8b0703049e4",
+      "created_at": "2026-07-15T19:43:02.741178Z",
+      "updated_at": "2026-07-15T19:43:02.741178Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "manager.notification_created",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Preferred beautician not listed in available slots"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "3e741f10-1779-4818-8046-66052dfa6541",
+      "created_at": "2026-07-15T19:43:02.582750Z",
+      "updated_at": "2026-07-15T19:43:02.582750Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Reply Agent",
+      "action": "draft.generated",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Beautician did not show up for scheduled appointment"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "127a37b5-9746-400e-90a2-0ae00db3e89a",
+      "created_at": "2026-07-15T19:43:02.421013Z",
+      "updated_at": "2026-07-15T19:43:02.421013Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Knowledge Agent",
+      "action": "knowledge.search.completed",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Same-day booking not appearing in beautician schedule"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "72a35e52-9fdb-4900-84ba-4c4b3ee5e112",
+      "created_at": "2026-07-15T19:43:02.248121Z",
+      "updated_at": "2026-07-15T19:43:02.248121Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Signal Detection Agent",
+      "action": "triage.completed",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Appointment reschedule option greyed out in app"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "b8d635ae-c6bc-4804-af26-7d007fb2d24a",
+      "created_at": "2026-07-15T19:43:02.071720Z",
+      "updated_at": "2026-07-15T19:43:02.071720Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Triage Agent",
+      "action": "ticket.created",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Beauty package booking not confirming after payment"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "c3c9544d-303e-4c9b-b21c-0cf41f528c1f",
+      "created_at": "2026-07-15T19:42:43.640318Z",
+      "updated_at": "2026-07-15T19:42:43.640318Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "signal.detected",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Attribution report showing negative conversion values"
+      },
+      "workspaceId": "zap",
+      "workspaceName": "Zap"
+    },
+    {
+      "id": "bf6f19f9-5d2c-4f83-9bff-554978a44353",
+      "created_at": "2026-07-15T19:42:43.445071Z",
+      "updated_at": "2026-07-15T19:42:43.445071Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Reply Agent",
+      "action": "manager.notification_created",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Segmentation query timing out on large customer base"
+      },
+      "workspaceId": "zap",
+      "workspaceName": "Zap"
+    },
+    {
+      "id": "d3a0404b-5878-40fa-92a8-ad25d3335c3c",
+      "created_at": "2026-07-15T19:42:43.282519Z",
+      "updated_at": "2026-07-15T19:42:43.282519Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Knowledge Agent",
+      "action": "draft.generated",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Customer 360 dashboard showing stale data from yesterday"
+      },
+      "workspaceId": "zap",
+      "workspaceName": "Zap"
+    },
+    {
+      "id": "9a186a2d-e4dc-4b6f-8a3c-86f7618a899f",
+      "created_at": "2026-07-15T19:42:43.109233Z",
+      "updated_at": "2026-07-15T19:42:43.109233Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Signal Detection Agent",
+      "action": "knowledge.search.completed",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Historical data backfill job failed at 73% completion"
+      },
+      "workspaceId": "zap",
+      "workspaceName": "Zap"
+    },
+    {
+      "id": "9350221a-44d8-49dc-aab3-8b63f5de378d",
+      "created_at": "2026-07-15T19:42:42.933849Z",
+      "updated_at": "2026-07-15T19:42:42.933849Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Triage Agent",
+      "action": "triage.completed",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "CSV import column mapping not saving on re-import"
+      },
+      "workspaceId": "zap",
+      "workspaceName": "Zap"
+    },
+    {
+      "id": "ad452000-0c16-4ade-9f6d-fad2e9266cde",
+      "created_at": "2026-07-15T19:42:42.752338Z",
+      "updated_at": "2026-07-15T19:42:42.752338Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "ticket.created",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Customer data import job stuck in queued state"
+      },
+      "workspaceId": "zap",
+      "workspaceName": "Zap"
+    },
+    {
+      "id": "163daf4c-64bb-4ce3-a52d-ab6fc20553fc",
+      "created_at": "2026-07-15T19:42:42.473076Z",
+      "updated_at": "2026-07-15T19:42:42.473076Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Reply Agent",
+      "action": "ticket.escalated",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Duplicate webhook events sent for single customer action"
+      },
+      "workspaceId": "zap",
+      "workspaceName": "Zap"
+    },
+    {
+      "id": "cf3c025a-ff5c-4704-954c-6c4aad6c1843",
+      "created_at": "2026-07-15T19:42:42.294508Z",
+      "updated_at": "2026-07-15T19:42:42.294508Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Knowledge Agent",
+      "action": "draft.pending_approval",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Webhook retry mechanism not honoring exponential backoff"
+      },
+      "workspaceId": "zap",
+      "workspaceName": "Zap"
+    },
+    {
+      "id": "b96f905d-7e7b-42aa-9e06-9f977cc54faa",
+      "created_at": "2026-07-15T19:42:42.112756Z",
+      "updated_at": "2026-07-15T19:42:42.112756Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Signal Detection Agent",
+      "action": "incident.created",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Webhook signature validation failing intermittently"
+      },
+      "workspaceId": "zap",
+      "workspaceName": "Zap"
+    },
+    {
+      "id": "ac4ece13-5bcf-4fd4-b7cd-ed68379cca00",
+      "created_at": "2026-07-15T19:42:41.941146Z",
+      "updated_at": "2026-07-15T19:42:41.941146Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Triage Agent",
+      "action": "signal.detected",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "GraphQL subscription not delivering real-time updates"
+      },
+      "workspaceId": "zap",
+      "workspaceName": "Zap"
+    },
+    {
+      "id": "a3daab7a-9822-4b39-99c1-34e2419a0b8c",
+      "created_at": "2026-07-15T19:42:41.782452Z",
+      "updated_at": "2026-07-15T19:42:41.782452Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "manager.notification_created",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "REST API endpoint returning inconsistent pagination"
+      },
+      "workspaceId": "zap",
+      "workspaceName": "Zap"
+    },
+    {
+      "id": "44570276-42f1-4e0d-be6d-cd717bb6b199",
+      "created_at": "2026-07-15T19:42:41.551683Z",
+      "updated_at": "2026-07-15T19:42:41.551683Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Reply Agent",
+      "action": "draft.generated",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "API rate limit exceeded for customer data export"
+      },
+      "workspaceId": "zap",
+      "workspaceName": "Zap"
+    },
+    {
+      "id": "854e6f4f-1fee-4136-a41c-32ef0ddd3d0b",
+      "created_at": "2026-07-15T19:42:41.187785Z",
+      "updated_at": "2026-07-15T19:42:41.187785Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Knowledge Agent",
+      "action": "knowledge.search.completed",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "CRM deal stage change not triggering webhook"
+      },
+      "workspaceId": "zap",
+      "workspaceName": "Zap"
+    },
+    {
+      "id": "95485a38-b82b-4144-b7d3-825f815e5680",
+      "created_at": "2026-07-15T19:42:40.943221Z",
+      "updated_at": "2026-07-15T19:42:40.943221Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Signal Detection Agent",
+      "action": "triage.completed",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Lead enrichment data not populating in Salesforce"
+      },
+      "workspaceId": "zap",
+      "workspaceName": "Zap"
+    },
+    {
+      "id": "9533e8ec-1e8c-441c-ab4b-52fd7ad64b4a",
+      "created_at": "2026-07-15T19:42:40.747361Z",
+      "updated_at": "2026-07-15T19:42:40.747361Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Triage Agent",
+      "action": "ticket.created",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "CRM contact sync delayed by over 45 minutes"
+      },
+      "workspaceId": "zap",
+      "workspaceName": "Zap"
+    },
+    {
+      "id": "02d7bf7b-a895-4c2f-b698-41e9ef260aad",
+      "created_at": "2026-07-15T19:42:20.614114Z",
+      "updated_at": "2026-07-15T19:42:20.614114Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "signal.detected",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Stress test scenario simulation failing to execute"
+      },
+      "workspaceId": "binocs",
+      "workspaceName": "Binocs"
+    },
+    {
+      "id": "3f512af1-0676-4b75-953c-4d404275066d",
+      "created_at": "2026-07-15T19:42:20.440246Z",
+      "updated_at": "2026-07-15T19:42:20.440246Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Reply Agent",
+      "action": "manager.notification_created",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "ESG compliance scoring module returned no data"
+      },
+      "workspaceId": "binocs",
+      "workspaceName": "Binocs"
+    },
+    {
+      "id": "c0d10bcb-f266-4cbf-8e12-86a30beab64f",
+      "created_at": "2026-07-15T19:42:20.254170Z",
+      "updated_at": "2026-07-15T19:42:20.254170Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Knowledge Agent",
+      "action": "draft.generated",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Portfolio concentration risk report showing zeros"
+      },
+      "workspaceId": "binocs",
+      "workspaceName": "Binocs"
+    },
+    {
+      "id": "a5d1c1f6-8d6c-40a9-a572-7610ec1cdaa9",
+      "created_at": "2026-07-15T19:42:20.023391Z",
+      "updated_at": "2026-07-15T19:42:20.023391Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Signal Detection Agent",
+      "action": "knowledge.search.completed",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Client document watermark not applying on download"
+      },
+      "workspaceId": "binocs",
+      "workspaceName": "Binocs"
+    },
+    {
+      "id": "5d1e0a69-f9c9-4e40-a3a1-f57e437036ac",
+      "created_at": "2026-07-15T19:42:19.794585Z",
+      "updated_at": "2026-07-15T19:42:19.794585Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Triage Agent",
+      "action": "triage.completed",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "LP capital call notification not delivered via email"
+      },
+      "workspaceId": "binocs",
+      "workspaceName": "Binocs"
+    },
+    {
+      "id": "31d67b25-c9ad-418d-8887-1d838fde8aee",
+      "created_at": "2026-07-15T19:42:19.602606Z",
+      "updated_at": "2026-07-15T19:42:19.602606Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "ticket.created",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Client investor dashboard loading extremely slowly"
+      },
+      "workspaceId": "binocs",
+      "workspaceName": "Binocs"
+    },
+    {
+      "id": "fd2d3a60-1658-4584-897d-18a2e4552556",
+      "created_at": "2026-07-15T19:42:19.402845Z",
+      "updated_at": "2026-07-15T19:42:19.402845Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Reply Agent",
+      "action": "ticket.escalated",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Holding period return calculation discrepancy"
+      },
+      "workspaceId": "binocs",
+      "workspaceName": "Binocs"
+    },
+    {
+      "id": "fb2fad3f-fb73-4768-8632-224afb299d26",
+      "created_at": "2026-07-15T19:42:19.138278Z",
+      "updated_at": "2026-07-15T19:42:19.138278Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Knowledge Agent",
+      "action": "draft.pending_approval",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Portfolio valuation model not updating with latest multiples"
+      },
+      "workspaceId": "binocs",
+      "workspaceName": "Binocs"
+    },
+    {
+      "id": "0bfa3053-e2ab-493f-b173-9939609ce376",
+      "created_at": "2026-07-15T19:42:17.319263Z",
+      "updated_at": "2026-07-15T19:42:17.319263Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Signal Detection Agent",
+      "action": "incident.created",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Portfolio company financial upload timing out"
+      },
+      "workspaceId": "binocs",
+      "workspaceName": "Binocs"
+    },
+    {
+      "id": "4b2943da-b048-4d36-b035-71b2d3d45bdb",
+      "created_at": "2026-07-15T19:42:17.136653Z",
+      "updated_at": "2026-07-15T19:42:17.136653Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Triage Agent",
+      "action": "signal.detected",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Due diligence checklist auto-population incomplete"
+      },
+      "workspaceId": "binocs",
+      "workspaceName": "Binocs"
+    },
+    {
+      "id": "348f8674-73f7-467c-b4d9-f70dc0a6cd1b",
+      "created_at": "2026-07-15T19:42:16.893391Z",
+      "updated_at": "2026-07-15T19:42:16.893391Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "manager.notification_created",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Document OCR pipeline failed for scanned PDFs"
+      },
+      "workspaceId": "binocs",
+      "workspaceName": "Binocs"
+    },
+    {
+      "id": "7f2f4333-1bf3-460d-96e5-c23e4f33d580",
+      "created_at": "2026-07-15T19:42:16.564008Z",
+      "updated_at": "2026-07-15T19:42:16.564008Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Reply Agent",
+      "action": "draft.generated",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "AI risk scoring engine returning inconsistent results"
+      },
+      "workspaceId": "binocs",
+      "workspaceName": "Binocs"
+    },
+    {
+      "id": "4c9976cb-bc39-479c-8c55-3df28ebdecbb",
+      "created_at": "2026-07-15T19:42:16.325483Z",
+      "updated_at": "2026-07-15T19:42:16.325483Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Knowledge Agent",
+      "action": "knowledge.search.completed",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Quarterly investor letter PDF generation failed"
+      },
+      "workspaceId": "binocs",
+      "workspaceName": "Binocs"
+    },
+    {
+      "id": "62cbc58a-0db0-41b5-8d70-e3abc9259075",
+      "created_at": "2026-07-15T19:42:16.089471Z",
+      "updated_at": "2026-07-15T19:42:16.089471Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Signal Detection Agent",
+      "action": "triage.completed",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Fund performance report showing incorrect IRR calculation"
+      },
+      "workspaceId": "binocs",
+      "workspaceName": "Binocs"
+    },
+    {
+      "id": "14644663-f103-4a60-a174-6f210aa21711",
+      "created_at": "2026-07-15T19:42:15.908163Z",
+      "updated_at": "2026-07-15T19:42:15.908163Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Triage Agent",
+      "action": "ticket.created",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Q3 financial statements missing from portfolio view"
+      },
+      "workspaceId": "binocs",
+      "workspaceName": "Binocs"
+    },
+    {
+      "id": "edf80192-32f0-4daf-af53-226faac78d15",
+      "created_at": "2026-07-15T19:41:57.408623Z",
+      "updated_at": "2026-07-15T19:41:57.408623Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "signal.detected",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Locum tenens provider unable to access patient panel"
+      },
+      "workspaceId": "foxo",
+      "workspaceName": "Foxo"
+    },
+    {
+      "id": "1eb2b843-e0d7-45fc-930d-2c88097448ee",
+      "created_at": "2026-07-15T19:41:57.209552Z",
+      "updated_at": "2026-07-15T19:41:57.209552Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Reply Agent",
+      "action": "manager.notification_created",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Doctor availability calendar not syncing with scheduling"
+      },
+      "workspaceId": "foxo",
+      "workspaceName": "Foxo"
+    },
+    {
+      "id": "7e6f62db-ea0e-4478-80ae-8b48a92502e7",
+      "created_at": "2026-07-15T19:41:57.019910Z",
+      "updated_at": "2026-07-15T19:41:57.019910Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Knowledge Agent",
+      "action": "draft.generated",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Lab report auto-import from Quest Diagnostics stalled"
+      },
+      "workspaceId": "foxo",
+      "workspaceName": "Foxo"
+    },
+    {
+      "id": "82a43e85-4327-44dc-8f05-d2ddcd7ef37d",
+      "created_at": "2026-07-15T19:41:56.849195Z",
+      "updated_at": "2026-07-15T19:41:56.849195Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Signal Detection Agent",
+      "action": "knowledge.search.completed",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Critical lab result alert not triggered for abnormal value"
+      },
+      "workspaceId": "foxo",
+      "workspaceName": "Foxo"
+    },
+    {
+      "id": "0d97a281-2fdf-469d-8834-de1675cae542",
+      "created_at": "2026-07-15T19:41:56.672618Z",
+      "updated_at": "2026-07-15T19:41:56.672618Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Triage Agent",
+      "action": "triage.completed",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Lab report PDF upload failing with date parsing error"
+      },
+      "workspaceId": "foxo",
+      "workspaceName": "Foxo"
+    },
+    {
+      "id": "0c88ef7a-f047-421c-9283-cd3960302c46",
+      "created_at": "2026-07-15T19:41:56.494575Z",
+      "updated_at": "2026-07-15T19:41:56.494575Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "ticket.created",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Patient PHI data export failing for insurance audit"
+      },
+      "workspaceId": "foxo",
+      "workspaceName": "Foxo"
+    },
+    {
+      "id": "c2c55dbc-5d5a-4dbb-b0e5-81fddb4a3a8f",
+      "created_at": "2026-07-15T19:41:56.325559Z",
+      "updated_at": "2026-07-15T19:41:56.325559Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Reply Agent",
+      "action": "ticket.escalated",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Patient demographics update not persisting across visits"
+      },
+      "workspaceId": "foxo",
+      "workspaceName": "Foxo"
+    },
+    {
+      "id": "fce64110-5f6c-4bb3-b60c-4c27e6873571",
+      "created_at": "2026-07-15T19:41:56.147279Z",
+      "updated_at": "2026-07-15T19:41:56.147279Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Knowledge Agent",
+      "action": "draft.pending_approval",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Patient profile showing duplicated records after merge"
+      },
+      "workspaceId": "foxo",
+      "workspaceName": "Foxo"
+    },
+    {
+      "id": "781de6ac-d476-4057-a7bc-03dc5ba6ed94",
+      "created_at": "2026-07-15T19:41:55.970902Z",
+      "updated_at": "2026-07-15T19:41:55.970902Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Signal Detection Agent",
+      "action": "incident.created",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Prescription renewal request not reaching doctor inbox"
+      },
+      "workspaceId": "foxo",
+      "workspaceName": "Foxo"
+    },
+    {
+      "id": "9bc6915f-4efb-4f50-a0c4-78718011333e",
+      "created_at": "2026-07-15T19:41:55.810339Z",
+      "updated_at": "2026-07-15T19:41:55.810339Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Triage Agent",
+      "action": "signal.detected",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Controlled substance prescription requires manual override"
+      },
+      "workspaceId": "foxo",
+      "workspaceName": "Foxo"
+    },
+    {
+      "id": "5eefa9a5-f0ee-4203-a193-6ec62d923c5a",
+      "created_at": "2026-07-15T19:41:55.638257Z",
+      "updated_at": "2026-07-15T19:41:55.638257Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "manager.notification_created",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "E-prescription not loading in pharmacy system"
+      },
+      "workspaceId": "foxo",
+      "workspaceName": "Foxo"
+    },
+    {
+      "id": "e01bb2e2-cd6b-4db7-9f95-25c3586d76db",
+      "created_at": "2026-07-15T19:41:55.463652Z",
+      "updated_at": "2026-07-15T19:41:55.463652Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Reply Agent",
+      "action": "draft.generated",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Same-day appointment queue not updating in real-time"
+      },
+      "workspaceId": "foxo",
+      "workspaceName": "Foxo"
+    },
+    {
+      "id": "c7212409-20d0-48f0-9c60-3eabac961db9",
+      "created_at": "2026-07-15T19:41:55.266604Z",
+      "updated_at": "2026-07-15T19:41:55.266604Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Knowledge Agent",
+      "action": "knowledge.search.completed",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Automated appointment reminders not sending SMS"
+      },
+      "workspaceId": "foxo",
+      "workspaceName": "Foxo"
+    },
+    {
+      "id": "e009e4e1-34c9-4b8e-ad91-909e03c614ba",
+      "created_at": "2026-07-15T19:41:55.083937Z",
+      "updated_at": "2026-07-15T19:41:55.083937Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Signal Detection Agent",
+      "action": "triage.completed",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Appointment slot double-booking in cardiology"
+      },
+      "workspaceId": "foxo",
+      "workspaceName": "Foxo"
+    },
+    {
+      "id": "63822989-5797-4d5d-ba7a-1211c8c5da16",
+      "created_at": "2026-07-15T19:41:54.906403Z",
+      "updated_at": "2026-07-15T19:41:54.906403Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Triage Agent",
+      "action": "ticket.created",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Patient unable to book appointment via patient portal"
+      },
+      "workspaceId": "foxo",
+      "workspaceName": "Foxo"
+    },
+    {
+      "id": "8af26c12-fbb5-430e-baad-835f925c7ab6",
+      "created_at": "2026-07-15T19:41:36.086197Z",
+      "updated_at": "2026-07-15T19:41:36.086197Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "signal.detected",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Revenue dashboard showing incorrect MRR figures"
+      },
+      "workspaceId": "corally",
+      "workspaceName": "Corally"
+    },
+    {
+      "id": "6297f3ae-d458-4559-b283-7bb3948194fa",
+      "created_at": "2026-07-15T19:41:35.893074Z",
+      "updated_at": "2026-07-15T19:41:35.893074Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Reply Agent",
+      "action": "manager.notification_created",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "API response payload missing expected fields"
+      },
+      "workspaceId": "corally",
+      "workspaceName": "Corally"
+    },
+    {
+      "id": "60496cc1-0af5-4a91-b2e3-acb7bc1b6c4b",
+      "created_at": "2026-07-15T19:41:35.699623Z",
+      "updated_at": "2026-07-15T19:41:35.699623Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Knowledge Agent",
+      "action": "draft.generated",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Rate limit exceeded on partner data export"
+      },
+      "workspaceId": "corally",
+      "workspaceName": "Corally"
+    },
+    {
+      "id": "673c70e6-e079-482d-8876-940150102a31",
+      "created_at": "2026-07-15T19:41:35.523065Z",
+      "updated_at": "2026-07-15T19:41:35.523065Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Signal Detection Agent",
+      "action": "knowledge.search.completed",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "OAuth authentication failure for partner API"
+      },
+      "workspaceId": "corally",
+      "workspaceName": "Corally"
+    },
+    {
+      "id": "48848888-21c6-4bb0-9f72-e1e312cf9c2e",
+      "created_at": "2026-07-15T19:41:35.340914Z",
+      "updated_at": "2026-07-15T19:41:35.340914Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Triage Agent",
+      "action": "triage.completed",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Partner tier upgrade not reflected in billing"
+      },
+      "workspaceId": "corally",
+      "workspaceName": "Corally"
+    },
+    {
+      "id": "137e796b-6fac-4dad-b8a9-e2615c5109c6",
+      "created_at": "2026-07-15T19:41:35.174427Z",
+      "updated_at": "2026-07-15T19:41:35.174427Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "ticket.created",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Contract renewal auto-approved without VP sign-off"
+      },
+      "workspaceId": "corally",
+      "workspaceName": "Corally"
+    },
+    {
+      "id": "1336a7e3-5f34-4758-8cf2-58acbdbc8ce7",
+      "created_at": "2026-07-15T19:41:34.991044Z",
+      "updated_at": "2026-07-15T19:41:34.991044Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Reply Agent",
+      "action": "ticket.escalated",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Enterprise invoice amount does not match contract terms"
+      },
+      "workspaceId": "corally",
+      "workspaceName": "Corally"
+    },
+    {
+      "id": "7db022be-ed36-44dc-997b-94e79798b841",
+      "created_at": "2026-07-15T19:41:34.804006Z",
+      "updated_at": "2026-07-15T19:41:34.804006Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Knowledge Agent",
+      "action": "draft.pending_approval",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Bulk partner import job failed mid-process"
+      },
+      "workspaceId": "corally",
+      "workspaceName": "Corally"
+    },
+    {
+      "id": "14c94e9b-79a9-4641-b062-65c22d3ccd00",
+      "created_at": "2026-07-15T19:41:34.627112Z",
+      "updated_at": "2026-07-15T19:41:34.627112Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Signal Detection Agent",
+      "action": "incident.created",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Onboarding verification link expired prematurely"
+      },
+      "workspaceId": "corally",
+      "workspaceName": "Corally"
+    },
+    {
+      "id": "4913d9b2-6721-4420-a8e7-f39df9bd2cd6",
+      "created_at": "2026-07-15T19:41:34.445876Z",
+      "updated_at": "2026-07-15T19:41:34.445876Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Triage Agent",
+      "action": "signal.detected",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Partner invite emails not being delivered"
+      },
+      "workspaceId": "corally",
+      "workspaceName": "Corally"
+    },
+    {
+      "id": "7b8710b0-54a7-4016-8f0e-8f6006252c0a",
+      "created_at": "2026-07-15T19:41:34.263053Z",
+      "updated_at": "2026-07-15T19:41:34.263053Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "manager.notification_created",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "CRM integration returning 503 errors"
+      },
+      "workspaceId": "corally",
+      "workspaceName": "Corally"
+    },
+    {
+      "id": "2502771a-9178-410b-9d50-60608c20611a",
+      "created_at": "2026-07-15T19:41:34.073296Z",
+      "updated_at": "2026-07-15T19:41:34.073296Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Reply Agent",
+      "action": "draft.generated",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Duplicate partner records created after CRM sync"
+      },
+      "workspaceId": "corally",
+      "workspaceName": "Corally"
+    },
+    {
+      "id": "23aac845-f8fd-42bd-a125-4102ddc2c41f",
+      "created_at": "2026-07-15T19:41:33.899432Z",
+      "updated_at": "2026-07-15T19:41:33.899432Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Knowledge Agent",
+      "action": "knowledge.search.completed",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "CRM webhook timeout on partner update"
+      },
+      "workspaceId": "corally",
+      "workspaceName": "Corally"
+    },
+    {
+      "id": "f1f7d7ae-04cd-4b28-b5c7-9d488136618a",
+      "created_at": "2026-07-15T19:41:33.719035Z",
+      "updated_at": "2026-07-15T19:41:33.719035Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Signal Detection Agent",
+      "action": "triage.completed",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "HubSpot deal data not reflecting in partner portal"
+      },
+      "workspaceId": "corally",
+      "workspaceName": "Corally"
+    },
+    {
+      "id": "5917b871-61ba-4d6e-b25f-87b86bfcf924",
+      "created_at": "2026-07-15T19:41:33.533939Z",
+      "updated_at": "2026-07-15T19:41:33.533939Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Triage Agent",
+      "action": "ticket.created",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Salesforce partner sync failing"
+      },
+      "workspaceId": "corally",
+      "workspaceName": "Corally"
+    },
+    {
+      "id": "7bcdcb58-3490-4251-aacd-1f0e9898d7ac",
+      "created_at": "2026-07-15T19:40:17.513613Z",
+      "updated_at": "2026-07-15T19:40:17.513613Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "signal.detected",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Wallet amount deducted twice for single service booking"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "3deed707-6d16-433a-8e65-9fce478a4d4b",
+      "created_at": "2026-07-15T19:40:17.328586Z",
+      "updated_at": "2026-07-15T19:40:17.328586Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Reply Agent",
+      "action": "manager.notification_created",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Wallet balance showing incorrect after top-up via UPI"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "5c49e339-bbc1-4c40-9705-c4aa382816a7",
+      "created_at": "2026-07-15T19:40:17.156313Z",
+      "updated_at": "2026-07-15T19:40:17.156313Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Knowledge Agent",
+      "action": "draft.generated",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Wallet cashback not credited after referral completion"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "888fba5e-e8f0-4228-b644-b617d7e77b14",
+      "created_at": "2026-07-15T19:40:16.978265Z",
+      "updated_at": "2026-07-15T19:40:16.978265Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Signal Detection Agent",
+      "action": "knowledge.search.completed",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "UPI payment stuck in processing for over 24 hours"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "12c98186-cfde-48c5-9d88-cc344be06bd9",
+      "created_at": "2026-07-15T19:40:16.797805Z",
+      "updated_at": "2026-07-15T19:40:16.797805Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Triage Agent",
+      "action": "triage.completed",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Payment deducted after OTP but booking shows as failed"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "4ee7e986-98b4-43ce-bce8-01ce0953403a",
+      "created_at": "2026-07-15T19:40:16.613971Z",
+      "updated_at": "2026-07-15T19:40:16.613971Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "ticket.created",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Customer charged twice for single booking transaction"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "7ff6f36a-5e06-4186-9f70-af2a6f791a04",
+      "created_at": "2026-07-15T19:40:16.344182Z",
+      "updated_at": "2026-07-15T19:40:16.344182Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Reply Agent",
+      "action": "ticket.escalated",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Partial refund for service downgrade calculated incorrectly"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "ec3cebf8-ffdf-4e8c-a493-3f22ae4d2923",
+      "created_at": "2026-07-15T19:40:16.166277Z",
+      "updated_at": "2026-07-15T19:40:16.166277Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Knowledge Agent",
+      "action": "draft.pending_approval",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Refund amount processed but not reflecting in bank"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "fc56a86f-fd1a-4525-a6d5-be6ddbae279a",
+      "created_at": "2026-07-15T19:40:15.970283Z",
+      "updated_at": "2026-07-15T19:40:15.970283Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Signal Detection Agent",
+      "action": "incident.created",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Refund for cancelled package pending for 8 days"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "07caa9e4-15c1-48db-8418-fcc53318fcdd",
+      "created_at": "2026-07-15T19:40:15.788985Z",
+      "updated_at": "2026-07-15T19:40:15.788985Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Triage Agent",
+      "action": "signal.detected",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Beautician rating and review not posting after service"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "beef241c-c28c-4744-8d33-84ad1251845a",
+      "created_at": "2026-07-15T19:40:15.608991Z",
+      "updated_at": "2026-07-15T19:40:15.608991Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "manager.notification_created",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Preferred beautician not listed in available slots"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "59d14961-811f-4ccd-bd3e-bca153c288cc",
+      "created_at": "2026-07-15T19:40:15.395352Z",
+      "updated_at": "2026-07-15T19:40:15.395352Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Reply Agent",
+      "action": "draft.generated",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Beautician did not show up for scheduled appointment"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "2fce1589-05fe-4322-9765-51cb9630b671",
+      "created_at": "2026-07-15T19:40:15.199839Z",
+      "updated_at": "2026-07-15T19:40:15.199839Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Knowledge Agent",
+      "action": "knowledge.search.completed",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Same-day booking not appearing in beautician schedule"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "022b4e20-09e8-493d-a0f2-23860ce3a1df",
+      "created_at": "2026-07-15T19:40:14.899744Z",
+      "updated_at": "2026-07-15T19:40:14.899744Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Signal Detection Agent",
+      "action": "triage.completed",
+      "resource_type": "ticket",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Appointment reschedule option greyed out in app"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "057e71a6-d802-4ae7-bb2f-5a93d47bf2a7",
+      "created_at": "2026-07-15T19:40:14.725077Z",
+      "updated_at": "2026-07-15T19:40:14.725077Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Triage Agent",
+      "action": "ticket.created",
+      "resource_type": "signal",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Beauty package booking not confirming after payment"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "83e73975-c726-4bb6-b7d4-cb2bdc33ceaf",
+      "created_at": "2026-07-15T18:40:21.421883Z",
+      "updated_at": "2026-07-15T18:40:21.421883Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "signal.workflow_changed",
+      "resource_type": "signal",
+      "resource_id": "6ebc3dc3-faf2-4fc1-97dd-219b25671e38",
+      "ticket_id": null,
+      "signal_id": "6ebc3dc3-faf2-4fc1-97dd-219b25671e38",
+      "details": {
+        "to": "review",
+        "from": "new",
+        "name": "Payment Processing and Booking Confirmation Failures"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "ef079f12-a4dc-4992-9ed7-75e23ce91865",
+      "created_at": "2026-07-15T18:36:06.945468Z",
+      "updated_at": "2026-07-15T18:36:06.945468Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "signal.workflow_changed",
+      "resource_type": "signal",
+      "resource_id": "24cf272d-bc29-400d-b69c-82d060f48eff",
+      "ticket_id": null,
+      "signal_id": "24cf272d-bc29-400d-b69c-82d060f48eff",
+      "details": {
+        "to": "incident_created",
+        "from": "new",
+        "name": "Beautician Scheduling and Availability Issues"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "777e6aee-6b90-40b7-b015-a1a98de1b1d3",
+      "created_at": "2026-07-15T18:36:06.739567Z",
+      "updated_at": "2026-07-15T18:36:06.739567Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "incident.created",
+      "resource_type": "incident",
+      "resource_id": "019f6710-625b-7029-8695-648b1b7dc5f3",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "name": "Beautician Scheduling and Availability Issues"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "4cbec525-3e1a-459e-8882-9372a25ca5a3",
+      "created_at": "2026-07-15T18:36:01.352091Z",
+      "updated_at": "2026-07-15T18:36:01.352091Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "signal.workflow_changed",
+      "resource_type": "signal",
+      "resource_id": "24cf272d-bc29-400d-b69c-82d060f48eff",
+      "ticket_id": null,
+      "signal_id": "24cf272d-bc29-400d-b69c-82d060f48eff",
+      "details": {
+        "to": "approved",
+        "from": "new",
+        "name": "Beautician Scheduling and Availability Issues"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "d583d61f-14ad-487e-b3fe-19383ec181b5",
+      "created_at": "2026-07-15T18:35:46.353638Z",
+      "updated_at": "2026-07-15T18:35:46.353638Z",
+      "actor_type": "agent",
+      "actor_user_id": null,
+      "actor_agent_name": "Support Manager",
+      "action": "signal.workflow_changed",
+      "resource_type": "signal",
+      "resource_id": "eeb9820a-86b7-432d-821d-c4890065b428",
+      "ticket_id": null,
+      "signal_id": "eeb9820a-86b7-432d-821d-c4890065b428",
+      "details": {
+        "to": "approved",
+        "from": "new",
+        "name": "Refund Processing Pipeline Delays"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "e1cb10c2-0035-49d0-ac58-533ed1ac4fb2",
+      "created_at": "2026-07-15T15:19:15.168775Z",
+      "updated_at": "2026-07-15T15:19:15.168775Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Enterprise Demo System",
+      "action": "demo.enterprise.completed",
+      "resource_type": "system",
+      "resource_id": null,
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "signals": 4,
+        "tickets": 38,
+        "handoffs": 3,
+        "approvals": 4,
+        "incidents": 2,
+        "knowledge": 3,
+        "workspace": "yesmadam"
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "553a8d21-b6d5-4c15-ab21-7da0980b3d25",
+      "created_at": "2026-07-15T15:19:08.225231Z",
+      "updated_at": "2026-07-15T15:19:08.225231Z",
+      "actor_type": "system",
+      "actor_user_id": null,
+      "actor_agent_name": "Demo System",
+      "action": "engineering.handoff",
+      "resource_type": "incident",
+      "resource_id": "7c6775fe-9703-466b-89c1-6836bd2f4c73",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "priority": "urgent",
+        "description": "Implement idempotency keys for payment callbacks to prevent race conditions",
+        "ticket_refs": [
+          0,
+          1
+        ],
+        "package_name": "ym-payment-gateway-v3.0",
+        "handoff_title": "Payment Gateway Idempotency Fix",
+        "engineering_notes": "Implement idempotency using payment gateway transaction ID + timestamp hash. Add lock on booking creation during callback processing. Implement retry with idempotency check for failed callbacks."
+      },
+      "workspaceId": "yesmadam",
+      "workspaceName": "YesMadam"
+    },
+    {
+      "id": "bd88a82f-c90f-4078-974d-ba2466a48b67",
+      "created_at": "2026-07-15T15:19:06.672347Z",
+      "updated_at": "2026-07-15T15:19:06.672347Z",
+      "actor_type": "user",
+      "actor_user_id": "014e210c-a34f-4200-9c17-e0fd765fffe2",
+      "actor_agent_name": null,
+      "action": "memory.created",
+      "resource_type": "memory_entry",
+      "resource_id": "67bccef4-c14d-4e90-b4b0-3475687aba61",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "title": "Wallet Balance Troubleshooting"
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "a7894735-5eb4-414b-afa7-f303247d40f3",
+      "created_at": "2026-07-15T15:18:38.751234Z",
+      "updated_at": "2026-07-15T15:18:38.751234Z",
+      "actor_type": "user",
+      "actor_user_id": "014e210c-a34f-4200-9c17-e0fd765fffe2",
+      "actor_agent_name": null,
+      "action": "memory.created",
+      "resource_type": "memory_entry",
+      "resource_id": "940569a4-9829-477d-adc4-ed9192fd35b8",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "title": "Payment Booking Failure Resolution Guide"
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "6a0cab8c-5b87-4be3-8f22-b1d8b36cbe96",
+      "created_at": "2026-07-15T15:17:41.832856Z",
+      "updated_at": "2026-07-15T15:17:41.832856Z",
+      "actor_type": "user",
+      "actor_user_id": "014e210c-a34f-4200-9c17-e0fd765fffe2",
+      "actor_agent_name": null,
+      "action": "memory.created",
+      "resource_type": "memory_entry",
+      "resource_id": "1127c7e0-d762-4a79-b857-a92d489b9721",
+      "ticket_id": null,
+      "signal_id": null,
+      "details": {
+        "title": "Billing and Contract Management Best Practices"
+      },
+      "workspaceId": null,
+      "workspaceName": null
+    }
+  ],
+  "limit": 10000,
+  "next_page_token": null,
+  "total": 172
+}

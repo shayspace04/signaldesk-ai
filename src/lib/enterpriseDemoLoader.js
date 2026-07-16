@@ -16,13 +16,13 @@ function sleep(ms) {
 
 function loadRegistry() {
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : {};
   } catch { return {}; }
 }
 
 function saveRegistry(registry) {
-  try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(registry)); } catch { }
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(registry)); } catch { }
 }
 
 function trackId(table, id) {
@@ -40,7 +40,7 @@ async function deleteRegistryRecords() {
       try { await client.records.delete(table, id); total++; } catch { }
     }
   }
-  sessionStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(STORAGE_KEY);
   return total;
 }
 
@@ -316,8 +316,35 @@ export async function launchEnterpriseDemo(onProgress) {
   return results;
 }
 
+async function deleteByWorkspace() {
+  let total = 0;
+  const tables = ["tickets", "signals", "incidents", "memory_entries", "audit_logs", "drafts"];
+  for (const wsId of ENTERPRISE_DEMO_WORKSPACES) {
+    for (const table of tables) {
+      let cursor;
+      do {
+        const filter = { field: "workspaceId", op: "eq", value: wsId };
+        const args = { filters: [filter], limit: 200 };
+        if (cursor) args.cursor = cursor;
+        try {
+          const page = await client.records.list(table, args);
+          const items = page.items || page.records || page.data || [];
+          for (const rec of items) {
+            try { await client.records.delete(table, rec.id); total++; } catch { }
+          }
+          cursor = page.cursor || page.nextCursor || null;
+        } catch { cursor = null; }
+      } while (cursor);
+    }
+  }
+  return total;
+}
+
 export async function clearEnterpriseDemo(onProgress) {
-  const count = await deleteRegistryRecords();
+  let count = await deleteRegistryRecords();
+  if (count === 0) {
+    count = await deleteByWorkspace();
+  }
   emitRefresh();
   if (onProgress) onProgress(0, 0, `Cleared ${count} records`, 100);
   return count;

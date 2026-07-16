@@ -1,0 +1,47 @@
+﻿{
+  "items": [
+    {
+      "id": "3f51f8c6-aaf7-4eaa-b4c6-d7362d470f93",
+      "created_at": "2026-07-15T14:05:38.860505Z",
+      "updated_at": "2026-07-15T14:05:38.860505Z",
+      "ticket_id": "ceaff958-1519-43a0-8338-e073ec22f814",
+      "signal_id": "2ce65a6d-fcf7-45d3-820e-2c71cb715f85",
+      "linked_at": "2026-07-15T14:05:39.009000Z",
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "a087fb61-3805-4f05-8998-5b19b11e8de7",
+      "created_at": "2026-07-06T09:10:24.860935Z",
+      "updated_at": "2026-07-06T09:10:24.860935Z",
+      "ticket_id": "242426c2-4e81-4ca5-a917-5a191a5aafde",
+      "signal_id": "98d823f8-3d11-4b4c-a0fe-23887f54cef3",
+      "linked_at": "2026-07-06T09:10:26.484000Z",
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "0f10bafb-217d-4f40-b9bc-b47a5aa5ee5e",
+      "created_at": "2026-07-01T01:44:17.795321Z",
+      "updated_at": "2026-07-01T01:44:17.795321Z",
+      "ticket_id": "65376982-4557-414a-90ee-bb477b346ed6",
+      "signal_id": "5f31697d-8ca9-444e-91d5-56782bd74c7a",
+      "linked_at": "2026-07-01T01:44:18.335000Z",
+      "workspaceId": null,
+      "workspaceName": null
+    },
+    {
+      "id": "e9fbda4b-5cdd-4d9a-9833-1e40af11922f",
+      "created_at": "2026-07-01T01:43:10.392901Z",
+      "updated_at": "2026-07-01T01:43:10.392901Z",
+      "ticket_id": "65376982-4557-414a-90ee-bb477b346ed6",
+      "signal_id": "0f65b493-812a-4cfe-8ef4-4f1acb5cf1cd",
+      "linked_at": "2026-07-01T01:43:09.765000Z",
+      "workspaceId": null,
+      "workspaceName": null
+    }
+  ],
+  "limit": 10000,
+  "next_page_token": null,
+  "total": 4
+}
