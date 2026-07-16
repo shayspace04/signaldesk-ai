@@ -28,7 +28,7 @@ def _items(rows):
         return rows
     return []
 
-def _audit(pod, action, actor_type="user", actor_user_id=None, actor_agent_name=None, resource_type=None, resource_id=None, ticket_id=None, signal_id=None, details=None):
+def _audit(pod, action, actor_type="user", actor_user_id=None, actor_agent_name=None, resource_type=None, resource_id=None, ticket_id=None, signal_id=None, details=None, workspace_id=None, workspace_name=None):
     try:
         row = {"actor_type": actor_type, "action": action}
         if actor_user_id: row["actor_user_id"] = actor_user_id
@@ -38,6 +38,8 @@ def _audit(pod, action, actor_type="user", actor_user_id=None, actor_agent_name=
         if ticket_id: row["ticket_id"] = str(ticket_id)
         if signal_id: row["signal_id"] = str(signal_id)
         if details is not None: row["details"] = details
+        if workspace_id: row["workspaceId"] = workspace_id
+        if workspace_name: row["workspaceName"] = workspace_name
         pod.records.create("audit_logs", row)
     except Exception:
         pass
@@ -70,6 +72,8 @@ async def escalate_incident(ctx: FunctionContext, data: EscalateIncidentInput) -
     if new_rank < old_rank:
         raise RuntimeError(f"new severity '{new_sev}' is lower than current severity '{old_sev}'")
 
+    ws_id = inc.get("workspaceId") or data.workspace_name or ""
+    ws_name = inc.get("workspaceName") or data.workspace_name or ""
     is_escalation = new_rank > old_rank
 
     if is_escalation:
@@ -78,7 +82,8 @@ async def escalate_incident(ctx: FunctionContext, data: EscalateIncidentInput) -
                actor_user_id=str(ctx.user_id) if ctx.user_id else None,
                resource_type="incident", resource_id=data.incident_id,
                details={"old_severity": old_sev, "new_severity": new_sev,
-                        "title": inc.get("title")})
+                        "title": inc.get("title")},
+               workspace_id=ws_id, workspace_name=ws_name)
 
     email_sent = False
     slack_sent = False
@@ -171,11 +176,13 @@ async def escalate_incident(ctx: FunctionContext, data: EscalateIncidentInput) -
                        resource_type="incident", resource_id=data.incident_id,
                        details={"to": MANAGER_EMAIL, "severity": new_sev,
                                 "title": inc.get("title"), "escalated_from": old_sev,
-                                "gmail_message_id": gmail_msg_id})
+                                "gmail_message_id": gmail_msg_id},
+                       workspace_id=ws_id, workspace_name=ws_name)
             except Exception as e:
                 _audit(pod, "manager.email_error", actor_type="system",
                        resource_type="incident", resource_id=data.incident_id,
-                       details={"error": str(e), "to": MANAGER_EMAIL, "severity": new_sev})
+                       details={"error": str(e), "to": MANAGER_EMAIL, "severity": new_sev},
+                       workspace_id=ws_id, workspace_name=ws_name)
 
     return EscalateIncidentOutput(
         incident_id=data.incident_id,

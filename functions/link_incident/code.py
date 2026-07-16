@@ -29,7 +29,7 @@ def _items(rows):
         return rows
     return []
 
-def _audit(pod, action, actor_type="user", actor_user_id=None, actor_agent_name=None, resource_type=None, resource_id=None, ticket_id=None, signal_id=None, details=None):
+def _audit(pod, action, actor_type="user", actor_user_id=None, actor_agent_name=None, resource_type=None, resource_id=None, ticket_id=None, signal_id=None, details=None, workspace_id=None, workspace_name=None):
     try:
         row = {"actor_type": actor_type, "action": action}
         if actor_user_id: row["actor_user_id"] = actor_user_id
@@ -39,6 +39,8 @@ def _audit(pod, action, actor_type="user", actor_user_id=None, actor_agent_name=
         if ticket_id: row["ticket_id"] = str(ticket_id)
         if signal_id: row["signal_id"] = str(signal_id)
         if details is not None: row["details"] = details
+        if workspace_id: row["workspaceId"] = workspace_id
+        if workspace_name: row["workspaceName"] = workspace_name
         pod.records.create("audit_logs", row)
     except Exception:
         pass
@@ -95,6 +97,8 @@ async def link_incident(ctx: FunctionContext, data: LinkIncidentInput) -> LinkIn
     except Exception:
         affected_count = sig.get("evidence_count", 0)
 
+    ws_id = data.workspace_id or sig.get("workspaceId") or ""
+    ws_name = data.workspace_name or sig.get("workspaceName") or ""
     title = data.title or f"[{data.severity.upper()}] {sig.get('name', 'Signal')}"
     sev_label = SEVERITY_LABEL.get(data.severity or "normal", "Medium")
 
@@ -134,7 +138,8 @@ async def link_incident(ctx: FunctionContext, data: LinkIncidentInput) -> LinkIn
                resource_type="incident", resource_id=inc["id"], signal_id=data.signal_id,
                details={"title": title, "severity": data.severity,
                         "affected_tickets": affected_count,
-                        "note": "Existing incident updated with new occurrences."})
+                        "note": "Existing incident updated with new occurrences."},
+               workspace_id=ws_id, workspace_name=ws_name)
     else:
         inc_record = {
             "title": title, "signal_id": data.signal_id, "status": data.status or "open",
@@ -182,7 +187,8 @@ async def link_incident(ctx: FunctionContext, data: LinkIncidentInput) -> LinkIn
         _audit(pod, "incident.created", actor_type="user",
                actor_user_id=str(ctx.user_id) if ctx.user_id else None,
                resource_type="incident", resource_id=inc["id"], signal_id=data.signal_id,
-               details={"severity": data.severity, "title": title, "affected_tickets": affected_count})
+               details={"severity": data.severity, "title": title, "affected_tickets": affected_count},
+               workspace_id=ws_id, workspace_name=ws_name)
 
     # Slack alert for high/urgent (dedup: skip if already sent for this incident)
     slack_sent = False
@@ -205,7 +211,8 @@ async def link_incident(ctx: FunctionContext, data: LinkIncidentInput) -> LinkIn
             _audit(pod, "slack.alert_sent", actor_type="system",
                    actor_user_id=str(ctx.user_id) if ctx.user_id else None,
                    resource_type="incident", resource_id=inc["id"], signal_id=data.signal_id,
-                   details={"severity": data.severity, "simulated": simulated, "message": alert_msg})
+                   details={"severity": data.severity, "simulated": simulated, "message": alert_msg},
+                   workspace_id=ws_id, workspace_name=ws_name)
             slack_sent = True
 
     # Send email alert via Gmail connector (one per incident)
@@ -291,11 +298,13 @@ async def link_incident(ctx: FunctionContext, data: LinkIncidentInput) -> LinkIn
                    resource_type="incident", resource_id=inc["id"], signal_id=data.signal_id,
                    details={"to": MANAGER_EMAIL, "severity": data.severity, "title": title,
                             "simulated": False, "incident_title": title,
-                            "gmail_message_id": gmail_message_id})
+                            "gmail_message_id": gmail_message_id},
+                   workspace_id=ws_id, workspace_name=ws_name)
         except Exception as e:
             _audit(pod, "manager.email_error", actor_type="system",
                    resource_type="incident", resource_id=inc["id"], signal_id=data.signal_id,
-                   details={"error": str(e), "to": MANAGER_EMAIL, "severity": data.severity})
+                   details={"error": str(e), "to": MANAGER_EMAIL, "severity": data.severity},
+                   workspace_id=ws_id, workspace_name=ws_name)
 
     # In-app notification for managers
     notification_created = False
@@ -303,7 +312,9 @@ async def link_incident(ctx: FunctionContext, data: LinkIncidentInput) -> LinkIn
         _audit(pod, "manager.notification_created", actor_type="system",
                resource_type="incident", resource_id=inc["id"], signal_id=data.signal_id,
                details={"incident_title": title, "severity": data.severity,
-                        "incident_id": inc["id"], "affected_tickets": affected_count})
+                        "incident_id": inc["id"], "affected_tickets": affected_count,
+                        "workspaceId": ws_id, "workspaceName": ws_name},
+               workspace_id=ws_id, workspace_name=ws_name)
         notification_created = True
     except Exception:
         pass

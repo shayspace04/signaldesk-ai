@@ -32,7 +32,7 @@ async function fetchBackup(table) {
 }
 
 // Tables that have a workspaceId column (can filter by workspace)
-const WS_TABLES = ["tickets", "signals", "incidents", "memory_entries", "audit_logs", "drafts"];
+const WS_TABLES = ["tickets", "signals", "incidents", "memory_entries", "audit_logs", "drafts", "ticket_incidents", "ticket_signals", "approvals", "user_roles"];
 
 async function deleteByWorkspace() {
   let total = 0;
@@ -48,6 +48,28 @@ async function deleteByWorkspace() {
           const items = page.items || page.records || page.data || [];
           for (const rec of items) {
             try { await client.records.delete(table, rec.id); total++; } catch { }
+          }
+          cursor = page.cursor || page.nextCursor || null;
+        } catch { cursor = null; }
+      } while (cursor);
+    }
+    // Also clear audit_logs by action prefix (catches entries without workspaceId from backend functions)
+    const actionPrefixes = ["incident.", "manager.", "email.", "demo."];
+    for (const prefix of actionPrefixes) {
+      let cursor;
+      do {
+        const prefixFilter = { field: "action", op: "startswith", value: prefix };
+        // Only delete from demo workspaces: filter by details.workspaceId via a second pass
+        const args = { filters: [prefixFilter], limit: 200 };
+        if (cursor) args.cursor = cursor;
+        try {
+          const page = await client.records.list("audit_logs", args);
+          const items = page.items || page.records || page.data || [];
+          for (const rec of items) {
+            const detailWs = rec.details?.workspaceId || rec.details?.workspace_id || rec.workspaceId;
+            if (detailWs === wsId || DEMO_WS_IDS.includes(detailWs)) {
+              try { await client.records.delete("audit_logs", rec.id); total++; } catch { }
+            }
           }
           cursor = page.cursor || page.nextCursor || null;
         } catch { cursor = null; }
