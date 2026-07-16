@@ -90,6 +90,41 @@ async function restoreTable(table, onProgress, wsName) {
   return { table, created, total: records.length };
 }
 
+async function sendIncidentAlerts(workspaceId, onProgress) {
+  let emailsSent = 0;
+  let cursor;
+  do {
+    const filter = { field: "workspaceId", op: "eq", value: workspaceId };
+    const args = { filters: [filter], limit: 100 };
+    if (cursor) args.cursor = cursor;
+    try {
+      const page = await client.records.list("incidents", args);
+      const items = page.items || page.records || page.data || [];
+      for (const inc of items) {
+        const sev = inc.severity || "";
+        if ((sev === "high" || sev === "urgent") && !inc.email_sent) {
+          try {
+            await client.functions.run("escalate_incident", {
+              input: {
+                incident_id: inc.id,
+                new_severity: sev,
+                workspace_name: inc.workspaceName || workspaceId,
+                dashboard_link: `${window.location.origin}/incidents`,
+              },
+            });
+            emailsSent++;
+          } catch (e) {
+            console.warn(`[alerts] Failed for ${inc.id}: ${e.message}`);
+          }
+        }
+      }
+      cursor = page.cursor || page.nextCursor || null;
+    } catch { cursor = null; }
+  } while (cursor);
+  if (emailsSent > 0 && onProgress) onProgress(null, workspaceId, 0, 0, `Sent ${emailsSent} Gmail alerts`, 0);
+  return emailsSent;
+}
+
 export async function loadEnterpriseWorkspace(workspaceId, onProgress) {
   const wsName = workspaceId;
   let totalRecords = 0;
@@ -101,6 +136,9 @@ export async function loadEnterpriseWorkspace(workspaceId, onProgress) {
     totalCreated += result.created;
     await sleep(10);
   }
+
+  if (onProgress) onProgress(null, wsName, 0, 0, "Sending Gmail alerts...", 0);
+  await sendIncidentAlerts(workspaceId, onProgress);
 
   emitRefresh();
 

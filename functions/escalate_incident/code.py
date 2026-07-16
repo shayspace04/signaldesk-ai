@@ -67,15 +67,18 @@ async def escalate_incident(ctx: FunctionContext, data: EscalateIncidentInput) -
     old_rank = SEVERITY_RANK.get(old_sev, 0)
     new_rank = SEVERITY_RANK.get(new_sev, 0)
 
-    if new_rank <= old_rank:
-        raise RuntimeError(f"new severity '{new_sev}' is not higher than current severity '{old_sev}'")
+    if new_rank < old_rank:
+        raise RuntimeError(f"new severity '{new_sev}' is lower than current severity '{old_sev}'")
 
-    pod.records.update("incidents", data.incident_id, {"severity": new_sev})
-    _audit(pod, "incident.escalated", actor_type="user",
-           actor_user_id=str(ctx.user_id) if ctx.user_id else None,
-           resource_type="incident", resource_id=data.incident_id,
-           details={"old_severity": old_sev, "new_severity": new_sev,
-                    "title": inc.get("title")})
+    is_escalation = new_rank > old_rank
+
+    if is_escalation:
+        pod.records.update("incidents", data.incident_id, {"severity": new_sev})
+        _audit(pod, "incident.escalated", actor_type="user",
+               actor_user_id=str(ctx.user_id) if ctx.user_id else None,
+               resource_type="incident", resource_id=data.incident_id,
+               details={"old_severity": old_sev, "new_severity": new_sev,
+                        "title": inc.get("title")})
 
     email_sent = False
     slack_sent = False
