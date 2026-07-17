@@ -30,7 +30,7 @@ function ChartSection({ title, data, color }) {
     <div className="rounded-xl border border-border dark:border-border-dark bg-card p-5 shadow-sm">
       <h2 className="text-base font-semibold text-primary mb-4">{title}</h2>
       {entries.length === 0 ? (
-        <p className="text-sm text-muted dark:text-muted-dark">No data.</p>
+        <p className="text-sm text-muted dark:text-muted-dark">Insufficient data — no entries recorded yet.</p>
       ) : (
         <div className="space-y-2">
           {entries.map(([lbl, count]) => (
@@ -48,7 +48,7 @@ function TopList({ title, data, color }) {
     <div className="rounded-xl border border-border dark:border-border-dark bg-card p-5 shadow-sm">
       <h2 className="text-base font-semibold text-primary mb-4">{title}</h2>
       {items.length === 0 ? (
-        <p className="text-sm text-muted dark:text-muted-dark">No data.</p>
+        <p className="text-sm text-muted dark:text-muted-dark">Insufficient data — no entries recorded yet.</p>
       ) : (
         <div className="space-y-2">
           {items.map(([name, count], i) => (
@@ -231,7 +231,7 @@ export default function Analytics() {
             </div>
           </div>
           {Object.keys(chartData || {}).length === 0 ? (
-            <p className="text-sm text-muted dark:text-muted-dark py-8 text-center">No ticket data.</p>
+            <p className="text-sm text-muted dark:text-muted-dark py-8 text-center">Insufficient data — no tickets recorded yet.</p>
           ) : (
             <div className="space-y-2">
               {Object.entries(chartData).map(([lbl, count]) => {
@@ -273,26 +273,36 @@ export default function Analytics() {
         <ChartSection title="Actions by Type" data={Object.fromEntries((m.analytics.actionsByType || []).slice(0, 10))} color="bg-cyan-500" />
         <div className="rounded-xl border border-border dark:border-border-dark bg-card p-5 shadow-sm">
           <h2 className="text-base font-semibold text-primary mb-4">SLA Compliance</h2>
-            <div className="flex items-center gap-4">
-              <span className="text-[36px] font-bold tracking-tight text-primary">
-                <CountUp end={m.analytics.slaCompliance ?? 0} duration={1.5} suffix="%" />
-              </span>
-              <p className="text-sm text-muted dark:text-muted-dark">Tickets resolved within 24 hours</p>
-            </div>
-            <div className="mt-4 h-3 rounded-full bg-muted-surface overflow-hidden">
-              <div className={`h-full rounded-full transition-all duration-700 ${(m.analytics.slaCompliance ?? 0) >= 90 ? "bg-emerald-500" : (m.analytics.slaCompliance ?? 0) >= 70 ? "bg-amber-500" : "bg-red-500"}`}
-                style={{ width: `${Math.max(m.analytics.slaCompliance ?? 0, 2)}%` }} />
-            </div>
+          {m.analytics.slaCompliance == null ? (
+            <p className="text-sm text-muted dark:text-muted-dark py-4 text-center">Insufficient data — no resolved tickets yet.</p>
+          ) : (
+            <>
+              <div className="flex items-center gap-4">
+                <span className="text-[36px] font-bold tracking-tight text-primary">
+                  <CountUp end={m.analytics.slaCompliance} duration={1.5} suffix="%" />
+                </span>
+                <p className="text-sm text-muted dark:text-muted-dark">Tickets resolved within 24 hours</p>
+              </div>
+              <div className="mt-4 h-3 rounded-full bg-muted-surface overflow-hidden">
+                <div className={`h-full rounded-full transition-all duration-700 ${m.analytics.slaCompliance >= 90 ? "bg-emerald-500" : m.analytics.slaCompliance >= 70 ? "bg-amber-500" : "bg-red-500"}`}
+                  style={{ width: `${Math.max(m.analytics.slaCompliance, 2)}%` }} />
+              </div>
+            </>
+          )}
           </div>
         <ChartSection title="Resolution Time Trend (hours)" data={Object.fromEntries(m.analytics.avgResTimeByDay)} color="bg-cyan-500" />
         <div className="rounded-xl border border-border dark:border-border-dark bg-card p-5 shadow-sm">
           <h2 className="text-base font-semibold text-primary mb-4">Engineering Response</h2>
-          <div className="flex items-center gap-4">
-            <span className="text-[36px] font-bold tracking-tight text-primary">
-              <CountUp end={m.analytics.engineeringResponseTime} duration={1.5} suffix="h" decimals={1} />
-            </span>
-            <p className="text-sm text-muted dark:text-muted-dark">Avg response time</p>
-          </div>
+          {m.analytics.engineeringResponseTime > 0 ? (
+            <div className="flex items-center gap-4">
+              <span className="text-[36px] font-bold tracking-tight text-primary">
+                <CountUp end={m.analytics.engineeringResponseTime} duration={1.5} suffix="h" decimals={1} />
+              </span>
+              <p className="text-sm text-muted dark:text-muted-dark">Avg response time</p>
+            </div>
+          ) : (
+            <p className="text-sm text-muted dark:text-muted-dark py-4 text-center">Insufficient data — no engineering responses yet.</p>
+          )}
           <div className="mt-4 flex justify-between text-xs text-muted dark:text-muted-dark">
             <span>{m.analytics.escalatedCount} escalated</span>
             <span>{m.analytics.incidentResolved} resolved</span>
@@ -305,7 +315,7 @@ export default function Analytics() {
         <div className="rounded-xl border border-border dark:border-border-dark bg-card p-5 shadow-sm lg:col-span-2">
           <h2 className="text-base font-semibold text-primary mb-4">Top Knowledge Articles</h2>
           {m.knowledge.topArticles.length === 0 ? (
-            <p className="text-sm text-muted dark:text-muted-dark">No articles yet.</p>
+            <p className="text-sm text-muted dark:text-muted-dark">Insufficient data — no knowledge articles created yet.</p>
           ) : (
             <div className="space-y-2">
               {m.knowledge.topArticles.map((a, i) => (

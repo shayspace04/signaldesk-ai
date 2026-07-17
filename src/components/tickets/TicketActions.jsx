@@ -5,7 +5,7 @@ import client from "@/lib/lemmaClient";
 import { emitRefresh } from "@/lib/refreshEvents";
 
 const ACTIONS = [
-  { key: "assign", label: "Assign", field: "assignee", value: "me", successMsg: "Ticket assigned to you", color: "bg-violet-600 hover:bg-violet-500" },
+  { key: "assign", label: "Assign", field: "assigned_to", value: "me", successMsg: "Ticket assigned to you", color: "bg-violet-600 hover:bg-violet-500" },
   { key: "resolve", label: "Resolve", field: "status", value: "resolved", successMsg: "Ticket resolved", color: "bg-green-600 hover:bg-green-500" },
   { key: "escalate", label: "Escalate", field: "priority", value: "urgent", successMsg: "Ticket escalated to urgent", color: "bg-yellow-600 hover:bg-yellow-500" },
   { key: "close", label: "Close", field: "status", value: "closed", successMsg: "Ticket closed", color: "bg-red-600 hover:bg-red-500" },

@@ -28,10 +28,10 @@ export default function TicketSummary({ ticket }) {
             <p className="text-zinc-900 dark:text-zinc-50 capitalize">{ticket.category.replace(/_/g, " ")}</p>
           </div>
         )}
-        {ticket.assignee && (
+        {ticket.assigned_to && (
           <div>
             <p className="text-zinc-400 dark:text-zinc-500">Assignee</p>
-            <p className="text-zinc-900 dark:text-zinc-50">{ticket.assignee}</p>
+            <p className="text-zinc-900 dark:text-zinc-50">{ticket.assigned_to}</p>
           </div>
         )}
       </div>

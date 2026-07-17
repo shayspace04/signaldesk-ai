@@ -71,7 +71,7 @@ function buildTicket(title, category, customer, opts) {
     priority: (opts && opts.priority) || ticketPriority(idx, isRecurring),
     status: (opts && opts.status) || ticketStatus(idx),
     customer: customer,
-    assignee: assignee(idx),
+    assigned_to: assignee(idx),
     body: (BODIES[category] || BODIES.General).replace("{name}", (customer && customer.name) || "Customer"),
     created_at: daysAgo((opts && opts.daysAgo !== undefined) ? opts.daysAgo : (idx + 1)),
     recurring: isRecurring,

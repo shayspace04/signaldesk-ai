@@ -66,6 +66,12 @@ export default function Incidents() {
   const [fetchingComments, setFetchingComments] = useState(false);
   const [commentError, setCommentError] = useState(null);
 
+  const filtered = linearFilter === "all" ? incidents : linearFilter === "escalated"
+    ? incidents.filter((i) => i.linearIssueId)
+    : incidents.filter((i) => !i.linearIssueId);
+
+  const current = selected || filtered[0] || null;
+
   useEffect(() => {
     if (!current || !current.linearIssueId) { setLinearComments([]); return; }
     let cancelled = false;
@@ -219,18 +225,6 @@ export default function Incidents() {
       setSendingComment(false);
     }
   };
-
-  const filtered = linearFilter === "all" ? incidents : linearFilter === "escalated"
-    ? incidents.filter((i) => i.linearIssueId)
-    : incidents.filter((i) => !i.linearIssueId);
-
-  const current = selected || filtered[0] || null;
-
-  useEffect(() => {
-    if (current) {
-
-    }
-  }, [current]);
 
   const linearIsDone = current?.linearStatus === "Done" || current?.linearStatus === "completed";
 

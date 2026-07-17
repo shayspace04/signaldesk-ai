@@ -141,8 +141,8 @@ export function useMetrics(workspaceId, options = {}) {
       urgent: urgent.length,
       urgentPct: allTickets.length > 0 ? Math.round((urgent.length / allTickets.length) * 100) : 0,
       highPct: allTickets.length > 0 ? Math.round((critical.length / allTickets.length) * 100) : 0,
-      avgResolutionTime: Math.round(avgResTime * 10) / 10,
-      avgResponseTime: Math.round(avgRespTime * 10) / 10,
+      avgResolutionTime: avgResTime > 0 ? Math.round(avgResTime * 10) / 10 : null,
+      avgResponseTime: avgRespTime > 0 ? Math.round(avgRespTime * 10) / 10 : null,
       waitingForReply: waitingReply.length,
       trendCreation: bounds != null ? pctChange(curT.length, prevT.length) : null,
     };
@@ -202,7 +202,7 @@ export function useMetrics(workspaceId, options = {}) {
       escalated: escalated.length,
       openLinear: openLinear.length,
       resolvedLinear: resolvedLinear.length,
-      avgEscalationTime: Math.round(avgEscTime * 10) / 10,
+      avgEscalationTime: avgEscTime > 0 ? Math.round(avgEscTime * 10) / 10 : null,
       trendCreation: bounds != null ? pctChange(curI.length, prevI.length) : null,
     };
   }, [allIncidents, curI, prevI]);
@@ -351,8 +351,6 @@ export function useMetrics(workspaceId, options = {}) {
         total += (end - start) / 3600000;
       });
       avgEngResponseTime = Math.round((total / engResponded.length) * 10) / 10;
-    } else if (allIncidents.some((i) => i.linearIssueId)) {
-      avgEngResponseTime = 4.5;
     }
 
     const draftsByStatus = {};

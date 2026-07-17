@@ -801,10 +801,10 @@ export default function TicketDrawer({ ticket: initialTicket, onClose, onRefresh
     setAssigning(true);
     const toastId = toast.loading("Assigning ticket...");
     try {
-      const updates = agentName ? { assignee: agentName } : { assignee: null };
+      const updates = agentName ? { assigned_to: agentName } : { assigned_to: null };
       await client.records.update("tickets", ticket.id, updates);
       setTicket((prev) => ({ ...prev, ...updates }));
-      await addAuditLog(ticket.id, "ticket.assigned", { assignee: agentName || "unassigned" }, ticket.workspaceId, ticket.workspaceName);
+      await addAuditLog(ticket.id, "ticket.assigned", { assigned_to: agentName || "unassigned" }, ticket.workspaceId, ticket.workspaceName);
       toast.dismiss(toastId);
       toast.success(agentName ? `Assigned to ${agentName}` : "Ticket unassigned");
       setShowAssign(false);
@@ -1438,8 +1438,8 @@ export default function TicketDrawer({ ticket: initialTicket, onClose, onRefresh
             {ticket.updated_at && (
               <span className="flex items-center gap-1">Updated {formatDistanceToNow(new Date(ticket.updated_at), { addSuffix: true })}</span>
             )}
-            {ticket.assignee ? (
-              <span className="flex items-center gap-1"><UserCheck size={12} />{ticket.assignee}</span>
+            {ticket.assigned_to ? (
+              <span className="flex items-center gap-1"><UserCheck size={12} />{ticket.assigned_to}</span>
             ) : (
               <span className="text-zinc-300 dark:text-zinc-600">Unassigned</span>
             )}
@@ -1595,8 +1595,8 @@ export default function TicketDrawer({ ticket: initialTicket, onClose, onRefresh
                         <div className="min-w-0 flex-1">
                           <p className="text-sm text-zinc-900 dark:text-zinc-50 capitalize">{log.action?.replace(/\./g, " ") || log.event || "Event"}</p>
                           {log.details?.name && <p className="text-xs text-zinc-500 dark:text-zinc-400">{log.details.name}</p>}
-                          {log.action === "ticket.assigned" && log.details?.assignee && (
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400">Assigned to {log.details.assignee}</p>
+                          {log.action === "ticket.assigned" && log.details?.assigned_to && (
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400">Assigned to {log.details.assigned_to}</p>
                           )}
                           <span className="text-xs text-zinc-400 dark:text-zinc-500">
                             {log.created_at ? format(new Date(log.created_at), "MMM d, yyyy 'at' h:mm a") : ""}
@@ -1931,7 +1931,7 @@ export default function TicketDrawer({ ticket: initialTicket, onClose, onRefresh
       {/* ===================== MODALS ===================== */}
       <AssignDialog
         open={showAssign}
-        currentAssignee={ticket.assignee}
+        currentAssignee={ticket.assigned_to}
         onAssign={handleAssign}
         onCancel={() => setShowAssign(false)}
       />

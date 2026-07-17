@@ -97,7 +97,7 @@ export function generateTicket(workspace, idx, scenario) {
     channel: "email",
     created_at: created,
     status,
-    assignee: pick(ASSIGNEES),
+    assigned_to: pick(ASSIGNEES),
   };
 }
 

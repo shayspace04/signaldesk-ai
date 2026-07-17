@@ -186,7 +186,7 @@ export default function Tickets() {
     if (filters.priority !== "All") result = result.filter((t) => t.priority === filters.priority);
     if (filters.status !== "All") result = result.filter((t) => t.status === filters.status);
     if (filters.category !== "All") result = result.filter((t) => t.category === filters.category);
-    if (filters.assignee !== "All") result = result.filter((t) => (t.assignee || t.assigned_to || "") === filters.assignee);
+    if (filters.assignee !== "All") result = result.filter((t) => (t.assigned_to || "") === filters.assignee);
     if (churnFilter === "at-risk") {
       result = result.filter((t) => {
         if (t.sentiment === "churn_risk") return true;

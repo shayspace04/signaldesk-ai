@@ -126,9 +126,6 @@ export default function DraftCopilotPanel({ ticket, workspace, permissions = {},
       const ctx = await gatherContext(ticket);
       setContext(ctx);
 
-      const fts = buildFacts(ticket, ctx);
-      setFacts(fts);
-
       progressSteps.push({ icon: "check", label: "Searching Knowledge Base" });
       progressSteps.push({ icon: "check", label: "Looking for active incidents" });
       progressSteps.push({ icon: "check", label: "Checking engineering updates" });
@@ -136,13 +133,15 @@ export default function DraftCopilotPanel({ ticket, workspace, permissions = {},
       progressSteps.push({ icon: "search", label: "Drafting response..." });
       setSteps([...progressSteps]);
 
-      const result = await client.functions.run("generate_draft_reply", {
-        input: { ticket_id: ticket.id },
-      });
+      const fts = buildFacts(ticket, ctx);
+      setFacts(fts);
+
+      const result = buildDraft(ticket, fts, selectedTone);
+
       const newDraft = {
         body: result.body,
-        sections: [{ type: "body", text: result.body }],
-        confidence: { overall: result.confidence, knowledge: 0, incident: 0, historical: 0, reasoning: [] },
+        sections: result.sections,
+        confidence: result.confidence,
         tone: selectedTone,
         created_at: new Date().toISOString(),
         version: 1,
@@ -152,7 +151,6 @@ export default function DraftCopilotPanel({ ticket, workspace, permissions = {},
       progressSteps.push({ icon: "check", label: "Ready" });
       setSteps([...progressSteps]);
 
-      setDraftId(result.draft_id);
       setDrafts([newDraft]);
       setCurrentVersion(0);
       setPhase("editing");
@@ -163,7 +161,7 @@ export default function DraftCopilotPanel({ ticket, workspace, permissions = {},
           actor: "AI Copilot",
           resourceType: "ticket",
           resourceId: ticket.id,
-          details: { tone: selectedTone, confidence: result.confidence },
+          details: { tone: selectedTone, confidence: result.confidence.overall },
           workspaceId: ticket.workspaceId,
           workspaceName: ticket.workspaceName,
         });
@@ -188,14 +186,14 @@ export default function DraftCopilotPanel({ ticket, workspace, permissions = {},
     setSteps([...progressSteps]);
 
     try {
-      const result = await client.functions.run("generate_draft_reply", {
-        input: { ticket_id: ticket.id },
-      });
+      const ctx = context || await gatherContext(ticket);
+      const fts = facts || buildFacts(ticket, ctx);
+      const result = buildDraft(ticket, fts, selectedTone);
 
       const newDraft = {
         body: result.body,
-        sections: [{ type: "body", text: result.body }],
-        confidence: { overall: result.confidence, knowledge: 0, incident: 0, historical: 0, reasoning: [] },
+        sections: result.sections,
+        confidence: result.confidence,
         tone: selectedTone,
         created_at: new Date().toISOString(),
         version: previousVersion + 1,
@@ -206,7 +204,6 @@ export default function DraftCopilotPanel({ ticket, workspace, permissions = {},
       progressSteps.push({ icon: "check", label: "Regenerated" });
       setSteps([...progressSteps]);
 
-      setDraftId(result.draft_id);
       setDrafts((prev) => [...prev, newDraft]);
       setCurrentVersion(drafts.length);
       setPhase("editing");

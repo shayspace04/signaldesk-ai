@@ -44,7 +44,7 @@ export default function KpiCard({ icon: Icon, color, value, label, loading, tren
       <div className="flex items-end justify-between gap-2">
         <div>
           <p className="text-[28px] font-bold tracking-tight text-zinc-900 dark:text-zinc-50 leading-none">
-            {loading ? <div className="h-7 w-12 animate-pulse rounded bg-zinc-100 dark:bg-zinc-800" /> : <CountUp end={value ?? 0} duration={1.5} />}
+            {loading ? <div className="h-7 w-12 animate-pulse rounded bg-zinc-100 dark:bg-zinc-800" /> : value == null ? <span className="text-lg font-normal text-muted dark:text-muted-dark">--</span> : <CountUp end={value} duration={1.5} />}
           </p>
           <p className="text-sm text-muted dark:text-muted-dark mt-1">{label}</p>
         </div>
