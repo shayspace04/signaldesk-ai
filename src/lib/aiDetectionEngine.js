@@ -806,7 +806,7 @@ async function postIncidentActions(cluster, signalId, incidentId, workspaceId, w
           {
             team_id: LINEAR_TEAM_ID,
             title: incident.title || `Incident ${incidentId}`,
-            description: incident.description || incident.summary || `Severity: ${incident.severity || "N/A"}`,
+            description: incident.description || incident.summary || `Severity: ${incident.severity || "not-set"}`,
             priority: priorityMap[incident.severity] || 0,
           },
         );
@@ -1013,7 +1013,7 @@ export async function runDetection(ticketId, workspaceId, workspaceName) {
       const cMaxSim = cPairs.length > 0 ? Math.max(...cPairs) : (c.length >= 2 ? 0 : 1);
       const timestamps = c.map(t => new Date(t.created_at || t.createdAt || 0).getTime()).filter(ts => !isNaN(ts));
       const timeSpanHours = timestamps.length > 1 ? (Math.max(...timestamps) - Math.min(...timestamps)) / 3600000 : 0;
-      const category = c[0]?.category || "N/A";
+      const category = c[0]?.category || "uncategorized";
       const riskScore = computeRiskScore(c);
       const meetsSize = c.length >= thresholds.minTickets;
       const meetsSim = cAvgSim >= thresholds.minSimilarity;

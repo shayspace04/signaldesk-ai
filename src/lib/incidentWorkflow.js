@@ -75,7 +75,7 @@ export function syncToLinear(incidentId) {
         {
           team_id: LINEAR_TEAM_ID,
           title: incident.title || `Incident ${incidentId}`,
-          description: incident.description || incident.summary || `Severity: ${incident.severity || "N/A"}`,
+          description: incident.description || incident.summary || `Severity: ${incident.severity || "not-set"}`,
           priority,
         },
       );

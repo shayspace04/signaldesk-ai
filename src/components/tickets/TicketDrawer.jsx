@@ -851,107 +851,252 @@ export default function TicketDrawer({ ticket: initialTicket, onClose, onRefresh
     };
     setAiState((prev) => ({ ...prev, action, loading: true, result: null }));
     const toastId = toast.loading(labels[action] || "Processing...");
-    await new Promise((r) => setTimeout(r, 800));
+    await new Promise((r) => setTimeout(r, 600));
 
     const body = ticket.body || "";
     const cat = ticket.category || "general";
-    const sent = ticket.sentiment || "calm";
+    const sent = ticket.sentiment || "neutral";
+    const tags = ticket.tags || [];
+    const priority = ticket.priority || "normal";
 
     let result = "";
     if (action === "summarize") {
       const words = body.split(/\s+/).filter(Boolean);
-      const short = words.length > 40 ? body.split(".").slice(0, 3).join(".") + "." : body || "No content.";
-      const intent = words.some((w) => ["refund", "cancel", "return"].includes(w.toLowerCase())) ? "Requesting refund/cancellation" : words.some((w) => ["help", "issue", "problem", "broken", "error"].includes(w.toLowerCase())) ? "Requesting technical support" : "General inquiry";
+      const sentences = body.split(/[.!?]+/).filter(Boolean);
+      const shortSummary = sentences.length > 2
+        ? sentences.slice(0, 2).join(". ") + "."
+        : body || "No description provided.";
+      const allText = (body + " " + (ticket.title || "")).toLowerCase();
+      const intentPatterns = [
+        { keywords: ["refund", "cancel", "unsubscribe", "chargeback", "return", "reimbursement"], label: "Requesting refund, cancellation, or financial remediation" },
+        { keywords: ["error", "bug", "crash", "broken", "fail", "timeout", "exception", "500", "not loading"], label: "Reporting a technical issue or system bug" },
+        { keywords: ["login", "password", "access", "permission", "account locked", "2fa", "mfa", "authentication"], label: "Account access or authentication issue" },
+        { keywords: ["slow", "performance", "lag", "delay", "hang", "unresponsive"], label: "Performance degradation or slow response" },
+        { keywords: ["billing", "invoice", "payment", "charge", "credit", "debit", "overcharge"], label: "Billing or payment discrepancy" },
+        { keywords: ["how", "what is", "help with", "guide", "tutorial", "setup", "configure"], label: "How-to question or configuration assistance" },
+      ];
+      const matchedIntent = intentPatterns.find((p) => p.keywords.some((k) => allText.includes(k)));
+      const intent = matchedIntent ? matchedIntent.label : "General inquiry or product feedback";
       const resolvedFromHistory = customerTickets.filter((t) => t.status === "resolved");
       const similarResolved = resolvedFromHistory.filter((t) => t.category === cat).length;
+      const firstSeen = customerTickets.length > 0
+        ? customerTickets.reduce((earliest, t) => !earliest || (t.created_at && t.created_at < earliest.created_at) ? t : earliest, null)
+        : null;
+      const timeTag = ticket.created_at ? format(new Date(ticket.created_at), "MMM d, yyyy 'at' h:mm a") : null;
+      const escalationRec = priority === "urgent" || (customerTickets.length > 3 && similarResolved === 0)
+        ? "Recommend escalation to senior support team due to urgent priority and unresolved history in this category."
+        : customerTickets.length > 5
+          ? "Customer has extensive history — consider account review to identify systemic issues."
+          : "No escalation needed at this time.";
       result = [
-        `**Summary:** ${short}`,
-        `**Key Issue:** ${cat} \u2014 ${ticket.priority} priority`,
-        `**Customer Intent:** ${intent}`,
-        `**Context:** ${customerTickets.length} previous ticket(s) from this customer \u00B7 ${similarResolved} similar ${cat} tickets resolved previously`,
-        `**Sentiment:** ${sent}`,
-      ].join("\n");
+        `**Summary**`,
+        shortSummary,
+        ``,
+        `**Customer Intent**`,
+        intent,
+        ``,
+        `**Issue Classification**`,
+        `Category: ${cat} \u00B7 Priority: ${priority}${tags.length > 0 ? ` \u00B7 Tags: ${tags.join(", ")}` : ""}`,
+        timeTag ? `Reported: ${timeTag}` : "",
+        ``,
+        `**Important Observations**`,
+        `Customer has ${customerTickets.length} ticket(s) total, ${resolvedFromHistory.length} resolved.`,
+        `${similarResolved} similar ${cat} case${similarResolved !== 1 ? "s" : ""} in history.`,
+        firstSeen?.created_at ? `Customer active since ${format(new Date(firstSeen.created_at), "MMM yyyy")}.` : "First-time customer.",
+        customerStats?.mostCommonCategory && customerStats.mostCommonCategory !== cat
+          ? `Most common category for this customer is "${customerStats.mostCommonCategory}", not "${cat}" — this may represent a new issue type.`
+          : null,
+        ``,
+        `**Escalation Recommendation**`,
+        escalationRec,
+      ].filter(Boolean).join("\n");
     } else if (action === "rootCause") {
-      const causes = {
-        billing: "Billing configuration error or payment processing failure",
-        account: "Account permission misconfiguration or expired credentials",
-        technical: "System integration error or API timeout",
-        delivery: "Delivery routing failure or address validation error",
-        general: "Unexpected system behavior under standard load conditions",
-      };
+      const bodyLower = body.toLowerCase();
+      const causeClues = [];
+      if (bodyLower.includes("csv") || bodyLower.includes("export") || bodyLower.includes("import") || bodyLower.includes("parse")) {
+        causeClues.push("data serialization or format conversion pipeline");
+      }
+      if (bodyLower.includes("login") || bodyLower.includes("auth") || bodyLower.includes("token") || bodyLower.includes("session")) {
+        causeClues.push("authentication token expiry or session management");
+      }
+      if (bodyLower.includes("api") || bodyLower.includes("timeout") || bodyLower.includes("gateway") || bodyLower.includes("503") || bodyLower.includes("500")) {
+        causeClues.push("upstream API availability or gateway timeout");
+      }
+      if (bodyLower.includes("database") || bodyLower.includes("query") || bodyLower.includes("slow") || bodyLower.includes("index")) {
+        causeClues.push("database query performance or missing index");
+      }
+      if (bodyLower.includes("memory") || bodyLower.includes("leak") || bodyLower.includes("oom") || bodyLower.includes("crash")) {
+        causeClues.push("memory exhaustion or resource leak");
+      }
+      if (causeClues.length === 0) {
+        const catCauses = {
+          billing: "payment gateway integration or subscription state machine desynchronization",
+          account: "identity provider configuration mismatch or credential rotation gap",
+          technical: "service dependency chain failure under concurrent load",
+          delivery: "message queue backpressure or delivery acknowledgment timeout",
+          general: "unexpected edge case in request processing pipeline",
+        };
+        causeClues.push(catCauses[cat] || catCauses.general);
+      }
       const similarCatCount = customerTickets.filter((t) => t.category === cat && t.id !== ticket.id).length;
       const similarResolved = customerTickets.filter((t) => t.category === cat && t.status === "resolved");
-      const confidence = Math.min(65 + similarCatCount * 5, 92);
+      const confidence = Math.min(65 + similarCatCount * 5, 95);
+      const ageHours = ticket.created_at ? Math.round((Date.now() - new Date(ticket.created_at).getTime()) / 3600000) : 0;
+      const slaStatus = ticket.sla_due_at
+        ? (new Date(ticket.sla_due_at) > new Date() ? `Within SLA (${Math.round((new Date(ticket.sla_due_at) - new Date()) / 3600000)}h remaining)` : "SLA breached")
+        : "No SLA target configured";
       result = [
-        `**Likely Root Cause:** ${causes[cat] || causes.general}`,
-        `**Supporting Evidence:** ${similarCatCount} similar ${cat} case(s) in this customer's history. ${similarResolved.length > 0 ? `${similarResolved.length} previously resolved.` : "No prior resolved cases of this type."}`,
-        `**Ticket Context:** ${ticket.priority} priority \u00B7 ${sent} sentiment \u00B7 ${customerTickets.length} total customer tickets`,
-        `**Confidence:** ${confidence}%`,
-      ].join("\n");
-    } else if (action === "resolution") {
-      const sla = ticket.sla_due_at ? (new Date(ticket.sla_due_at) > new Date() ? "Within SLA" : "SLA breached") : "No SLA set";
-      const avgResolveHours = customerStats?.avgResolutionHours ? `${customerStats.avgResolutionHours}h avg` : "Unknown";
-      result = [
-        `**Suggested Resolution:**`,
-        `1. Verify customer account and recent transaction history`,
-        `2. Check for related system alerts or known outages`,
-        `3. Apply standard ${cat} troubleshooting workflow`,
-        `4. Escalate to ${cat === "technical" ? "engineering" : "specialist"} team if unresolved`,
+        `**Likely Root Cause**`,
+        `The most probable cause is a ${causeClues.join(" or ")}.`,
         ``,
-        `**Ticket Context:** ${ticket.priority} priority \u00B7 SLA: ${sla} \u00B7 Sentiment: ${sent}`,
-        `**Customer History:** ${customerTickets.length} previous tickets \u00B7 Avg resolution: ${avgResolveHours}`,
-        `**Confidence:** 78%`,
+        `**Supporting Evidence**`,
+        `- Category: ${cat} (${cat === "technical" || cat === "general" ? "consistent with infrastructure issues" : "customer-facing workflow disruption"})`,
+        `- ${similarCatCount} previous ${cat} case${similarCatCount !== 1 ? "s" : ""} in this customer's history${similarResolved.length > 0 ? `, ${similarResolved.length} resolved` : ""}.`,
+        `- Ticket has been open for ${ageHours}h with ${slaStatus}.`,
+        tags.length > 0 ? `- Tags: ${tags.join(", ")} — ${tags.some((t) => ["urgent", "blocker", "p1", "p0"].includes(t.toLowerCase())) ? "indicates high-severity impact" : "provides additional context"}` : "",
+        customerTickets.length > 2 ? `- Customer has ${customerTickets.length} total tickets, suggesting ${customerTickets.length > 5 ? "a systemic or recurring issue pattern" : "moderate engagement"}.` : "",
+        ``,
+        `**Confidence**`,
+        `${confidence}% — based on category, historical patterns, and keyword analysis.`,
+      ].filter(Boolean).join("\n");
+    } else if (action === "resolution") {
+      const sla = ticket.sla_due_at
+        ? (new Date(ticket.sla_due_at) > new Date()
+          ? `Within SLA — ${Math.round((new Date(ticket.sla_due_at) - new Date()) / 3600000)}h remaining`
+          : `SLA breached by ${Math.round((new Date() - new Date(ticket.sla_due_at)) / 3600000)}h`)
+        : "No SLA target configured for this ticket.";
+      const avgResolveHours = customerStats?.avgResolutionHours
+        ? `${customerStats.avgResolutionHours}h average across ${customerStats.resolvedCount} resolved ticket(s)`
+        : "No resolved tickets in this customer's history to estimate resolution time.";
+      const matchedSolutions = knownSolutions.length > 0
+        ? `Found ${knownSolutions.length} knowledge article(s) matching this issue. Consider reviewing: ${knownSolutions.map((k) => k.title).join(", ")}.`
+        : "No existing knowledge articles matched this ticket's content. Consider creating one after resolution.";
+      const affectedSystems = cat === "technical" ? ["API Gateway", "Database Cluster", "Cache Layer"]
+        : cat === "billing" ? ["Payment Processor", "Invoice Service", "Billing Database"]
+        : cat === "account" ? ["Identity Provider", "User Directory", "Session Store"]
+        : cat === "delivery" ? ["Message Queue", "Notification Service", "Delivery Tracker"]
+        : ["Web Application", "API Layer", "Database"];
+      result = [
+        `**Suggested Resolution Steps**`,
+        ``,
+        `**Reproduce**`,
+        `1. Review ticket description: "${(ticket.title || "").slice(0, 80)}${(ticket.title || "").length > 80 ? "..." : ""}"`,
+        `2. Identify the affected workflow: ${cat}`,
+        `3. Check if the issue is reproducible with the same inputs provided by the customer`,
+        ``,
+        `**Affected Services**`,
+        affectedSystems.join(", "),
+        ``,
+        `**Probable Fix**`,
+        `- Apply the standard ${cat} troubleshooting workflow`,
+        `- Verify configuration integrity across ${affectedSystems[0]} and ${affectedSystems[1]}`,
+        cat !== "general" ? `- Check for recent deployments or configuration changes in the ${cat} service` : "- Review application logs for error patterns around the reported timestamp",
+        `- Validate data integrity for the affected customer record`,
+        ``,
+        `**Rollout Plan**`,
+        `1. Apply fix to staging or canary environment first`,
+        `2. Run existing test suite for ${cat} workflows`,
+        `3. Deploy to production with monitoring`,
+        `4. Verify fix with customer before closing ticket`,
+        ``,
+        `**Verification**`,
+        `- Confirm the customer's reported scenario now works correctly`,
+        `- Monitor error rates and latency for ${affectedSystems[0]} for 30 minutes post-deploy`,
+        `- Update or create a knowledge article with the resolution details`,
+        ``,
+        `**Context**`,
+        `Priority: ${priority} \u00B7 SLA: ${sla}`,
+        `Customer history: ${customerTickets.length} previous tickets \u00B7 ${avgResolveHours}`,
+        matchedSolutions,
       ].join("\n");
     } else if (action === "sentiment") {
       const negativeWordsList = body ? body.toLowerCase().split(/\s+/).filter((w) =>
-        ["bad", "angry", "frustrated", "terrible", "awful", "disappointed", "cancel", "refund", "complaint", "horrible", "never", "worst", "unacceptable", "ridiculous"].includes(w)
+        ["bad", "angry", "frustrated", "terrible", "awful", "disappointed", "cancel", "refund", "complaint", "horrible", "never", "worst", "unacceptable", "ridiculous", "useless", "scam", "outrageous", "pathetic", "fed up", "sick of"].includes(w)
       ).length : 0;
       const positiveWordsList = body ? body.toLowerCase().split(/\s+/).filter((w) =>
-        ["good", "great", "thanks", "thank", "help", "please", "appreciate", "excellent"].includes(w)
+        ["good", "great", "thanks", "thank", "help", "please", "appreciate", "excellent", "amazing", "wonderful", "fantastic", "love", "best", "outstanding"].includes(w)
       ).length : 0;
-      const score = Math.min(100, Math.max(0, 50 + (positiveWordsList - negativeWordsList) * 10));
-      const level = score >= 70 ? "Positive" : score >= 40 ? "Neutral" : "Negative";
+      const urgencyWordsList = body ? body.toLowerCase().split(/\s+/).filter((w) =>
+        ["urgent", "asap", "immediately", "emergency", "critical", "deadline", "blocking", "blocked", "stop", "halt"].includes(w)
+      ).length : 0;
+      const netScore = positiveWordsList - negativeWordsList;
+      const score = Math.min(100, Math.max(0, 50 + netScore * 10));
+      const baseConfidence = Math.min(75 + negativeWordsList * 3 + positiveWordsList * 2, 96);
+      const level = score >= 65 ? "Positive" : score >= 35 ? "Neutral" : "Negative";
+      const urgency = urgencyWordsList > 3 ? "Critical" : urgencyWordsList > 1 ? "High" : urgencyWordsList > 0 ? "Medium" : "Low";
+      const escalationLikelihood = negativeWordsList > 3 && urgency === "Critical" ? "High"
+        : negativeWordsList > 1 || urgency !== "Low" ? "Medium" : "Low";
+      const toneLabels = {
+        negative: ["Frustrated", "Disappointed", "Irritated", "Demanding", "Anxious"],
+        neutral: ["Factual", "Inquisitive", "Descriptive", "Measured", "Neutral"],
+        positive: ["Appreciative", "Patient", "Optimistic", "Collaborative", "Polite"],
+      };
+      const toneList = netScore < -1 ? toneLabels.negative : netScore > 1 ? toneLabels.positive : toneLabels.neutral;
+      const tone = toneList[Math.abs(body.length) % toneList.length];
       const previousNegativeCount = customerTickets.filter((t) => t.sentiment === "angry" || t.sentiment === "frustrated").length;
+      const reason = negativeWordsList > 0
+        ? `Customer used ${negativeWordsList} negative word(s) in their description.`
+        : positiveWordsList > 0
+          ? `Customer used ${positiveWordsList} positive word(s), indicating a cooperative tone.`
+          : "Customer communication is neutral and factual.";
+      const urgencyReason = urgencyWordsList > 0
+        ? `Urgency indicated by ${urgencyWordsList} urgency word(s) (${["urgent", "asap", "immediately", "emergency", "critical", "deadline", "blocking"].slice(0, urgencyWordsList).join(", ")}).`
+        : "No explicit urgency markers detected.";
       result = [
-        `**Customer Sentiment:** ${level}`,
-        `**Sentiment Score:** ${score}/100`,
-        `**Confidence:** 85%`,
+        `**Customer Sentiment**`,
+        `${tone}`,
         ``,
-        `**Indicators:** ${negativeWordsList > 0 ? `${negativeWordsList} negative word(s) detected. ` : ""}${positiveWordsList > 0 ? `${positiveWordsList} positive word(s) detected.` : ""}`,
-        `**History:** ${previousNegativeCount} previous negative ticket(s) from this customer`,
-        `**Risk Level:** ${level === "Negative" ? "High - immediate attention required" : level === "Neutral" ? "Medium - monitor" : "Low"}`,
+        `**Confidence**`,
+        `${baseConfidence}%`,
         ``,
-        `**Recommended Action:** ${level === "Negative" ? "Prioritize empathetic response and quick resolution. Consider escalation." : "Standard follow-up procedure."}`,
+        `**Urgency**`,
+        `${urgency}`,
+        ``,
+        `**Escalation Likelihood**`,
+        `${escalationLikelihood}`,
+        ``,
+        `**Analysis**`,
+        reason,
+        urgencyReason,
+        previousNegativeCount > 0 ? `Customer has ${previousNegativeCount} previous negative interaction(s) on record.` : "No prior negative interactions recorded for this customer.",
+        ``,
+        `**Recommended Action**`,
+        level === "Negative" ? "Prioritize empathetic response and swift resolution. Consider assigning a senior agent due to elevated frustration and escalation risk."
+        : level === "Neutral" ? "Acknowledge the issue clearly and set expectations for next steps."
+        : "Maintain current engagement level. Ensure timely follow-through to preserve positive sentiment.",
       ].join("\n");
     } else if (action === "churn") {
       const risk = calculateChurnRisk(ticket, { customerTickets, incidents: linkedIncidents });
       if (risk && !risk.resolved) {
         const lines = [
-          `**Churn Risk Score:** ${risk.riskPercent}%`,
-          `**Risk Level:** ${risk.riskLevel}`,
-          `**Why This Score?**`,
+          `**Churn Risk Score**`,
+          `${risk.riskPercent}%`,
+          ``,
+          `**Risk Level**`,
+          `${risk.riskLevel}`,
+          ``,
+          `**Breakdown**`,
         ];
         risk.breakdown.forEach((b) => {
-          lines.push(`${b.label} (${b.evidence})`);
+          lines.push(`- ${b.evidence}`);
         });
         lines.push(``);
-        lines.push(`**Contributing Factors:**`);
-        risk.factors.forEach((f) => {
-          lines.push(`- ${f.label} (score: ${f.score > 0 ? "+" : ""}${f.score})`);
+        lines.push(`**Contributing Factors**`);
+        risk.factors.sort((a, b) => Math.abs(b.score) - Math.abs(a.score)).forEach((f) => {
+          const sign = f.score > 0 ? "+" : "";
+          lines.push(`- ${f.name}: ${sign}${f.score}`);
         });
         lines.push(``);
-        lines.push(`**Evidence:**`);
-        risk.evidence.forEach((e) => {
-          lines.push(`- ${e}`);
-        });
-        lines.push(``);
-        lines.push(`**Recommended Actions:**`);
+        lines.push(`**Recommended Actions**`);
         risk.recommendations.forEach((r, i) => {
           lines.push(`${i + 1}. ${r.action} (${r.priority}) \u2014 ${r.reason}`);
         });
         result = lines.join("\n");
       } else {
-        result = `**Churn Risk Score:** 0%\n**Risk Level:** Low\nNo action required.`;
+        const resolvedNote = ticket.status === "resolved" || ticket.status === "closed"
+          ? "This ticket is already resolved — no churn risk assessment needed."
+          : "No churn risk factors detected for this ticket.";
+        result = `**Churn Risk Score**\n0%\n\n**Risk Level**\nNone\n\n${resolvedNote}`;
       }
     }
 
@@ -973,6 +1118,16 @@ export default function TicketDrawer({ ticket: initialTicket, onClose, onRefresh
       history: prev.result ? [...prev.history, prev.result] : prev.history,
     }));
     handleAiAction(action);
+  };
+
+  const verifyAnalysis = async () => {
+    if (!aiState.action) {
+      toast.info("Run an AI analysis first, then Verify to refresh it.");
+      return;
+    }
+    toast.success("Analysis Updated");
+    await new Promise((r) => setTimeout(r, 300));
+    regenerateAi();
   };
 
   const copyAiResult = () => {
@@ -1185,6 +1340,37 @@ export default function TicketDrawer({ ticket: initialTicket, onClose, onRefresh
     return { total, resolvedCount: resolved.length, openCount: open.length, mostCommonCategory, avgResolutionHours };
   }, [customerTickets]);
 
+  const AI_STORAGE_PREFIX = "signaldesk-ai-";
+  const loadAiResults = useCallback(() => {
+    try {
+      const saved = localStorage.getItem(AI_STORAGE_PREFIX + ticket.id);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return null;
+  }, [ticket.id]);
+  const saveAiResults = useCallback((state) => {
+    try {
+      localStorage.setItem(AI_STORAGE_PREFIX + ticket.id, JSON.stringify(state));
+    } catch {}
+  }, [ticket.id]);
+
+  // Restore AI results from localStorage
+  useEffect(() => {
+    const saved = loadAiResults();
+    if (saved) {
+      setAiState(saved);
+    }
+  }, [loadAiResults]);
+
+  // Persist AI results when they change
+  const prevAiResultRef = useRef(aiState.result);
+  useEffect(() => {
+    if (aiState.result && aiState.result !== prevAiResultRef.current) {
+      saveAiResults(aiState);
+      prevAiResultRef.current = aiState.result;
+    }
+  }, [aiState, saveAiResults]);
+
   // Churn risk (with context)
   const churnRisk = useMemo(() => calculateChurnRisk(ticket, {
     customerTickets,
@@ -1244,7 +1430,7 @@ export default function TicketDrawer({ ticket: initialTicket, onClose, onRefresh
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-200 dark:bg-[#27272A] text-[7px] font-semibold text-zinc-600 dark:text-zinc-400">
                 {avatarFor(ticket.id)}
               </span>
-              <span className="truncate max-w-[120px]">{ticket.customer_name || ticket.customer_email || "Unknown"}</span>
+              <span className="truncate max-w-[120px]">{ticket.customer_name || ticket.customer_email || "Customer"}</span>
             </div>
             {ticket.created_at && (
               <span className="flex items-center gap-1"><Clock size={12} />{format(new Date(ticket.created_at), "MMM d, yyyy")}</span>
@@ -1364,35 +1550,62 @@ export default function TicketDrawer({ ticket: initialTicket, onClose, onRefresh
           <Section title="Timeline" icon={Clock}>
             {loadingLogs ? (
               <div className="flex justify-center py-4"><Loader2 size={16} className="animate-spin text-zinc-400 dark:text-zinc-500" /></div>
-            ) : logs.length === 0 ? (
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 text-center py-4">No timeline events.</p>
             ) : (
               <div className="space-y-0">
-                {logs.map((log, idx) => {
-                  const aMeta = getActionMeta(log.action);
-                  const Icon = aMeta.icon;
-                  const color = aMeta.color;
-                  return (
-                    <div key={log.id || idx} className="flex gap-3 pb-4 last:pb-0 relative">
-                      {idx < logs.length - 1 && (
-                        <div className="absolute left-[11px] top-6 bottom-0 w-px bg-zinc-200 dark:bg-[#2A2A2E]" />
-                      )}
-                      <div className={`mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-zinc-100 dark:bg-[#202024] flex-shrink-0 ${color}`}>
-                        <Icon size={12} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm text-zinc-900 dark:text-zinc-50 capitalize">{log.action?.replace(/\./g, " ") || log.event || "Event"}</p>
-                        {log.details?.name && <p className="text-xs text-zinc-500 dark:text-zinc-400">{log.details.name}</p>}
-                        {log.action === "ticket.assigned" && log.details?.assignee && (
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400">Assigned to {log.details.assignee}</p>
-                        )}
-                        <span className="text-xs text-zinc-400 dark:text-zinc-500">
-                          {log.created_at ? formatDistanceToNow(new Date(log.created_at), { addSuffix: true }) : ""}
-                        </span>
-                      </div>
+                {/* Always show ticket creation as the first event */}
+                {ticket.created_at && (
+                  <div className="flex gap-3 pb-4 relative">
+                    <div className="absolute left-[11px] top-6 bottom-0 w-px bg-zinc-200 dark:bg-[#2A2A2E]" />
+                    <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-950/30 flex-shrink-0 text-blue-500">
+                      <FileText size={12} />
                     </div>
-                  );
-                })}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-zinc-900 dark:text-zinc-50">Ticket Created</p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">by {ticket.customer_name || ticket.customer_email || "System"}</p>
+                      <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                        {format(new Date(ticket.created_at), "MMM d, yyyy 'at' h:mm a")}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {logs.length === 0 ? (
+                  <div className="flex gap-3 pb-4">
+                    <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-zinc-100 dark:bg-[#202024] flex-shrink-0 text-zinc-400">
+                      <Clock size={12} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400">Awaiting activity</p>
+                      <span className="text-xs text-zinc-400 dark:text-zinc-500">No further events recorded yet.</span>
+                    </div>
+                  </div>
+                ) : (
+                  logs.map((log, idx) => {
+                    const aMeta = getActionMeta(log.action);
+                    const Icon = aMeta.icon;
+                    const color = aMeta.color;
+                    const isLast = idx === logs.length - 1;
+                    return (
+                      <div key={log.id || idx} className="flex gap-3 pb-4 last:pb-0 relative">
+                        {!isLast && (
+                          <div className="absolute left-[11px] top-6 bottom-0 w-px bg-zinc-200 dark:bg-[#2A2A2E]" />
+                        )}
+                        <div className={`mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-zinc-100 dark:bg-[#202024] flex-shrink-0 ${color}`}>
+                          <Icon size={12} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm text-zinc-900 dark:text-zinc-50 capitalize">{log.action?.replace(/\./g, " ") || log.event || "Event"}</p>
+                          {log.details?.name && <p className="text-xs text-zinc-500 dark:text-zinc-400">{log.details.name}</p>}
+                          {log.action === "ticket.assigned" && log.details?.assignee && (
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400">Assigned to {log.details.assignee}</p>
+                          )}
+                          <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                            {log.created_at ? format(new Date(log.created_at), "MMM d, yyyy 'at' h:mm a") : ""}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             )}
           </Section>
@@ -1420,6 +1633,10 @@ export default function TicketDrawer({ ticket: initialTicket, onClose, onRefresh
                 <button onClick={() => handleAiAction("churn")} disabled={aiState.loading}
                   className="flex items-center gap-1.5 rounded-lg border border-border dark:border-border-dark px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-[#27272A] transition-colors disabled:opacity-50">
                   <BarChart3 size={13} /> Churn Risk
+                </button>
+                <button onClick={verifyAnalysis} disabled={aiState.loading || !aiState.action}
+                  className="flex items-center gap-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-950/40 transition-colors disabled:opacity-50">
+                  <RefreshCw size={13} /> Verify
                 </button>
               </div>
 
@@ -1757,15 +1974,33 @@ export default function TicketDrawer({ ticket: initialTicket, onClose, onRefresh
       />
 
       {/* AI History Modal */}
-      <ConfirmDialog
-        open={showAiHistory}
-        title="Previous AI Versions"
-        message={aiState.history.map((h, i) => `Version ${i + 1}: ${h.slice(0, 100)}...`).join("\n\n")}
-        confirmLabel="Close"
-        destructive={false}
-        onConfirm={() => setShowAiHistory(false)}
-        onCancel={() => setShowAiHistory(false)}
-      />
+      {showAiHistory && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowAiHistory(false)}>
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-lg max-h-[70vh] rounded-2xl border border-border dark:border-border-dark bg-white dark:bg-surface-dark shadow-modal overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-5 border-b border-border dark:border-border-dark">
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Previous AI Versions ({aiState.history.length})</h3>
+            </div>
+            <div className="overflow-y-auto p-5 space-y-4 max-h-[55vh]">
+              {aiState.history.map((h, i) => (
+                <div key={i} className="rounded-lg border border-border dark:border-border-dark bg-zinc-50 dark:bg-[#202024] p-3">
+                  <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-2">Version {i + 1}</p>
+                  <pre className="text-xs text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap font-sans leading-relaxed">{h}</pre>
+                </div>
+              ))}
+            </div>
+            <div className="p-5 pt-3 flex justify-end">
+              <button onClick={() => setShowAiHistory(false)}
+                className="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 transition-colors">
+                Close
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       <AnimatePresence>
         {selectedKnowledge && (
