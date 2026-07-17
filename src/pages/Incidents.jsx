@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShieldAlert, CheckCircle2, Loader2, ArrowUp, ExternalLink, RefreshCw, MessageSquare, Clock, ChevronRight } from "lucide-react";
+import { ShieldAlert, CheckCircle2, Loader2, ArrowUp, ExternalLink, RefreshCw, MessageSquare, Clock, ChevronRight, CheckCheck, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useLemmaRecords } from "@/hooks/useLemmaRecords";
 import { useLinearSync, SYNC_STATUS } from "@/hooks/useLinearSync";
@@ -16,6 +16,7 @@ import { workspaceFilter } from "@/lib/workspaceConfig";
 import { createNotification } from "@/lib/notifications";
 import { escalateIncident } from "@/lib/incidentWorkflow";
 import { deriveWorkflowStage } from "@/lib/workflowStage";
+import { addLinearComment, fetchLinearComments, backfillLinearMetadata } from "@/lib/engineeringHandoff";
 
 function timeAgo(dateStr) {
   if (!dateStr) return "";
@@ -61,6 +62,22 @@ export default function Incidents() {
   const { syncStatus, syncLoading, syncResult, syncError, syncLinearIssue, resetSync } = useLinearSync();
   const [commentText, setCommentText] = useState("");
   const [sendingComment, setSendingComment] = useState(false);
+  const [linearComments, setLinearComments] = useState([]);
+  const [fetchingComments, setFetchingComments] = useState(false);
+  const [commentError, setCommentError] = useState(null);
+
+  useEffect(() => {
+    if (!current || !current.linearIssueId) { setLinearComments([]); return; }
+    let cancelled = false;
+    setFetchingComments(true);
+    Promise.all([
+      fetchLinearComments(current.id).catch(() => []),
+      backfillLinearMetadata(current.id).catch(() => null),
+    ]).then(([comments]) => {
+      if (!cancelled) { setLinearComments(comments); setFetchingComments(false); }
+    });
+    return () => { cancelled = true; };
+  }, [current?.id, current?.linearIssueId]);
 
   useEffect(() => {
     if (!showEscalate) return;
@@ -185,18 +202,19 @@ export default function Incidents() {
   const handleAddComment = async () => {
     if (!current || !current.linearIssueId || !commentText.trim() || sendingComment) return;
     setSendingComment(true);
-    const toastId = toast.loading("Adding comment...");
+    setCommentError(null);
+    const toastId = toast.loading("Syncing note to Linear...");
     try {
-      await client.functions.run("add_linear_comment", {
-        input: { incident_id: current.id, body: commentText.trim(), user_name: "Support Manager" },
-      });
+      const comment = await addLinearComment(current.id, commentText.trim(), "Support Manager");
       toast.dismiss(toastId);
-      toast.success("Comment synced to Linear");
+      toast.success("Synced to Linear");
+      setLinearComments((prev) => [...prev, comment].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)));
       setCommentText("");
-      refreshIncidents();
+      fetchLinearComments(current.id).then(setLinearComments).catch(() => {});
     } catch (err) {
       toast.dismiss(toastId);
-      toast.error("Failed to add comment");
+      toast.error(err?.message || "Sync failed — comment was not created in Linear");
+      setCommentError(err?.message || "Sync failed");
     } finally {
       setSendingComment(false);
     }
@@ -467,10 +485,35 @@ export default function Incidents() {
                 </div>
 
                 {current.linearIssueId && (
-                  <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted dark:text-muted-dark flex items-center gap-1.5">
+                  <div className="space-y-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted dark:text-muted-dark flex items-center gap-1.5">
                       <MessageSquare size={12} /> Engineering Notes
                     </p>
+                    {fetchingComments ? (
+                      <div className="flex items-center gap-2 py-2"><Loader2 size={12} className="animate-spin text-muted" /><span className="text-xs text-muted">Loading comments...</span></div>
+                    ) : linearComments.length > 0 ? (
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {linearComments.map((c) => (
+                          <div key={c.id} className="rounded-xl bg-zinc-50 dark:bg-[#202024] p-3">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs font-semibold text-primary">{c.user}</span>
+                              <span className="text-[10px] text-muted dark:text-muted-dark">{timeAgo(c.createdAt) || ''}</span>
+                            </div>
+                            <p className="text-xs text-secondary-body whitespace-pre-wrap">{c.body}</p>
+                            <div className="mt-1.5 flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400">
+                              <CheckCheck size={10} /> Synced to Linear
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : commentError ? (
+                      <div className="flex items-center gap-2 py-2">
+                        <AlertCircle size={12} className="text-red-500" />
+                        <span className="text-xs text-red-600 dark:text-red-400">Sync failed — Retry</span>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted dark:text-muted-dark italic py-1">No engineering notes yet.</p>
+                    )}
                     <div className="flex gap-2">
                       <input type="text" value={commentText} onChange={(e) => setCommentText(e.target.value)}
                         placeholder="Add an engineering note (synced to Linear)..."

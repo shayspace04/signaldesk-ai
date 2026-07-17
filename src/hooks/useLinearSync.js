@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import client from '@/lib/lemmaClient';
-import { createOrUpdateLinearIssue } from '@/lib/engineeringHandoff';
+import { createOrUpdateLinearIssue, backfillLinearMetadata } from '@/lib/engineeringHandoff';
 
 export const SYNC_STATUS = {
   IDLE: 'idle',
@@ -10,8 +10,14 @@ export const SYNC_STATUS = {
 };
 
 async function fetchIssueFromIncident(incidentId) {
-  const inc = await client.records.get("incidents", incidentId);
+  let inc = await client.records.get("incidents", incidentId);
   if (!inc?.linearIssueId) return null;
+
+  if (!inc.linearIssueIdentifier) {
+    const backfilled = await backfillLinearMetadata(incidentId).catch(() => null);
+    if (backfilled) inc = backfilled;
+  }
+
   const now = new Date().toISOString();
   await client.records.update("incidents", incidentId, { linearSyncedAt: now }).catch(() => {});
   return {

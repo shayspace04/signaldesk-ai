@@ -219,11 +219,9 @@ export async function createOrUpdateLinearIssue(incidentId) {
     if (!opResult.id && !opResult.success) {
       throw new Error(opResult.error || 'Failed to update Linear issue');
     }
-    result = {
-      issueId: incident.linearIssueId,
-      issueUrl: incident.linearIssueUrl || opResult.url || '',
-      identifier: incident.linearIssueIdentifier || '',
-    };
+    const issueUrl = incident.linearIssueUrl || opResult.url || '';
+    const identifier = incident.linearIssueIdentifier || opResult.identifier || extractIdentifierFromUrl(issueUrl);
+    result = { issueId: incident.linearIssueId, issueUrl, identifier };
   } else {
     const raw = await client.connectors.operations.execute(config, 'LINEAR_CREATE_LINEAR_ISSUE', {
       team_id: teamId,
@@ -235,19 +233,36 @@ export async function createOrUpdateLinearIssue(incidentId) {
     const issueId = opResult.id;
     if (!issueId) throw new Error(opResult.error || 'Linear returned no issue ID');
     const issueUrl = opResult.url || opResult.ticket_url || '';
-    const identifier = opResult.identifier || '';
+    const identifier = opResult.identifier || extractIdentifierFromUrl(issueUrl);
     result = { issueId, issueUrl, identifier };
   }
 
   const now = new Date().toISOString();
-  await client.records.update('incidents', incidentId, {
+  const updates = {
     linearIssueId: result.issueId,
     linearIssueUrl: result.issueUrl,
     linearIssueIdentifier: result.identifier,
     linearStatus: 'Todo',
     linearPriority: handoff.priorityLabel,
     linearSyncedAt: now,
-  }).catch(() => {});
+  };
+
+  if (!result.identifier || !result.issueUrl) {
+    try {
+      const verified = await verifyLinearIssue(result.issueId);
+      if (verified && verified.id) {
+        if (!result.identifier && verified.identifier) updates.linearIssueIdentifier = verified.identifier;
+        if (!result.issueUrl && verified.url) updates.linearIssueUrl = verified.url;
+        if (verified.state?.name) updates.linearStatus = verified.state.name;
+        if (verified.priority != null) {
+          const labels = { 0: 'No priority', 1: 'Urgent', 2: 'High', 3: 'Medium', 4: 'Low' };
+          updates.linearPriority = labels[verified.priority] || handoff.priorityLabel;
+        }
+      }
+    } catch {}
+  }
+
+  await client.records.update('incidents', incidentId, updates).catch(() => {});
 
   await client.records.create('audit_logs', {
     id: crypto.randomUUID(),
@@ -257,11 +272,112 @@ export async function createOrUpdateLinearIssue(incidentId) {
     resource_type: 'incident',
     resource_id: incidentId,
     ticket_id: '',
-    details: { linearIssueId: result.issueId, linearIssueIdentifier: result.identifier, linearIssueUrl: result.issueUrl, priority: handoff.priorityLabel },
+    details: { linearIssueId: result.issueId, linearIssueIdentifier: updates.linearIssueIdentifier, linearIssueUrl: updates.linearIssueUrl, priority: handoff.priorityLabel },
     workspaceId: incident.workspaceId || 'signaldesk',
     workspaceName: incident.workspaceName || 'SignalDesk',
     created_at: now,
   }).catch(() => {});
 
-  return { ...result, syncedAt: now };
+  return { ...result, syncedAt: now, identifier: updates.linearIssueIdentifier };
+}
+
+function extractIdentifierFromUrl(url) {
+  if (!url) return '';
+  const match = url.match(/\/issue\/([A-Z0-9]+-\d+)/i);
+  return match ? match[1] : '';
+}
+
+export async function verifyLinearIssue(issueId) {
+  const config = { organizationId: '019ef98f-e90b-74df-9116-d0df1a4baeff', authConfigName: 'linear' };
+  const raw = await client.connectors.operations.execute(config, 'LINEAR_GET_LINEAR_ISSUE', { issue_id: issueId });
+  return raw?.result || {};
+}
+
+export async function backfillLinearMetadata(incidentId) {
+  const incident = await client.records.get('incidents', incidentId);
+  if (!incident || !incident.linearIssueId) return null;
+  const issue = await verifyLinearIssue(incident.linearIssueId);
+  if (!issue || !issue.id) return null;
+
+  const identifier = issue.identifier || extractIdentifierFromUrl(issue.url) || '';
+  const updates = {};
+  if (!incident.linearIssueIdentifier && identifier) updates.linearIssueIdentifier = identifier;
+  if (!incident.linearIssueUrl && issue.url) updates.linearIssueUrl = issue.url;
+  if (issue.state?.name) updates.linearStatus = issue.state.name;
+  if (issue.priority != null) {
+    const labels = { 0: 'No priority', 1: 'Urgent', 2: 'High', 3: 'Medium', 4: 'Low' };
+    updates.linearPriority = labels[issue.priority] || '';
+  }
+  if (Object.keys(updates).length > 0) {
+    updates.linearSyncedAt = new Date().toISOString();
+    await client.records.update('incidents', incidentId, updates).catch(() => {});
+  }
+  return { ...incident, ...updates };
+}
+
+export async function addLinearComment(incidentId, body, userName) {
+  const incident = await client.records.get('incidents', incidentId);
+  if (!incident || !incident.linearIssueId) throw new Error('No Linear issue linked to this incident');
+
+  const config = { organizationId: '019ef98f-e90b-74df-9116-d0df1a4baeff', authConfigName: 'linear' };
+  const raw = await client.connectors.operations.execute(config, 'LINEAR_CREATE_LINEAR_COMMENT', {
+    issue_id: incident.linearIssueId,
+    body: `**${userName}** (via SignalDesk):\n\n${body}`,
+  });
+  const result = raw?.result || {};
+  const commentId = result.id || result.comment_id;
+  if (!commentId || String(commentId).startsWith('sim_')) {
+    throw new Error(result.error || result.message || 'Linear did not create the comment');
+  }
+
+  const verifyRaw = await client.connectors.operations.execute(config, 'LINEAR_GET_COMMENT', { comment_id: commentId });
+  const verifyResult = verifyRaw?.result || {};
+  if (!verifyResult || !verifyResult.id) {
+    throw new Error('Comment verification failed — not found in Linear');
+  }
+
+  return { id: commentId, body, user: userName, createdAt: new Date().toISOString(), verified: true };
+}
+
+export async function fetchLinearComments(incidentId) {
+  const incident = await client.records.get('incidents', incidentId);
+  if (!incident || !incident.linearIssueId) return [];
+
+  const config = { organizationId: '019ef98f-e90b-74df-9116-d0df1a4baeff', authConfigName: 'linear' };
+  try {
+    const raw = await client.connectors.operations.execute(config, 'LINEAR_RUN_QUERY_OR_MUTATION', {
+      query: `query($issueId: String!) { issue(id: $issueId) { comments { nodes { id body user { name } createdAt } } } }`,
+      variables: { issueId: incident.linearIssueId },
+    });
+    const result = raw?.result || {};
+    const data = result.data || result;
+    const nodes = data?.issue?.comments?.nodes || [];
+    return nodes
+      .filter((c) => c && c.id)
+      .map((c) => ({
+        id: c.id,
+        body: (c.body || '').replace(/\*\*(.+?)\*\*\s*\(via SignalDesk\):\n*/g, '').trim(),
+        user: c.user?.name || 'Unknown',
+        createdAt: c.createdAt || '',
+      }))
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  } catch {
+    try {
+      const raw = await client.connectors.operations.execute(config, 'LINEAR_LIST_COMMENTS', {});
+      const result = raw?.result || {};
+      const items = result.items || result.data || (Array.isArray(result) ? result : []);
+      const list = Array.isArray(items) ? items : [];
+      return list
+        .filter((c) => c && c.id)
+        .map((c) => ({
+          id: c.id,
+          body: (c.body || '').replace(/\*\*(.+?)\*\*\s*\(via SignalDesk\):\n*/g, '').trim(),
+          user: c.user?.name || c.userName || c.user_name || 'Unknown',
+          createdAt: c.createdAt || c.created_at || '',
+        }))
+        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    } catch {
+      return [];
+    }
+  }
 }
