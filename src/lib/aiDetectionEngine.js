@@ -1,4 +1,4 @@
-import client, { ORG_ID, LINEAR_AUTH_CONFIG, LINEAR_TEAM_ID } from "@/lib/lemmaClient";
+import client, { ORG_ID } from "@/lib/lemmaClient";
 import { emitRefresh } from "@/lib/refreshEvents";
 import { createNotification } from "@/lib/notifications";
 import { getAIDetectionConfig, getThresholds, isSignalAutomationEnabled, getSignalAutomation, getIncidentAutomation } from "@/lib/aiDetectionConfig";
@@ -799,33 +799,26 @@ async function postIncidentActions(cluster, signalId, incidentId, workspaceId, w
     try {
       const incident = await client.records.get("incidents", incidentId).catch(() => null);
       if (incident) {
-        const priorityMap = { urgent: 1, high: 2, normal: 3, low: 4 };
-        const raw = await client.connectors.operations.execute(
-          { organizationId: ORG_ID, authConfigName: LINEAR_AUTH_CONFIG },
-          "LINEAR_CREATE_LINEAR_ISSUE",
-          {
-            team_id: LINEAR_TEAM_ID,
-            title: incident.title || `Incident ${incidentId}`,
-            description: incident.description || incident.summary || `Severity: ${incident.severity || "not-set"}`,
-            priority: priorityMap[incident.severity] || 0,
-          },
-        );
-        const opResult = raw?.result || {};
-        const issueId = opResult.id;
-        const issueUrl = opResult.ticket_url || "";
-        const identifier = issueUrl.match(/\/issue\/([^/]+)/)?.[1] || opResult.issue_title || "";
-        if (issueId) {
-          const now = new Date().toISOString();
-          await client.records.update("incidents", incidentId, {
-            linearIssueId: issueId,
-            linearIssueUrl: issueUrl || "",
-            linearIssueIdentifier: identifier || "",
-            linearSyncedAt: now,
-            linearStatus: "Todo",
-          }).catch(e => log("Linear persist failed:", e?.message || e));
-          log("Linear issue created and persisted:", identifier);
+        if (incident.linearIssueId) {
+          log("Linear issue already exists for incident:", incident.linearIssueIdentifier);
         } else {
-          log("Linear create returned unsuccessful:", opResult.error || "unknown error");
+          const raw = await client.functions.run("create_linear_issue", {
+            input: { incident_id: incidentId },
+          }).catch(() => null);
+          const output = raw?.output_data || raw?.output || raw || {};
+          if (output.success && output.linearIssueId) {
+            const now = new Date().toISOString();
+            await client.records.update("incidents", incidentId, {
+              linearIssueId: output.linearIssueId,
+              linearIssueUrl: output.linearIssueUrl || "",
+              linearIssueIdentifier: output.linearIssueIdentifier || "",
+              linearSyncedAt: now,
+              linearStatus: "Todo",
+            }).catch(e => log("Linear persist failed:", e?.message || e));
+            log("Linear issue created and persisted:", output.linearIssueIdentifier);
+          } else {
+            log("Linear create returned unsuccessful:", output.message || output.error || "unknown error");
+          }
         }
       }
     } catch (err) {
