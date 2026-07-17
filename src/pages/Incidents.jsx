@@ -101,18 +101,23 @@ export default function Incidents() {
 
   const handleSync = async () => {
     if (!current) return;
-    const toastId = toast.loading("Syncing with Linear...");
+    const toastId = toast.loading(current.linearIssueId ? "Updating Linear issue..." : "Creating Linear issue...");
     resetSync();
     const result = await syncLinearIssue(current.id);
     toast.dismiss(toastId);
+    try {
+      const updated = await client.records.get("incidents", current.id);
+      setSelected(updated);
+    } catch {}
     refreshIncidents();
     if (result.status === SYNC_STATUS.SYNCED) {
-      toast.success("Linear issue synced");
       const ident = result?.result?.identifier || result?.result?.issueId || current.id;
-      await createNotification({ action: "linear.issue_created", actor: "Support Manager", resourceType: "incident", resourceId: current.id, details: { name: current.title, linearIssue: ident }, workspaceId: workspace.id, workspaceName: workspace.name }).catch(() => {});
+      toast.success(current.linearIssueId ? `Linear issue ${ident} updated` : `Linear issue ${ident} created`);
+      const action = current.linearIssueId ? "linear.issue_updated" : "linear.issue_created";
+      await createNotification({ action, actor: "Support Manager", resourceType: "incident", resourceId: current.id, details: { name: current.title, linearIssue: ident }, workspaceId: workspace.id, workspaceName: workspace.name }).catch(() => {});
       emitRefresh();
     } else {
-      toast.error(result.error || "Failed to create Linear issue");
+      toast.error(result.error || "Failed to sync with Linear");
     }
   };
 
@@ -400,7 +405,7 @@ export default function Incidents() {
                       <div className="grid grid-cols-2 gap-2">
                         <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
                           <p className="text-[10px] text-muted dark:text-muted-dark">Issue Key</p>
-                          <p className="text-xs font-medium text-primary">{current.linearIssueIdentifier || "—"}</p>
+                          <p className="text-xs font-medium text-primary font-mono">{current.linearIssueIdentifier || "—"}</p>
                         </div>
                         <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
                           <p className="text-[10px] text-muted dark:text-muted-dark">Status</p>
@@ -409,8 +414,8 @@ export default function Incidents() {
                           </p>
                         </div>
                         <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
-                          <p className="text-[10px] text-muted dark:text-muted-dark">Issue URL</p>
-                          <p className="text-xs font-medium text-primary truncate max-w-[160px]">{current.linearIssueUrl || "—"}</p>
+                          <p className="text-[10px] text-muted dark:text-muted-dark">Priority</p>
+                          <p className="text-xs font-medium text-primary">{current.linearPriority || "—"}</p>
                         </div>
                         <div className="rounded-lg bg-white dark:bg-[#202024] p-2.5">
                           <p className="text-[10px] text-muted dark:text-muted-dark">Last Synced</p>

@@ -1,4 +1,5 @@
 import client, { ORG_ID, GMAIL_AUTH_CONFIG, ALERT_RECIPIENT } from "@/lib/lemmaClient";
+import { createOrUpdateLinearIssue } from "@/lib/engineeringHandoff";
 
 export async function runGmailAlert(incident) {
   const sev = incident.severity || "";
@@ -59,85 +60,10 @@ export async function runGmailAlert(incident) {
   }
 }
 
-const LINEAR_TEAM_ID = "8016a82b-1e4c-40bc-b2c1-40c521897628";
-
-async function tryCreateLinearViaConnector(incidentId, incident) {
-  const priorityMap = { urgent: 1, high: 2, normal: 3, low: 4 };
-  const priority = priorityMap[incident.severity] || 0;
-  const raw = await client.connectors.operations.execute(
-    { organizationId: "019ef98f-e90b-74df-9116-d0df1a4baeff", authConfigName: "linear" },
-    "LINEAR_CREATE_LINEAR_ISSUE",
-    {
-      team_id: LINEAR_TEAM_ID,
-      title: incident.title || `Incident ${incidentId}`,
-      description: incident.description || incident.summary || `Incident ${incidentId}`,
-      priority,
-    },
-  );
-  const opResult = raw?.result || {};
-  const issueId = opResult.id;
-  if (!issueId) throw new Error(opResult.error || 'Connector returned no issue ID');
-  return {
-    issueId,
-    issueUrl: opResult.ticket_url || opResult.url || '',
-    identifier: opResult.identifier || '',
-  };
-}
-
 export async function syncToLinear(incidentId) {
   console.log(`[linear] sync invoked for incident ${incidentId}`);
   try {
-    const incident = await client.records.get("incidents", incidentId).catch(() => null);
-    if (!incident) return { status: "error", error: "Incident not found" };
-
-    if (incident.linearIssueId) {
-      console.log(`[linear] already synced for ${incidentId}: ${incident.linearIssueIdentifier}`);
-      return {
-        status: "synced",
-        issueId: incident.linearIssueId,
-        issueUrl: incident.linearIssueUrl || "",
-        identifier: incident.linearIssueIdentifier || "",
-      };
-    }
-
-    let result;
-    try {
-      const raw = await client.functions.run("create_linear_issue", {
-        input: { incident_id: incidentId },
-      });
-      const output = raw?.output_data || raw?.output || raw || {};
-      if (output.success && output.linearIssueId) {
-        result = {
-          issueId: output.linearIssueId,
-          issueUrl: output.linearIssueUrl || "",
-          identifier: output.linearIssueIdentifier || "",
-        };
-      } else {
-        const errMsg = output.message || output.error || "";
-        if (errMsg.toLowerCase().includes("already exists")) {
-          const refetched = await client.records.get("incidents", incidentId).catch(() => null);
-          if (refetched?.linearIssueId) {
-            return { status: "synced", issueId: refetched.linearIssueId, issueUrl: refetched.linearIssueUrl || "", identifier: refetched.linearIssueIdentifier || "" };
-          }
-        }
-        throw new Error(errMsg || "Server function returned unsuccessful");
-      }
-    } catch (serverErr) {
-      console.log(`[linear] server function failed, trying connector fallback:`, serverErr?.message);
-      result = await tryCreateLinearViaConnector(incidentId, incident);
-    }
-
-    console.log(`[linear] success for ${incidentId}: ${result.identifier} (${result.issueUrl})`);
-
-    const updates = {
-      linearIssueId: result.issueId,
-      linearIssueUrl: result.issueUrl,
-      linearIssueIdentifier: result.identifier,
-      linearSyncedAt: new Date().toISOString(),
-      linearStatus: "Todo",
-    };
-    await client.records.update("incidents", incidentId, updates).catch(e => console.error(`[linear] persist failed for ${incidentId}:`, e?.message || e));
-
+    const result = await createOrUpdateLinearIssue(incidentId);
     return { status: "synced", ...result };
   } catch (err) {
     console.error(`[linear] ERROR for ${incidentId}:`, err?.message || err);
